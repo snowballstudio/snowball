@@ -1,0 +1,2893 @@
+/* 物馆模块：从 App.css 拆分，保持原有效样式顺序 */
+
+.thingsOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10040;
+  background: rgba(247, 239, 224, 0.82);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.thingsPanel {
+  width: min(1100px, 96vw);
+  height: min(760px, 94vh);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 229, 240, 0.92), transparent 34%),
+    linear-gradient(135deg, rgba(255, 251, 244, 0.96), rgba(238, 248, 244, 0.94));
+  border: 1px solid rgba(161, 93, 134, 0.18);
+  box-shadow: 0 28px 80px rgba(54, 42, 50, 0.24);
+  color: #243047;
+  padding: 22px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 14px;
+}
+
+.thingsTopBar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.thingsTopBar h2 {
+  margin: 0;
+  font-size: 30px;
+  color: #a22975;
+}
+
+.thingsTopBar p {
+  margin: 6px 0 0;
+  color: #526070;
+  line-height: 1.55;
+}
+
+.thingsTopBar button:not(.thingsUsageLinkTop),
+.thingsTabs button,
+.saveThingBtn,
+.thingMoveButtons button,
+.deleteThingBtn {
+  border: 1px solid rgba(162, 41, 117, 0.24);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.72);
+  color: #2a3950;
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+.thingsTabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-width: 560px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.62);
+  border: 1px solid rgba(162, 41, 117, 0.12);
+}
+
+.thingsTabs button {
+  border: none;
+  background: transparent;
+  margin: 0;
+  font-weight: 700;
+}
+
+.thingsTabs button.active {
+  background: #ffddea;
+  color: #8d1f65;
+  box-shadow: 0 8px 24px rgba(162, 41, 117, 0.14);
+}
+
+.thingsTabs small {
+  opacity: 0.75;
+  margin-left: 4px;
+}
+
+.thingsLayout {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 300px minmax(220px, 300px) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.thingsAddCard,
+.thingsListCard,
+.thingDetailCard {
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: 24px;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(162, 41, 117, 0.12);
+  box-shadow: 0 16px 38px rgba(54, 42, 50, 0.12);
+  padding: 16px;
+}
+
+.thingsAddCard h3,
+.thingsListCard h3,
+.thingDetailCard h3 {
+  margin: 0 0 8px;
+  color: #2b3d54;
+  font-size: 20px;
+}
+
+.thingHint,
+.thingsEmpty {
+  color: #667486;
+  line-height: 1.6;
+}
+
+.thingPhotoBox {
+  position: relative;
+  height: 150px;
+  border-radius: 20px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(236,242,245,0.9), rgba(255,236,244,0.82));
+  border: 1px dashed rgba(162, 41, 117, 0.32);
+  margin: 12px 0;
+}
+
+.thingPhotoBox img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thingPhotoBox span {
+  color: #7a8693;
+}
+
+.thingPhotoBox input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.thingDateGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.thingsAddCard input,
+.thingsAddCard textarea {
+  width: 100%;
+  border: 1px solid rgba(162, 41, 117, 0.16);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.86);
+  color: #243047;
+  padding: 12px 13px;
+  font-size: 14px;
+  outline: none;
+  margin-bottom: 10px;
+}
+
+.thingsAddCard textarea {
+  min-height: 92px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.thingPawPreview,
+.thingPawSeal {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 243, 247, 0.86);
+  color: #5f4d5a;
+  margin: 4px 0 12px;
+}
+
+.thingPawPreview span,
+.thingPawSeal span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 6px 16px rgba(162, 41, 117, 0.16);
+}
+
+.thingPawPreview p,
+.thingPawSeal p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.saveThingBtn {
+  width: 100%;
+  background: #a22975;
+  color: white;
+  font-weight: 800;
+}
+
+.saveThingBtn:disabled {
+  opacity: 0.42;
+}
+
+.thingsListHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.thingsListHeader span {
+  color: #9d6282;
+  font-weight: 700;
+}
+
+.thingsList {
+  display: grid;
+  gap: 8px;
+}
+
+.thingListItem {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  grid-template-rows: auto auto;
+  gap: 4px 10px;
+  align-items: center;
+  text-align: left;
+  border: 1px solid rgba(162, 41, 117, 0.12);
+  background: rgba(255,255,255,0.72);
+  color: #243047;
+  border-radius: 18px;
+  padding: 8px;
+}
+
+.thingListItem.active {
+  border-color: rgba(162, 41, 117, 0.42);
+  background: #fff0f6;
+}
+
+.thingListItem img,
+.thingThumbFallback {
+  grid-row: 1 / 3;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: #f3e8ef;
+}
+
+.thingListItem strong {
+  font-size: 15px;
+}
+
+.thingListItem small {
+  color: #718093;
+}
+
+.thingDetailCard {
+  position: relative;
+}
+
+.thingDetailPhoto {
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  border-radius: 22px;
+  background: #f2edf1;
+  margin-bottom: 14px;
+}
+
+.thingDetailPhotoEmpty {
+  display: grid;
+  place-items: center;
+  font-size: 46px;
+}
+
+.thingDetailCard small {
+  color: #7a8693;
+}
+
+.thingReason {
+  color: #3e4c5f;
+  line-height: 1.72;
+  white-space: pre-line;
+}
+
+.thingMoveButtons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.thingMoveButtons button {
+  padding: 10px 8px;
+  background: rgba(255,255,255,0.76);
+}
+
+@media (max-width: 900px) {
+.thingsPanel {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    padding: 14px;
+  }
+.thingsTopBar {
+    align-items: center;
+  }
+.thingsTopBar h2 {
+    font-size: 24px;
+  }
+.thingsTopBar p {
+    display: none;
+  }
+.thingsLayout {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+.thingsAddCard,
+.thingsListCard,
+.thingDetailCard {
+    overflow: visible;
+  }
+.thingDetailPhoto {
+    height: 220px;
+  }
+}
+
+.thingsOverlay {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(203, 229, 255, 0.42), transparent 36%),
+    rgba(228, 241, 252, 0.78) !important;
+}
+
+.thingsPanel,
+.thingsPanelBlue {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(209, 235, 255, 0.96), transparent 34%),
+    linear-gradient(135deg, rgba(249, 253, 255, 0.98), rgba(225, 241, 255, 0.95)) !important;
+  border: 1px solid rgba(76, 142, 204, 0.22) !important;
+  box-shadow: 0 28px 80px rgba(28, 70, 116, 0.22) !important;
+  color: #1d3552 !important;
+}
+
+.thingsTopBar h2 {
+  color: #1c79d5 !important;
+}
+
+.thingsTopBar p,
+.thingHint,
+.thingsEmpty {
+  color: #49677f !important;
+}
+
+.thingsTopBar button:not(.thingsUsageLinkTop),
+.thingsTabs button,
+.saveThingBtn,
+.thingMoveButtons button,
+.deleteThingBtn {
+  border-color: rgba(46, 132, 204, 0.24) !important;
+  color: #1f4f7e !important;
+  background: rgba(255,255,255,0.58) !important;
+}
+
+.thingsTabs {
+  grid-template-columns: repeat(4, 1fr) !important;
+  border-color: rgba(46, 132, 204, 0.14) !important;
+}
+
+.thingsTabs button.active {
+  background: #d8edff !important;
+  color: #126ab3 !important;
+  box-shadow: 0 8px 24px rgba(46,132,204,0.16) !important;
+}
+
+.saveThingBtn {
+  background: linear-gradient(180deg, #8ec8f7, #4a9bdd) !important;
+  color: white !important;
+  font-weight: 800;
+}
+
+.thingsOverview {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 16px;
+}
+
+.thingsOverviewStats {
+  border-radius: 22px;
+  padding: 18px;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(46,132,204,0.16);
+  text-align: center;
+}
+
+.thingsOverviewStats h3 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  color: #1c79d5;
+}
+
+.thingsOverviewStats p {
+  margin: 0;
+  color: #49677f;
+}
+
+.thingsOverviewStats strong {
+  color: #126ab3;
+  font-size: 28px;
+}
+
+.thingsOverviewGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.thingsOverviewGrid button {
+  min-height: 132px;
+  border: 1px solid rgba(46,132,204,0.16);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.86), rgba(225,241,255,0.78));
+  color: #1d3552;
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  box-shadow: 0 14px 34px rgba(28,70,116,0.12);
+}
+
+.thingsOverviewGrid button span {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.thingsOverviewGrid button strong {
+  font-size: 34px;
+  color: #1684ff;
+}
+
+.thingsOverviewGrid button small {
+  color: #5b7891;
+}
+
+.thingsNameList {
+  border-radius: 22px;
+  padding: 16px;
+  background: rgba(255,255,255,0.68);
+  border: 1px solid rgba(46,132,204,0.14);
+  overflow-y: auto;
+}
+
+.thingsNameList h3 {
+  margin: 0 0 10px;
+  color: #1c79d5;
+}
+
+.thingsNameRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid rgba(46,132,204,0.12);
+}
+
+.thingsNameRow span {
+  font-weight: 700;
+  color: #1d3552;
+}
+
+.thingsNameRow small {
+  color: #5b7891;
+}
+
+@media (max-width: 900px) {
+.thingsOverviewGrid {
+    grid-template-columns: 1fr;
+  }
+.thingsTabs {
+    grid-template-columns: repeat(2, 1fr) !important;
+    border-radius: 22px !important;
+  }
+.thingsNameRow {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+.thingsPanel-overview,
+.thingsPanelBlue.thingsPanel-overview {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(209, 235, 255, 0.96), transparent 34%),
+    linear-gradient(135deg, rgba(249, 253, 255, 0.98), rgba(225, 241, 255, 0.95)) !important;
+}
+
+.thingsPanel-wish {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(203, 229, 255, 0.98), transparent 35%),
+    linear-gradient(135deg, rgba(246, 252, 255, 0.98), rgba(214, 235, 255, 0.96)) !important;
+  border-color: rgba(56, 132, 210, 0.24) !important;
+}
+
+.thingsPanel-treasure {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(214, 246, 222, 0.98), transparent 35%),
+    linear-gradient(135deg, rgba(249, 255, 248, 0.98), rgba(219, 244, 225, 0.96)) !important;
+  border-color: rgba(76, 151, 95, 0.24) !important;
+}
+
+.thingsPanel-memory {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 235, 184, 0.78), transparent 36%),
+    linear-gradient(135deg, rgba(255, 252, 241, 0.98), rgba(239, 224, 190, 0.96)) !important;
+  border-color: rgba(151, 112, 54, 0.24) !important;
+}
+
+.thingsPanel-wish .thingsTopBar h2,
+.thingsPanel-wish .thingsOverviewStats h3,
+.thingsPanel-wish .thingsNameList h3 {
+  color: #1c79d5 !important;
+}
+
+.thingsPanel-treasure .thingsTopBar h2,
+.thingsPanel-treasure .thingsOverviewStats h3,
+.thingsPanel-treasure .thingsNameList h3 {
+  color: #3f9259 !important;
+}
+
+.thingsPanel-memory .thingsTopBar h2,
+.thingsPanel-memory .thingsOverviewStats h3,
+.thingsPanel-memory .thingsNameList h3 {
+  color: #9a6b28 !important;
+}
+
+.thingsPanel-wish .thingsTabs button.active,
+.thingsPanel-wish .saveThingBtn {
+  background: linear-gradient(180deg, #9bd2ff, #4a9bdd) !important;
+  color: white !important;
+}
+
+.thingsPanel-treasure .thingsTabs button.active,
+.thingsPanel-treasure .saveThingBtn {
+  background: linear-gradient(180deg, #a9dfb7, #4fa46b) !important;
+  color: white !important;
+}
+
+.thingsPanel-memory .thingsTabs button.active,
+.thingsPanel-memory .saveThingBtn {
+  background: linear-gradient(180deg, #ead4a0, #b8873e) !important;
+  color: white !important;
+}
+
+.saveThingBtn {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.saveThingCatIcon {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.92);
+  overflow: hidden;
+  box-shadow: 0 5px 14px rgba(0,0,0,0.16);
+}
+
+.saveThingCatIcon img {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+}
+
+.thingValueInput {
+  letter-spacing: 0.2px;
+}
+
+.thingFinalNote {
+  grid-column: 1 / -1;
+  border-radius: 16px;
+  padding: 11px 12px;
+  background: rgba(255,255,255,0.66);
+  color: #746045;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.thingPawSeal span {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.thingPawSeal:hover span {
+  transform: scale(1.08);
+}
+
+.thingsPanel-overview,
+.thingsPanelBlue.thingsPanel-overview {
+  background:
+    linear-gradient(135deg, rgba(232, 235, 238, 0.88), rgba(202, 207, 213, 0.86)),
+    url('/refine/things_background.png') center/cover no-repeat !important;
+  border-color: rgba(255,255,255,0.32) !important;
+  color: #233044 !important;
+}
+
+.thingsPanel-overview .thingsOverviewStats,
+.thingsPanel-overview .thingsNameList {
+  background: rgba(255,255,255,0.58) !important;
+  border-color: rgba(40,60,80,0.14) !important;
+  backdrop-filter: blur(8px);
+}
+
+.goldPriceLine {
+  display: block;
+  margin-top: 8px;
+  color: #657486;
+  font-size: 13px;
+}
+
+.thingOverviewButton-wish {
+  background: linear-gradient(180deg, rgba(222,240,255,0.96), rgba(179,219,250,0.92)) !important;
+}
+
+.thingOverviewButton-treasure {
+  background: linear-gradient(180deg, rgba(226,249,230,0.96), rgba(184,229,194,0.92)) !important;
+}
+
+.thingOverviewButton-memory {
+  background: linear-gradient(180deg, rgba(255,244,210,0.96), rgba(235,212,156,0.92)) !important;
+}
+
+.thingsOverviewTableWrap {
+  overflow: auto !important;
+}
+
+.thingsOverviewTable {
+  min-width: 620px;
+  display: grid;
+  grid-template-columns: minmax(140px, 1.5fr) minmax(110px, 1fr) minmax(90px, 0.8fr) minmax(110px, 1fr);
+  align-items: stretch;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(46,132,204,0.14);
+  background: rgba(255,255,255,0.58);
+}
+
+.thingsTableHead,
+.thingsTableCell {
+  min-height: 42px;
+  padding: 10px 12px;
+  border: none;
+  border-right: 1px solid rgba(46,132,204,0.12);
+  border-bottom: 1px solid rgba(46,132,204,0.12);
+  background: rgba(255,255,255,0.52);
+  color: #27384d;
+  text-align: left;
+  font-size: 14px;
+}
+
+.thingsTableHead {
+  font-weight: 800;
+  background: rgba(238,244,249,0.92);
+  cursor: pointer;
+}
+
+.thingsTableName {
+  color: #176db8;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.thingsTableName:hover {
+  background: rgba(214,235,255,0.72);
+}
+
+.thingFieldLabel {
+  display: block;
+  margin-bottom: 10px;
+  color: #536679;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.thingFieldLabel input,
+.thingFieldLabel textarea,
+.thingFieldLabel select {
+  margin-top: 6px !important;
+}
+
+.thingValueGrid {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 8px;
+}
+
+.thingValueGrid select {
+  width: 100%;
+  border: 1px solid rgba(162, 41, 117, 0.16);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.86);
+  color: #243047;
+  padding: 12px 10px;
+  font-size: 14px;
+  outline: none;
+}
+
+.thingValueGrid input:disabled {
+  opacity: 0.48;
+  background: rgba(245,245,245,0.88);
+}
+
+.thingPhotoBox img {
+  object-fit: contain !important;
+  background: rgba(238,243,247,0.95);
+}
+
+.thingListItem img,
+.thingThumbFallback {
+  object-fit: contain !important;
+  background: #eef3f6 !important;
+}
+
+.thingDetailPhoto {
+  object-fit: contain !important;
+  background: #eef3f6 !important;
+}
+
+@media (max-width: 900px) {
+.thingsOverviewTable {
+    min-width: 560px;
+  }
+}
+
+.thingsTableRowGroup {
+  display: contents;
+}
+
+.thingsListHeader {
+  justify-content: flex-end !important;
+}
+
+.thingsPanel-treasure {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(216, 229, 222, 0.96), transparent 35%),
+    linear-gradient(135deg, rgba(249, 252, 250, 0.98), rgba(211, 224, 218, 0.96)) !important;
+  border-color: rgba(109, 137, 126, 0.24) !important;
+}
+
+.thingsPanel-treasure .thingsTopBar h2,
+.thingsPanel-treasure .thingsOverviewStats h3,
+.thingsPanel-treasure .thingsNameList h3 {
+  color: #5f7f73 !important;
+}
+
+.thingsPanel-treasure .thingsTabs button.active,
+.thingsPanel-treasure .saveThingBtn {
+  background: linear-gradient(180deg, #d8e6df, #7f9f93) !important;
+  color: white !important;
+}
+
+.thingOverviewButton-treasure {
+  background: linear-gradient(180deg, rgba(235,243,239,0.96), rgba(203,219,211,0.92)) !important;
+}
+
+.thingsPanel-overview .thingsOverviewStats,
+.thingsPanel-overview .thingsNameList {
+  background: rgba(255,255,255,0.52) !important;
+  backdrop-filter: blur(3px) !important;
+}
+
+.thingsPanel-overview,
+.thingsPanelBlue.thingsPanel-overview {
+  background:
+    linear-gradient(135deg, rgba(232, 235, 238, 0.68), rgba(202, 207, 213, 0.58)),
+    url('/refine/things_background.png') center/cover no-repeat !important;
+}
+
+.thingRowPaws,
+.thingVisitPaws {
+  display: inline-flex;
+  gap: 1px;
+  margin-left: 6px;
+  color: #7a5b78;
+  letter-spacing: -2px;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.thingEyeSeal {
+  opacity: 0.82;
+  filter: drop-shadow(0 3px 8px rgba(90, 66, 92, 0.18));
+}
+
+.thingActionButtons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.thingActionButtons button,
+.thingConfirmButtons button {
+  width: 100%;
+  border: 1px solid rgba(48, 113, 164, 0.14);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.68);
+  color: #21628f;
+  padding: 12px 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.thingActionButtons .deleteThingBtn {
+  margin: 0 !important;
+  background: rgba(255,255,255,0.68) !important;
+  color: #8a5870 !important;
+}
+
+.thingConfirmBox {
+  background: rgba(248, 252, 255, 0.96) !important;
+  color: #26384c !important;
+}
+
+.thingConfirmBox h2 {
+  color: #3f6f8f !important;
+}
+
+.thingConfirmBox p {
+  color: #4c6075 !important;
+}
+
+.thingConfirmButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.thingConfirmButtons button:first-child {
+  background: linear-gradient(180deg, #d8e6df, #7f9f93) !important;
+  color: white !important;
+}
+
+.thingPhotoBox img,
+.thingListItem img,
+.thingThumbFallback,
+.thingDetailPhoto {
+  object-fit: contain !important;
+  background: #eef3f6 !important;
+}
+
+@media (max-width: 900px) {
+.thingActionButtons {
+    grid-template-columns: 1fr;
+  }
+}
+
+.thingPawSeal {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 9px !important;
+  align-items: start !important;
+  text-align: left !important;
+}
+
+.thingSealLine {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  justify-content: start;
+}
+
+.thingVisitLine {
+  align-items: center;
+}
+
+.thingPaws {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.thingRowPaws {
+  margin-left: 6px !important;
+}
+
+.thingVisitPaws {
+  margin-left: 0 !important;
+  min-width: 34px;
+}
+
+.catPawStack {
+  position: relative;
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+}
+
+.catPawStack img {
+  position: absolute;
+  inset: 0;
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+  opacity: 0.78;
+  transform: translate(calc(var(--paw-layer, 0) * 0.45px), calc(var(--paw-layer, 0) * 0.45px));
+  filter: drop-shadow(0 1px 1px rgba(60, 38, 61, 0.12));
+}
+
+.thingVisitPaws .catPawStack {
+  width: 15px;
+  height: 15px;
+}
+
+.thingVisitPaws .catPawStack img {
+  width: 15px;
+  height: 15px;
+}
+
+.thingEyeSeal {
+  width: 34px !important;
+  height: 34px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+  background: white !important;
+}
+
+.thingDeleteConfirmBox h2 {
+  color: #8a5870 !important;
+}
+
+.thingConfirmButtons .dangerConfirmBtn {
+  background: linear-gradient(180deg, #d49aac, #a9697f) !important;
+  color: white !important;
+}
+
+.thingPawSeal .catPawStack,
+.thingPawPreview .catPawStack {
+  display: inline-block !important;
+  place-items: initial !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.thingPawSeal:hover .catPawStack {
+  transform: none !important;
+}
+
+.thingPawsCompact {
+  flex-wrap: nowrap !important;
+  width: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  overflow: visible;
+}
+
+.catPawStackCompact {
+  width: 17px !important;
+  height: 17px !important;
+}
+
+.catPawStackCompact img {
+  width: 17px !important;
+  height: 17px !important;
+  transform: translateY(calc(var(--paw-layer, 0) * -0.28px)) !important;
+  opacity: 0.18;
+}
+
+.catPawStackCompact img:last-child {
+  opacity: 0.9;
+}
+
+.thingVisitPaws {
+  min-width: 18px !important;
+  max-width: 18px !important;
+  flex: 0 0 18px;
+  overflow: visible !important;
+}
+
+.thingsPanel-overview .thingsTopBar h2,
+.thingsPanel-overview .thingsTopBar p,
+.thingsPanel-overview .thingsTopBar button,
+.thingsPanel-overview .thingsOverviewStats h3,
+.thingsPanel-overview .thingsOverviewStats p,
+.thingsPanel-overview .thingsOverviewStats strong,
+.thingsPanel-overview .goldPriceLine {
+  color: #1f242b !important;
+}
+
+.thingsPanel-overview .thingsTopBar .thingsBackBtn {
+  border-color: rgba(31,36,43,0.18) !important;
+  background: transparent !important;
+}
+
+.thingsPanel-overview .thingsOverviewStats {
+  color: #1f242b !important;
+}
+
+.thingsTopBar {
+  position: relative;
+  z-index: 3;
+}
+
+.thingsTopRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  position: relative;
+  z-index: 4;
+}
+
+.thingsTopRight button {
+  color: #ffffff !important;
+  background: rgba(45, 55, 70, 0.74) !important;
+  border: 1px solid rgba(255,255,255,0.28) !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.18) !important;
+}
+
+.thingsPanel-overview .thingsTopBar h2 {
+  color: #ffffff !important;
+  text-shadow: 0 3px 16px rgba(0,0,0,0.5) !important;
+}
+
+.thingsCornerCat {
+  width: min(160px, 18vw);
+  max-height: 128px;
+  object-fit: contain;
+  opacity: 0.9;
+  filter: drop-shadow(0 14px 22px rgba(0,0,0,0.22));
+  pointer-events: none;
+}
+
+.thingsPanel-overview .thingsCornerCat {
+  width: min(155px, 17vw);
+}
+
+.thingsOverview {
+  grid-template-rows: auto auto minmax(0, 1fr) !important;
+  gap: 12px !important;
+}
+
+.thingsProgressLine {
+  display: grid;
+  grid-template-columns: minmax(116px, 145px) 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 4px 2px;
+  color: #1f242b;
+}
+
+.thingsProgressCrate {
+  position: relative;
+  height: 58px;
+  border-radius: 12px 12px 9px 9px;
+  background:
+    linear-gradient(90deg, rgba(111,75,42,0.18) 0 12%, transparent 12% 24%, rgba(111,75,42,0.12) 24% 36%, transparent 36% 48%, rgba(111,75,42,0.14) 48% 60%, transparent 60% 72%, rgba(111,75,42,0.12) 72% 84%, transparent 84%),
+    linear-gradient(180deg, #b98a55, #8b6236);
+  border: 2px solid rgba(77, 51, 27, 0.48);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.22),
+    inset 0 -8px 18px rgba(65,39,18,0.28),
+    0 10px 24px rgba(32,28,20,0.18);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.thingsProgressCrate::before,
+.thingsProgressCrate::after {
+  content: "";
+  position: absolute;
+  inset: 8px 10px auto 10px;
+  height: 2px;
+  background: rgba(72,45,21,0.28);
+  z-index: 2;
+}
+
+.thingsProgressCrate::after {
+  inset: auto 10px 9px 10px;
+}
+
+.thingsCrateFill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(244,211,125,0.35), rgba(255,235,160,0.48));
+  z-index: 1;
+}
+
+.thingsProgressCrate span {
+  position: relative;
+  z-index: 3;
+  color: #fff8dd;
+  font-weight: 900;
+  font-size: 18px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+
+.thingsProgressText {
+  display: grid;
+  gap: 5px;
+  align-content: center;
+  min-width: 0;
+}
+
+.thingsProgressText strong {
+  font-size: 18px;
+  color: #1f242b;
+  letter-spacing: 0.5px;
+}
+
+.thingsProgressText small {
+  font-size: 13px;
+  color: #44505c;
+}
+
+.thingsOverviewStats {
+  display: none !important;
+}
+
+.thingsOverviewGrid button {
+  min-height: 122px !important;
+  align-content: center !important;
+  grid-template-rows: auto auto auto auto !important;
+  gap: 3px !important;
+}
+
+.thingsOverviewGrid button em {
+  font-style: normal;
+  font-size: 13px;
+  color: rgba(31, 48, 64, 0.72);
+  margin-top: -2px;
+}
+
+.thingsOverviewGrid button small {
+  width: min(180px, 92%);
+  display: grid !important;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  align-items: baseline;
+  justify-self: center;
+  text-align: left;
+  color: #5b7891 !important;
+  font-size: 12px !important;
+  line-height: 1.35;
+}
+
+.thingsOverviewGrid button small b,
+.thingsOverviewGrid button small i {
+  font-weight: 600;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.thingsOverviewGrid button small i {
+  text-align: right;
+}
+
+.thingsOverviewTableWrap h3 {
+  color: #1684ff !important;
+}
+
+.thingsValueHead {
+  display: grid !important;
+  gap: 1px;
+  line-height: 1.2;
+}
+
+.thingsValueHead small {
+  display: block;
+  font-size: 11px;
+  color: rgba(35, 48, 68, 0.62);
+  font-weight: 500;
+  margin-top: 1px;
+}
+
+.catPawStack img {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.catPawStack.pawTone-light img {
+  opacity: 0.34 !important;
+  filter: grayscale(1) brightness(1.9) contrast(0.78) drop-shadow(0 1px 1px rgba(60, 38, 61, 0.08)) !important;
+}
+
+.catPawStack.pawTone-dark img {
+  opacity: 0.72 !important;
+  filter: grayscale(1) brightness(0.74) contrast(1.25) drop-shadow(0 1px 1px rgba(60, 38, 61, 0.12)) !important;
+}
+
+.catPawStack.pawTone-black img {
+  opacity: 0.96 !important;
+  filter: grayscale(1) brightness(0) contrast(1.8) drop-shadow(0 1px 1px rgba(60, 38, 61, 0.14)) !important;
+}
+
+.catPawStackCompact img,
+.catPawStackCompact img:last-child {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+@media (max-width: 900px) {
+.thingsCornerCat {
+    width: 96px;
+    max-height: 86px;
+    opacity: 0.76;
+  }
+.thingsProgressLine {
+    grid-template-columns: 112px 1fr;
+    gap: 10px;
+  }
+.thingsProgressCrate {
+    height: 50px;
+  }
+.thingsProgressCrate span {
+    font-size: 15px;
+  }
+.thingsProgressText strong {
+    font-size: 16px;
+  }
+.thingsOverviewGrid button small {
+    width: 96%;
+    gap: 2px 5px;
+    font-size: 11px !important;
+  }
+}
+
+.thingsPanel {
+  gap: 8px !important;
+  padding-top: 18px !important;
+}
+
+.thingsTopBar {
+  min-height: 52px !important;
+}
+
+.thingsTopBar h2 {
+  margin-top: 0 !important;
+}
+
+.thingsPanel-overview .thingsTopBar {
+  margin-bottom: -6px !important;
+}
+
+.thingsPanel-overview .thingsTopRight button {
+  background: rgba(42, 50, 60, 0.78) !important;
+  color: #fff !important;
+}
+
+.thingsOverview {
+  gap: 8px !important;
+  grid-template-rows: 54px 98px minmax(0, 1fr) !important;
+}
+
+.thingsProgressLine {
+  padding: 0 4px !important;
+  margin-top: -4px !important;
+  grid-template-columns: minmax(110px, 132px) 1fr !important;
+  gap: 12px !important;
+}
+
+.thingsProgressCrate {
+  height: 48px !important;
+  background:
+    linear-gradient(90deg, rgba(91,52,22,0.26) 0 12%, transparent 12% 24%, rgba(91,52,22,0.18) 24% 36%, transparent 36% 48%, rgba(91,52,22,0.22) 48% 60%, transparent 60% 72%, rgba(91,52,22,0.18) 72% 84%, transparent 84%),
+    linear-gradient(180deg, #b8894e, #7b5026) !important;
+}
+
+.thingsCrateFill {
+  background:
+    linear-gradient(90deg, rgba(60, 31, 14, 0.86), rgba(86, 47, 20, 0.92)) !important;
+  box-shadow: inset -8px 0 14px rgba(32,16,7,0.22) !important;
+}
+
+.thingsProgressText {
+  gap: 2px !important;
+}
+
+.thingsProgressText strong {
+  font-size: 17px !important;
+}
+
+.thingsProgressText small {
+  font-size: 12px !important;
+}
+
+.thingsOverviewGrid {
+  gap: 12px !important;
+}
+
+.thingsOverviewGrid button {
+  min-height: 92px !important;
+  padding: 10px 16px !important;
+  grid-template-rows: auto auto 1fr !important;
+  gap: 3px !important;
+}
+
+.thingsOverviewGrid button span {
+  font-size: 20px !important;
+  line-height: 1.15 !important;
+}
+
+.thingsOverviewGrid button strong {
+  display: none !important;
+}
+
+.thingsOverviewGrid button em {
+  font-size: 13px !important;
+  margin: 0 !important;
+}
+
+.thingCaptionCount {
+  color: #1684ff !important;
+  font-size: 18px !important;
+  font-weight: 900 !important;
+}
+
+.thingsOverviewGrid button small {
+  margin-top: 2px !important;
+  grid-template-columns: 56px 1fr !important;
+  gap: 1px 10px !important;
+  font-weight: 400 !important;
+}
+
+.thingsOverviewGrid button small b,
+.thingsOverviewGrid button small i {
+  font-weight: 400 !important;
+}
+
+.thingsOverviewGrid button small b {
+  text-align: right !important;
+}
+
+.thingsOverviewGrid button small i {
+  text-align: left !important;
+}
+
+.thingsNameList.thingsOverviewTableWrap {
+  margin-top: -2px !important;
+}
+
+.thingsOverviewTableWrap h3 {
+  margin-bottom: 8px !important;
+}
+
+.thingsPanel-overview .thingsTopRight {
+  position: static !important;
+}
+
+.thingsPanel-overview .thingsCornerCat {
+  position: absolute !important;
+  right: 8.4% !important;
+  top: 100px !important;
+  width: min(118px, 11vw) !important;
+  max-height: 102px !important;
+  opacity: 0.92 !important;
+  z-index: 6 !important;
+}
+
+.thingsPanel:not(.thingsPanel-overview) .thingsTopRight {
+  position: static !important;
+}
+
+.thingsPanel:not(.thingsPanel-overview) .thingsCornerCat {
+  position: absolute !important;
+  right: 58px !important;
+  top: 146px !important;
+  width: min(128px, 12vw) !important;
+  max-height: 112px !important;
+  opacity: 0.9 !important;
+  z-index: 6 !important;
+}
+
+.thingsCornerCat-wish {
+  width: min(102px, 10vw) !important;
+  max-height: 96px !important;
+}
+
+.thingsCornerCat-memory {
+  width: min(122px, 11vw) !important;
+  max-height: 106px !important;
+}
+
+.thingsCornerCat-treasure {
+  width: min(128px, 12vw) !important;
+  max-height: 112px !important;
+}
+
+.thingsTabs {
+  margin-top: -10px !important;
+  margin-bottom: 6px !important;
+}
+
+.thingsLayout {
+  margin-top: -4px !important;
+}
+
+.thingsAddCard,
+.thingsListCard,
+.thingDetailCard {
+  padding-top: 14px !important;
+}
+
+.thingDetailPhoto {
+  height: 236px !important;
+  margin-bottom: 10px !important;
+}
+
+@media (max-width: 900px) {
+.thingsOverview {
+    grid-template-rows: auto auto minmax(0, 1fr) !important;
+  }
+.thingsOverviewGrid button {
+    min-height: 86px !important;
+    padding: 9px 10px !important;
+  }
+.thingsPanel-overview .thingsCornerCat {
+    right: 7% !important;
+    top: 160px !important;
+    width: 84px !important;
+  }
+.thingsPanel:not(.thingsPanel-overview) .thingsCornerCat {
+    right: 24px !important;
+    top: 140px !important;
+    width: 82px !important;
+  }
+}
+
+.thingsOverviewGrid button small.thingCategoryMeta {
+  width: 88px !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 1px !important;
+  justify-self: center !important;
+  margin-top: 2px !important;
+  color: #5b7891 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.28 !important;
+}
+
+.thingsOverviewGrid button small.thingCategoryMeta span {
+  display: grid !important;
+  grid-template-columns: 30px 1fr !important;
+  gap: 10px !important;
+  align-items: baseline !important;
+}
+
+.thingsOverviewGrid button small.thingCategoryMeta i,
+.thingsOverviewGrid button small.thingCategoryMeta b {
+  font-style: normal !important;
+  font-weight: 400 !important;
+  white-space: nowrap !important;
+}
+
+.thingsOverviewGrid button small.thingCategoryMeta i {
+  text-align: right !important;
+}
+
+.thingsOverviewGrid button small.thingCategoryMeta b {
+  text-align: left !important;
+}
+
+.thingsPanel-overview .thingsCornerCat {
+  top: 138px !important;
+}
+
+.thingsPanel:not(.thingsPanel-overview) .thingsCornerCat {
+  top: 86px !important;
+  right: 58px !important;
+}
+
+.thingsCornerCat-wish {
+  width: min(82px, 8vw) !important;
+  max-height: 78px !important;
+}
+
+.thingsCornerCat-treasure {
+  width: min(116px, 11vw) !important;
+  max-height: 100px !important;
+}
+
+.thingsCornerCat-memory {
+  width: min(116px, 10.5vw) !important;
+  max-height: 100px !important;
+}
+
+@media (max-width: 900px) {
+.thingsOverviewGrid button small.thingCategoryMeta {
+    width: 82px !important;
+    font-size: 11px !important;
+  }
+.thingsOverviewGrid button small.thingCategoryMeta span {
+    grid-template-columns: 28px 1fr !important;
+    gap: 7px !important;
+  }
+.thingsPanel-overview .thingsCornerCat {
+    top: 132px !important;
+  }
+.thingsPanel:not(.thingsPanel-overview) .thingsCornerCat {
+    top: 82px !important;
+    right: 22px !important;
+  }
+}
+
+.thingsOverviewGrid button {
+  min-height: var(--things-card-height) !important;
+  padding: 8px 16px 10px !important;
+  gap: 2px !important;
+  grid-template-rows: auto auto auto !important;
+  align-content: center !important;
+}
+
+.thingsOverviewGrid button span {
+  font-size: var(--things-card-title-size) !important;
+  font-weight: var(--things-card-title-weight) !important;
+  line-height: 1.12 !important;
+}
+
+.thingsOverviewGrid button em {
+  font-size: var(--things-card-caption-size) !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+}
+
+.thingCaptionCount {
+  color: #1684ff !important;
+  font-size: var(--things-card-count-size) !important;
+  font-weight: var(--things-card-count-weight) !important;
+}
+
+.thingsOverviewGrid button small,
+.thingsOverviewGrid button .thingCategoryMeta {
+  display: grid !important;
+  grid-template-columns: var(--things-card-meta-label-width) 1fr !important;
+  gap: 1px var(--things-card-meta-gap) !important;
+  align-items: baseline !important;
+  justify-content: center !important;
+  margin-top: 2px !important;
+  font-size: var(--things-card-meta-size) !important;
+  font-weight: var(--things-card-meta-weight) !important;
+  line-height: 1.1 !important;
+}
+
+.thingsOverviewGrid button .thingCategoryMeta span {
+  display: contents !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+}
+
+.thingsOverviewGrid button .thingCategoryMeta i,
+.thingsOverviewGrid button .thingCategoryMeta b {
+  font-size: inherit !important;
+  font-weight: var(--things-card-meta-weight) !important;
+  line-height: inherit !important;
+}
+
+.thingsOverviewGrid button .thingCategoryMeta i {
+  text-align: right !important;
+  font-style: normal !important;
+}
+
+.thingsOverviewGrid button .thingCategoryMeta b {
+  text-align: left !important;
+}
+
+.thingsPanel-overview .thingsCornerCat {
+  position: absolute !important;
+  top: var(--things-overview-cat-top) !important;
+  right: var(--things-overview-cat-right) !important;
+  width: var(--things-overview-cat-width) !important;
+  max-height: none !important;
+  height: auto !important;
+  opacity: 0.92 !important;
+  z-index: 6 !important;
+}
+
+.thingsPanel:not(.thingsPanel-overview) .thingsCornerCat {
+  position: absolute !important;
+  top: var(--things-page-cat-top) !important;
+  right: var(--things-page-cat-right) !important;
+  width: var(--things-page-cat-width) !important;
+  max-height: none !important;
+  height: auto !important;
+  opacity: 0.9 !important;
+  z-index: 6 !important;
+}
+
+.thingsCornerCat-wish {
+  top: var(--things-wish-cat-top) !important;
+  right: var(--things-wish-cat-right) !important;
+  width: var(--things-wish-cat-width) !important;
+}
+
+.thingsCornerCat-treasure {
+  top: var(--things-treasure-cat-top) !important;
+  right: var(--things-treasure-cat-right) !important;
+  width: var(--things-treasure-cat-width) !important;
+}
+
+.thingsCornerCat-memory {
+  top: var(--things-memory-cat-top) !important;
+  right: var(--things-memory-cat-right) !important;
+  width: var(--things-memory-cat-width) !important;
+}
+
+/* 2026-07 物馆手机版 UI 重构：主页压缩、子页浏览优先、添加记录折叠 */
+.thingsUnifiedHeader {
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr) 34px !important;
+  align-items: center !important;
+  justify-content: initial !important;
+  gap: 6px !important;
+  min-height: 42px !important;
+}
+.thingsBackBtn {
+  width: 32px !important;
+  height: 32px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #354252 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  font-size: 30px !important;
+  line-height: 1 !important;
+}
+.thingsUnifiedHeader h2 {
+  margin: 0 !important;
+  text-align: left !important;
+}
+.thingsPanel-overview .thingsUnifiedHeader h2 {
+  color: #222b35 !important;
+  text-shadow: none !important;
+}
+.thingsPanel-wish .thingsUnifiedHeader h2 { color: #1c79d5 !important; }
+.thingsPanel-treasure .thingsUnifiedHeader h2 { color: #5f7f73 !important; }
+.thingsPanel-memory .thingsUnifiedHeader h2 { color: #9a6b28 !important; }
+
+.thingsOverviewGrid {
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 10px !important;
+}
+.thingsOverviewGrid .thingOverviewButton {
+  min-height: 62px !important;
+  border: 1px solid rgba(46,132,204,0.13) !important;
+  border-radius: 18px !important;
+  padding: 8px 12px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  box-shadow: 0 8px 20px rgba(28,70,116,0.08) !important;
+  text-align: left !important;
+}
+.thingOverviewLead { min-width: 0; }
+.thingOverviewLead > span {
+  display: block;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  line-height: 1.1;
+}
+.thingOverviewLead em {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 5px;
+  font-style: normal;
+  font-size: 12px !important;
+  color: #5d7184;
+  white-space: nowrap;
+}
+.thingCaptionCount {
+  border: none;
+  background: transparent;
+  color: #1684ff !important;
+  font: inherit;
+  font-weight: 800;
+  padding: 0;
+  cursor: pointer;
+}
+.thingCategoryMeta {
+  display: grid !important;
+  gap: 4px !important;
+  justify-items: start !important;
+  width: auto !important;
+  margin: 0 !important;
+  color: #5b6e80 !important;
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+  white-space: nowrap;
+}
+
+.thingsOverview {
+  position: relative;
+  grid-template-rows: 52px 70px minmax(0, 1fr) 62px !important;
+  gap: 7px !important;
+  overflow: hidden !important;
+}
+.thingsNameList.thingsOverviewTableWrap {
+  margin-top: 0 !important;
+  padding: 10px 12px 8px !important;
+  min-height: 0;
+  overflow: auto !important;
+}
+.thingsOverviewTableWrap h3 {
+  margin: 0 0 5px !important;
+  font-size: 16px !important;
+}
+.thingsOverviewTable {
+  min-width: max-content !important;
+  width: max-content !important;
+  grid-template-columns: max-content max-content max-content max-content !important;
+}
+.thingsTableHead,
+.thingsTableCell {
+  min-height: 0 !important;
+  padding: 6px 9px !important;
+  font-size: 12px !important;
+  line-height: 1.15 !important;
+}
+.thingsTableHead { padding-top: 4px !important; padding-bottom: 4px !important; }
+.thingsValueHead small { font-size: 9px !important; }
+.thingsTableName {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  white-space: nowrap;
+}
+.thingsTableThumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: rgba(232,238,242,0.94);
+  flex: 0 0 24px;
+  font-size: 14px;
+}
+.thingsTableThumb img { width: 100%; height: 100%; object-fit: contain; }
+.thingsOverviewBottomCat {
+  position: absolute;
+  right: 16px;
+  bottom: 0;
+  width: 138px;
+  max-height: 82px;
+  object-fit: contain;
+  opacity: 0.92;
+  filter: drop-shadow(0 10px 16px rgba(0,0,0,0.14));
+  pointer-events: none;
+}
+
+.thingsSubPage { min-height: 0; position: relative; padding-bottom: 34px; }
+.thingsSubPage .thingsLayout {
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr) !important;
+  min-height: 0;
+}
+.thingsSubPage.isAdding .thingsLayout {
+  grid-template-columns: 300px minmax(220px, 280px) minmax(0, 1fr) !important;
+}
+.thingsSubPage:not(.isAdding) .thingsListCard { grid-column: 1; }
+.thingsSubPage:not(.isAdding) .thingDetailCard { grid-column: 2; }
+.thingsAddLink {
+  position: absolute;
+  left: 4px;
+  bottom: 0;
+  border: none;
+  background: transparent;
+  color: #365a76;
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 400;
+}
+.thingsAddCardHead { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.thingsAddClose {
+  border: none !important;
+  background: transparent !important;
+  color: #687686 !important;
+  padding: 0 !important;
+  font-size: 22px !important;
+}
+.thingPhotoUpload {
+  position: relative;
+  width: 92px;
+  min-height: 76px;
+  margin: 10px 0 14px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  border: none;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.48);
+  overflow: hidden;
+  cursor: pointer;
+}
+.thingPhotoUpload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.thingPhotoUpload img { width: 100%; height: 76px; object-fit: contain; background: rgba(239,243,246,0.9); }
+.thingFolderIcon { font-size: 34px; line-height: 1; }
+.thingPhotoUpload small { font-size: 11px; color: #788493; }
+.saveThingBtn { background: rgba(255,255,255,0.72) !important; color: #2a3950 !important; font-weight: 600 !important; }
+
+.thingQuietModal { position: relative; padding-top: 30px !important; }
+.thingQuietModal > button:not(.thingModalClose) { display: none !important; }
+.thingModalClose {
+  position: absolute;
+  right: 12px;
+  top: 8px;
+  width: 30px !important;
+  height: 30px;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  color: #657080 !important;
+  padding: 0 !important;
+  font-size: 22px !important;
+}
+
+@media (max-width: 900px) {
+  .thingsPanel {
+    padding: 12px 12px 10px !important;
+    gap: 6px !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+  }
+  .thingsUnifiedHeader { grid-template-columns: 32px minmax(0, 1fr) 32px !important; min-height: 40px !important; }
+  .thingsBackBtn { font-size: 28px !important; }
+  .thingsUnifiedHeader h2 { font-size: 24px !important; }
+  .thingsOverview { grid-template-rows: 50px auto minmax(0, 1fr) 58px !important; }
+  .thingsProgressLine { grid-template-columns: 112px 1fr !important; }
+  .thingsOverviewGrid { grid-template-columns: 1fr !important; gap: 7px !important; }
+  .thingsOverviewGrid .thingOverviewButton { min-height: 58px !important; padding: 7px 11px !important; }
+  .thingOverviewLead > span { font-size: 16px !important; }
+  .thingOverviewLead em { font-size: 12px !important; }
+  .thingCategoryMeta { font-size: 11px !important; }
+  .thingsOverviewTableWrap h3 { font-size: 15px !important; }
+  .thingsTableHead,
+  .thingsTableCell { padding: 5px 8px !important; font-size: 11px !important; }
+  .thingsOverviewBottomCat { width: 118px; max-height: 70px; right: 8px; }
+  .thingsSubPage { height: 100%; min-height: 0; padding-bottom: 32px; }
+  .thingsSubPage .thingsLayout,
+  .thingsSubPage.isAdding .thingsLayout {
+    grid-template-columns: 1fr !important;
+    height: 100%;
+    overflow-y: auto;
+    padding-bottom: 4px;
+  }
+  .thingsSubPage:not(.isAdding) .thingsListCard,
+  .thingsSubPage:not(.isAdding) .thingDetailCard { grid-column: auto; }
+  .thingsAddCard { order: 1; }
+  .thingsListCard { order: 2; }
+  .thingDetailCard { order: 3; }
+  .thingsAddLink { left: 2px; bottom: 0; font-size: 13px; }
+  .thingPhotoUpload { width: 84px; min-height: 70px; }
+  .thingPhotoUpload img { height: 70px; }
+}
+
+/* 2026-07 物馆 UI v3：修复新增/编辑与移动端紧凑布局 */
+.thingsBackBtn,
+.thingsUnifiedHeader .thingsBackBtn,
+.thingsPanel-overview .thingsBackBtn,
+.thingsPanel-wish .thingsBackBtn,
+.thingsPanel-treasure .thingsBackBtn,
+.thingsPanel-memory .thingsBackBtn {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.thingCaptionCount {
+  display: inline !important;
+  min-width: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 2px !important;
+  margin: 0 !important;
+  color: #089cf0 !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+}
+
+.thingsGoldPriceAbove {
+  margin: -1px 0 5px;
+  color: #758190;
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.thingsValueHead small { display: none !important; }
+
+.thingsSubPage.isAdding .thingsLayout {
+  display: block !important;
+  overflow-y: auto !important;
+}
+.thingsSubPage.isAdding .thingsAddCard {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .thingsOverview {
+    grid-template-rows: 50px auto minmax(0, 1fr) 58px !important;
+  }
+  .thingsOverviewGrid {
+    gap: 5px !important;
+  }
+  .thingsOverviewGrid .thingOverviewButton {
+    min-height: 0 !important;
+    height: 44px !important;
+    max-height: 44px !important;
+    padding: 4px 10px !important;
+    border-radius: 15px !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+  }
+  .thingOverviewLead > span {
+    font-size: 14px !important;
+    line-height: 1 !important;
+  }
+  .thingOverviewLead em {
+    margin-top: 2px !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
+  }
+  .thingCaptionCount {
+    font-size: 18px !important;
+  }
+  .thingCategoryMeta {
+    gap: 1px !important;
+    font-size: 9px !important;
+    line-height: 1.08 !important;
+  }
+  .thingsNameList.thingsOverviewTableWrap {
+    padding-top: 7px !important;
+  }
+  .thingsGoldPriceAbove {
+    font-size: 9px;
+    margin-bottom: 3px;
+  }
+  .thingsSubPage.isAdding .thingsLayout {
+    height: 100% !important;
+    display: block !important;
+  }
+  .thingsSubPage.isAdding .thingsAddCard {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+}
+
+/* 2026-07 物馆 UI v4：修复输入、总览布局、详情按钮与本地保存 */
+.thingsBackBtn,
+.thingsPanel-overview .thingsBackBtn,
+.thingsPanel-wish .thingsBackBtn,
+.thingsPanel-treasure .thingsBackBtn,
+.thingsPanel-memory .thingsBackBtn {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.thingsPanel-overview .thingsOverview {
+  padding-top: 14px !important;
+  gap: 10px !important;
+}
+
+.thingsPanel-overview .thingsProgressLine {
+  transform: scale(0.7);
+  transform-origin: left center;
+  width: 142%;
+  margin-top: 4px !important;
+  margin-bottom: 8px !important;
+}
+
+.thingsPanel-overview .thingsProgressText strong {
+  font-size: 15px !important;
+}
+
+.thingsOverviewGrid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+}
+
+.thingsOverviewGrid .thingOverviewButton {
+  min-height: 58px !important;
+  height: 58px !important;
+  border-radius: 3px !important;
+  padding: 8px 14px !important;
+  display: grid !important;
+  grid-template-columns: 92px 1fr 1.25fr 0.8fr !important;
+  align-items: center !important;
+  column-gap: 10px !important;
+  text-align: left !important;
+  overflow: hidden !important;
+}
+
+.thingCategoryTitle {
+  font-size: 17px;
+  font-weight: 800;
+  color: #233044;
+}
+
+.thingCategoryCaption,
+.thingCategoryGold,
+.thingCategoryPriceless {
+  color: #627184;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.thingCategoryGold {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  justify-self: center;
+}
+
+.thingCategoryPriceless {
+  justify-self: end;
+}
+
+.thingCaptionCount {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: #089cf0 !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+}
+
+.thingsNameList.thingsOverviewTableWrap,
+.thingsOverviewTable {
+  border-radius: 3px !important;
+}
+
+.thingsPanel-overview .thingsNameList.thingsOverviewTableWrap {
+  margin-top: 2px !important;
+}
+
+.thingsSubPage .thingsLayout {
+  align-content: end;
+}
+
+.thingsSubPage:not(.isAdding) .thingsListCard {
+  min-height: 150px !important;
+  max-height: 30vh !important;
+}
+
+.thingsSubPage:not(.isAdding) .thingDetailCard {
+  margin-top: auto !important;
+}
+
+.thingPawSeal {
+  margin-top: 8px !important;
+  padding: 8px 0 0 !important;
+  background: transparent !important;
+}
+
+.thingVisitLine {
+  margin-bottom: 2px !important;
+}
+
+.thingActionButtons {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px !important;
+  margin-top: 2px !important;
+}
+
+.thingActionButtons button,
+.thingActionButtons .deleteThingBtn {
+  width: auto !important;
+  min-width: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #536578 !important;
+  padding: 2px 0 !important;
+  margin: 0 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+.thingActionButtons .deleteThingBtn {
+  color: #9b6876 !important;
+}
+
+@media (max-width: 900px) {
+  .thingsPanel-overview .thingsOverview {
+    padding-top: 10px !important;
+  }
+
+  .thingsPanel-overview .thingsProgressLine {
+    transform: scale(0.7);
+    width: 142%;
+    margin-left: 0 !important;
+  }
+
+  .thingsOverviewGrid .thingOverviewButton {
+    grid-template-columns: 66px 0.8fr 1.35fr 0.75fr !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    padding: 7px 10px !important;
+    column-gap: 5px !important;
+  }
+
+  .thingCategoryTitle {
+    font-size: 15px;
+  }
+
+  .thingCategoryCaption,
+  .thingCategoryGold,
+  .thingCategoryPriceless {
+    font-size: 10px;
+  }
+
+  .thingCaptionCount {
+    font-size: 19px !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingsListCard {
+    max-height: 25vh !important;
+  }
+
+  .thingActionButtons {
+    gap: 12px !important;
+  }
+}
+
+/* 2026-07 物馆 v5：主页细节、操作图标、持久化配套 */
+.thingsBackBtn,
+.thingsUnifiedHeader .thingsBackBtn,
+.thingsPanel .thingsTopBar .thingsBackBtn {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.thingsPanel-overview .thingsProgressCrate span {
+  font-size: 17px !important;
+}
+
+.thingsPanel-overview .thingsProgressText strong {
+  font-size: 15px !important;
+}
+
+.thingsPanel-overview .thingsProgressText small {
+  font-size: 12px !important;
+}
+
+.thingsOverviewGrid .thingOverviewButton {
+  align-items: center !important;
+  align-content: center !important;
+}
+
+.thingsOverviewGrid .thingCategoryTitle,
+.thingsOverviewGrid .thingCategoryCaption,
+.thingsOverviewGrid .thingCategoryGold,
+.thingsOverviewGrid .thingCategoryPriceless {
+  align-self: center !important;
+  line-height: 1.15 !important;
+}
+
+.thingsOverviewGrid .thingCategoryCaption,
+.thingsOverviewGrid .thingCategoryGold,
+.thingsOverviewGrid .thingCategoryPriceless {
+  font-size: 12px !important;
+}
+
+.thingsOverviewGrid .thingCategoryCaption {
+  margin-left: -12px !important;
+}
+
+.thingsOverviewGrid .thingCategoryGold {
+  margin-left: -12px !important;
+}
+
+.thingsOverviewGrid .thingCaptionCount {
+  font-size: 23px !important;
+}
+
+.thingsOverviewBottomCat {
+  right: 3.5% !important;
+  bottom: auto !important;
+  top: 171px !important;
+  width: 105px !important;
+  max-height: 112px !important;
+  z-index: 8 !important;
+}
+
+.thingActionButtons .thingIconAction {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  padding: 2px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  color: #557080 !important;
+}
+
+.thingActionButtons .thingIconAction svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.thingActionButtons .thingIconAction.deleteThingBtn {
+  color: #9a6d78 !important;
+}
+
+@media (max-width: 900px) {
+  .thingsPanel-overview .thingsProgressCrate span {
+    font-size: 17px !important;
+  }
+
+  .thingsPanel-overview .thingsProgressText strong {
+    font-size: 20px !important;
+  }
+
+  .thingsPanel-overview .thingsProgressText small {
+    font-size: 16px !important;
+  }
+
+  .thingsOverviewGrid .thingOverviewButton {
+    grid-template-columns: 92px 96px minmax(150px, 1fr) 76px !important;
+    align-items: center !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .thingsOverviewGrid .thingCategoryCaption {
+    margin-left: -60px !important;
+  }
+
+  .thingsOverviewGrid .thingCategoryGold {
+    margin-left: -260px !important;
+  }
+
+  .thingsOverviewGrid .thingCategoryCaption,
+  .thingsOverviewGrid .thingCategoryGold,
+  .thingsOverviewGrid .thingCategoryPriceless {
+    font-size: 12px !important;
+  }
+
+  .thingsOverviewBottomCat {
+    top: -8px !important;
+    right: 4% !important;
+    width: 88px !important;
+    max-height: 96px !important;
+  }
+}
+
+/* 2026-07 物馆 v6：分类行对齐、猫图稳定、木箱数字 */
+.thingsPanel-overview .thingsProgressCrate span {
+  font-size: 19px !important;
+}
+
+.thingsOverviewGrid .thingOverviewButton {
+  display: grid !important;
+  grid-template-columns: 76px 92px auto minmax(130px, 1fr) auto !important;
+  column-gap: 10px !important;
+  align-items: center !important;
+  align-content: center !important;
+  justify-items: start !important;
+}
+
+.thingsOverviewGrid .thingCategoryTitle,
+.thingsOverviewGrid .thingCategoryCaption,
+.thingsOverviewGrid .thingCategoryCount,
+.thingsOverviewGrid .thingCategoryGold,
+.thingsOverviewGrid .thingCategoryPriceless {
+  margin: 0 !important;
+  transform: none !important;
+  align-self: center !important;
+  white-space: nowrap !important;
+}
+
+.thingsOverviewGrid .thingCategoryCount {
+  display: inline-flex !important;
+  align-items: baseline !important;
+  gap: 3px !important;
+}
+
+.thingsOverviewGrid .thingCategoryUnit {
+  color: #5b7891 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+.thingsOverviewGrid .thingCategoryGold {
+  justify-self: start !important;
+  padding-left: 18px !important;
+}
+
+.thingsOverviewGrid .thingCategoryPriceless {
+  justify-self: end !important;
+  padding-right: 6px !important;
+}
+
+.thingsOverviewBottomCat {
+  display: block !important;
+  width: 88px !important;
+  height: 96px !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  animation: none !important;
+  transition: none !important;
+  transform: translateZ(0) !important;
+  will-change: auto !important;
+  backface-visibility: hidden !important;
+}
+
+@media (max-width: 900px) {
+  .thingsPanel-overview .thingsProgressCrate span {
+    font-size: 19px !important;
+  }
+
+  .thingsOverviewGrid .thingOverviewButton {
+    grid-template-columns: 32px 34px auto minmax(130px, 1fr) auto !important;
+    column-gap: 1px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .thingsOverviewGrid .thingCategoryCaption,
+  .thingsOverviewGrid .thingCategoryGold,
+  .thingsOverviewGrid .thingCategoryPriceless,
+  .thingsOverviewGrid .thingCategoryUnit {
+    font-size: 12px !important;
+  }
+
+  .thingsOverviewGrid .thingCategoryGold {
+    padding-left: 18px !important;
+  }
+
+  .thingsOverviewGrid .thingCategoryPriceless {
+    padding-right: 0 !important;
+  }
+
+  .thingsOverviewBottomCat {
+    top: -11px !important;
+    right: 4% !important;
+    width: 88px !important;
+    height: 96px !important;
+  }
+}
+
+
+/* 2026-07 物馆 v7：使用说明与分类行最终对齐 */
+.thingsGoldPriceAbove {
+  font-size: 13px !important;
+}
+
+.thingsOverviewGrid .thingOverviewButton {
+  grid-template-columns: 58px 82px 66px minmax(118px, 1fr) 88px !important;
+  column-gap: 8px !important;
+  justify-items: start !important;
+}
+
+.thingsOverviewGrid .thingCategoryTitle,
+.thingsOverviewGrid .thingCategoryCaption,
+.thingsOverviewGrid .thingCategoryGold,
+.thingsOverviewGrid .thingCategoryPriceless {
+  justify-self: start !important;
+  padding: 0 !important;
+}
+
+.thingsOverviewGrid .thingCategoryCount {
+  width: 66px !important;
+  justify-self: center !important;
+  justify-content: center !important;
+}
+
+.thingsOverviewGrid .thingCategoryGold {
+  width: 100% !important;
+  text-align: left !important;
+}
+
+.thingsOverviewGrid .thingCategoryPriceless {
+  width: 88px !important;
+  text-align: left !important;
+}
+
+.thingsUsageLink {
+  position: absolute;
+  left: 28px;
+  bottom: 18px;
+  z-index: 12;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  color: #3f4a56;
+  padding: 2px 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.thingsPanel-info {
+  background: #ffffff !important;
+  color: #242b33 !important;
+}
+
+.thingsPanel-info .thingsUnifiedHeader {
+  border-bottom: 1px solid rgba(35, 43, 51, 0.08);
+  padding-bottom: 12px;
+}
+
+.thingsPanel-info .thingsUnifiedHeader h2 {
+  color: #242b33 !important;
+  text-shadow: none !important;
+}
+
+.thingsInfoPage {
+  min-height: 0;
+  overflow-y: auto;
+  background: #ffffff;
+  color: #242b33;
+  padding: 18px 34px 28px;
+}
+
+.thingsInfoText {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.thingsInfoText p {
+  margin: 0 0 20px;
+  color: #333a42;
+  font-size: 15px;
+  line-height: 1.85;
+  font-weight: 400;
+}
+
+.thingsInfoText p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .thingsGoldPriceAbove {
+    font-size: 10.5px !important;
+  }
+
+  .thingsOverviewGrid .thingOverviewButton {
+    grid-template-columns: 30px 28px 58px minmax(110px, 1fr) 82px !important;
+    column-gap: 5px !important;
+  }
+
+  .thingsOverviewGrid .thingCategoryCount {
+    width: 20px !important;
+  }
+
+  .thingsOverviewGrid .thingCategoryPriceless {
+    width: 82px !important;
+  }
+
+  .thingsUsageLink {
+    left: 18px;
+    bottom: 12px;
+    font-size: 12px;
+  }
+
+  .thingsInfoPage {
+    padding: 14px 26px 28px;
+  }
+
+  .thingsInfoText p {
+    font-size: 14px;
+    line-height: 1.82;
+    margin-bottom: 18px;
+  }
+}
+
+/* ======================================================
+   2026-07 物馆 90 分收尾：
+   使用说明移到右上角；底部改为愿单 / 在手 / 舍离三个文字链接。
+   ====================================================== */
+.thingsUsageLinkTop {
+  position: static !important;
+  justify-self: end !important;
+  align-self: center !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 2px 0 !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  outline: none !important;
+  color: #3f4a56 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+.thingsOverviewBottomLinks {
+  position: absolute !important;
+  left: 20% !important;
+  right: 20% !important;
+  bottom: 18px !important;
+  z-index: 12 !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  align-items: center !important;
+  justify-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.thingsOverviewBottomLinks button {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 2px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  outline: none !important;
+  color: #3f4a56 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.2 !important;
+  cursor: pointer !important;
+}
+
+@media (max-width: 900px) {
+  .thingsUsageLinkTop,
+  .thingsOverviewBottomLinks button {
+    font-size: 12px !important;
+  }
+
+  .thingsOverviewBottomLinks {
+    left: 20% !important;
+    right: 20% !important;
+    bottom: 18px !important;
+  }
+}
+
+
+/* ======================================================
+   2026-07 物馆子页移动端清单 / 浏览区优化
+   上方紧凑可滚动清单，下方浏览详情。
+   ====================================================== */
+@media (max-width: 900px) {
+  .thingsSubPage {
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+    padding-bottom: 34px;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingsLayout {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    /* 上方清单区固定增高；下方详情区占用剩余高度 */
+    grid-template-rows: 300px minmax(0, 1fr) !important;
+    gap: 3px !important;
+    margin-top: 0 !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingsListCard {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    align-self: stretch !important;
+    overflow: hidden !important;
+    padding: 10px 12px !important;
+    border-radius: 20px !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingsListHeader {
+    height: 28px;
+    min-height: 28px;
+    margin: 0 0 5px !important;
+    justify-content: flex-end !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingsListHeader span {
+    font-size: 12px !important;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingsList {
+    height: calc(100% - 33px);
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    display: block !important;
+    gap: 0 !important;
+    border: 1px solid rgba(162, 41, 117, 0.13);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.46);
+  }
+
+  .thingsSubPage:not(.isAdding) .thingListItem {
+    width: 100%;
+    min-height: 26px;
+    height: 26px;
+    display: grid !important;
+    grid-template-columns: 86px minmax(0, 1fr) !important;
+    grid-template-rows: 1fr !important;
+    gap: 2px !important;
+    align-items: center !important;
+    margin: 0 !important;
+    padding: 2px 9px !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(68, 82, 96, 0.10) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-align: left;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingListItem:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingListItem.active {
+    background: rgba(255, 230, 240, 0.72) !important;
+    box-shadow: inset 3px 0 0 rgba(162, 41, 117, 0.45) !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingListItem small,
+  .thingsSubPage:not(.isAdding) .thingListItem strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.1;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingListItem small {
+    color: #718093;
+    font-size: 11px !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingListItem strong {
+    font-size: 12px !important;
+    font-weight: 700;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingDetailCard {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    margin-top: 0 !important;
+    padding: 12px 14px 34px !important;
+    border-radius: 20px !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingDetailPhoto {
+    flex: 0 0 auto;
+    height: 176px !important;
+    margin-bottom: 8px !important;
+    border-radius: 18px !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingDetailCard h3 {
+    margin-bottom: 4px !important;
+    font-size: 19px !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingReason {
+    margin: 8px 0 10px !important;
+    line-height: 1.55 !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingPawSeal {
+    margin-top: auto !important;
+    margin-bottom: 0 !important;
+    padding: 9px 10px 7px !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingActionButtons {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+    margin-top: 10px !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingActionButtons button {
+    min-width: 0;
+    padding: 8px 5px !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingsAddLink {
+    bottom: 1px !important;
+  }
+}
+
+/* ======================================================
+   2026-07-14 物馆移动端滚动最终修正
+   1) 清单框真实增高，不再受旧 max-height / align-content 影响
+   2) 详情框独立滚动，长文字与底部操作均可查看
+   3) 物馆总览清单独立滚动
+   ====================================================== */
+@media (max-width: 900px) {
+  /* 子页本身只占标题栏以下的可用空间 */
+  .thingsPanel:not(.thingsPanel-overview) .thingsSubPage {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding-bottom: 30px !important;
+  }
+
+  /* 明确建立两行：上方清单约占可用高度 38%，下方详情吃剩余空间 */
+  .thingsPanel:not(.thingsPanel-overview) .thingsSubPage:not(.isAdding) .thingsLayout {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(248px, 38%) minmax(0, 1fr) !important;
+    align-content: stretch !important;
+    align-items: stretch !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    gap: 4px !important;
+    margin: 0 !important;
+    padding: 0 0 2px !important;
+  }
+
+  /* 上方白框真实填满第一行，解除所有旧高度限制 */
+  .thingsPanel:not(.thingsPanel-overview) .thingsSubPage:not(.isAdding) .thingsListCard {
+    grid-row: 1 !important;
+    align-self: stretch !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 9px 11px !important;
+  }
+
+  .thingsPanel:not(.thingsPanel-overview) .thingsSubPage:not(.isAdding) .thingsList {
+    height: calc(100% - 31px) !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+  }
+
+  /* 下方详情框固定在第二行，内容自行滚动 */
+  .thingsPanel:not(.thingsPanel-overview) .thingsSubPage:not(.isAdding) .thingDetailCard {
+    grid-row: 2 !important;
+    align-self: stretch !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
+    margin: 0 !important;
+    padding: 12px 14px 24px !important;
+  }
+
+  /* 不再用 margin-top:auto 把爪印和按钮强行压出滚动内容 */
+  .thingsPanel:not(.thingsPanel-overview) .thingsSubPage:not(.isAdding) .thingPawSeal {
+    margin-top: 10px !important;
+    flex: 0 0 auto !important;
+  }
+
+  .thingsPanel:not(.thingsPanel-overview) .thingsSubPage:not(.isAdding) .thingActionButtons {
+    flex: 0 0 auto !important;
+    margin-bottom: 4px !important;
+  }
+
+  /* 物馆主页：让“物馆总览”成为真正的可滚动剩余区域 */
+  .thingsPanel-overview .thingsOverview {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    grid-template-rows: auto auto minmax(0, 1fr) !important;
+    padding-bottom: 52px !important;
+  }
+
+  .thingsPanel-overview .thingsNameList.thingsOverviewTableWrap {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-x pan-y !important;
+  }
+
+  .thingsPanel-overview .thingsOverviewTable {
+    min-height: min-content !important;
+  }
+}

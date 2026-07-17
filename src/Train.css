@@ -1,0 +1,723 @@
+/* ======================================================
+   雪球 V1｜TRAIN PAGE
+   信息列车页面样式（整理版）
+   本文件只负责：信息列车背景、返回、标题、列车动画、APP使用榜、守望猫。
+   ====================================================== */
+
+/* ======================================================
+   0. 手机信息列车可调参数
+   你微调信息列车时，优先改这里。
+   ====================================================== */
+@media (max-width: 900px) {
+  :root {
+    /* 顶部返回与标题 */
+    --train-title-top: 25px;
+    --train-title-size: 24px;
+    --train-title-color: #ffffff;
+    --train-back-left: 21px;
+    --train-back-top: 22px;
+    --train-back-size: 31px;
+
+    /* 背景 */
+    --train-bg-brightness: 0.90;
+    --train-bg-saturate: 0.98;
+    --train-page-shade: linear-gradient(180deg, rgba(3,12,22,0.12), rgba(3,12,22,0.18) 58%, rgba(3,12,22,0.28));
+
+    /* 跑动列车 */
+    --train-lane-height: 5px;
+    --train-runner-height: 100px;
+    --train-runner-scale-y: 1.28;
+    --train-image-top: 20px;
+    --train-image-height: 92px;
+    --train-icon-top: 48px;
+    --train-icon-height: 30px;
+    --train-icon-size: 22px;
+    --train-icon-gap: 5px;
+    --train-meta-left: 90px;
+    --train-meta-top: 38px;
+    --train-meta-title-size: 13px;
+    --train-meta-text-size: 12px;
+
+    /* APP使用榜：整体位置与大小 */
+    --train-panel-left: 3vw;
+    --train-panel-top: 45vh;
+    --train-panel-width: min(400px, 72vw);
+    --train-panel-padding: 12px;
+    --train-panel-radius: 18px;
+    --train-panel-bg: linear-gradient(180deg, rgba(172, 185, 198, 0.23), rgba(70, 86, 102, 0.18)), rgba(12, 22, 34, 0.72);
+    --train-panel-border: rgba(192, 211, 226, 0.28);
+    --train-panel-shadow: 0 18px 46px rgba(0,0,0,0.32), inset 0 0 24px rgba(146,221,255,0.08), 0 0 28px rgba(126,215,255,0.08);
+
+    /* APP使用榜标题 */
+    --train-panel-title: "TOP10 APP 使用榜";
+    --train-panel-title-size: 15px;
+    --train-panel-title-color: rgba(153,229,255,0.94);
+
+    /* TAB */
+    --train-tab-gap: 5px;
+    --train-tab-size: 11px;
+    --train-tab-height: 26px;
+    --train-tab-color: rgba(219,231,239,0.72);
+    --train-tab-active-color: rgba(154,230,255,0.95);
+
+    /* APP使用榜表格 */
+    --train-table-bg: rgba(8, 17, 28, 0.52);
+    --train-table-border: rgba(185, 205, 220, 0.16);
+    --train-table-radius: 14px;
+    --train-table-padding-y: 4px;
+    --train-table-padding-x: 8px;
+    --train-grid-cols: minmax(0, 1.2fr) 0.72fr 0.86fr;
+    --train-grid-gap: 4px;
+    --train-header-size: 12px;
+    --train-row-size: 11px;
+    --train-row-height: 12px;
+    --train-row-line: rgba(190,210,224,0.08);
+    --train-header-color: rgba(153,229,255,0.94);
+    --train-row-color: rgba(212,225,235,0.88);
+    --train-row-key-color: rgba(158,229,255,0.82);
+    --train-total-color: rgba(160,232,255,0.94);
+
+    /* 屏幕时间详情文字 */
+    --train-detail-top: 42px;
+    --train-detail-right: 24px;
+    --train-detail-size: 13px;
+    --train-detail-color: rgba(241,223,177,0.96);
+
+    /* 守望猫 */
+    --train-cat-width: min(18vw, 92px);
+    --train-cat-right: 1vw;
+    --train-cat-bottom: 23.5vh;
+    --train-cat-opacity: 0.96;
+  }
+}
+
+/* ======================================================
+   1. 页面外壳与背景
+   ====================================================== */
+.dailySubPage.dailyTrainPage {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  z-index: 3 !important;
+}
+
+.dailyTrainPage .dailyInsightCard {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: #071524 !important;
+}
+
+.dailyTrainPage .dailyInsightBg {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  object-fit: cover !important;
+  opacity: 1 !important;
+  filter: saturate(var(--train-bg-saturate, 0.98)) brightness(var(--train-bg-brightness, 0.92)) !important;
+}
+
+.dailyTrainPage .dailyInsightContent {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  padding: 0 !important;
+  display: block !important;
+  overflow: hidden !important;
+  background: var(--train-page-shade, linear-gradient(180deg, rgba(3,12,22,0.12), rgba(3,12,22,0.18) 58%, rgba(3,12,22,0.28))) !important;
+}
+
+/* ======================================================
+   2. 顶部标题、返回、查看详情
+   ====================================================== */
+.dailyTrainPage .dailySubTop {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  height: 90px !important;
+  z-index: 20 !important;
+  margin: 0 !important;
+  pointer-events: none !important;
+}
+
+.dailyTrainPage .dailyPlainTitle {
+  position: absolute !important;
+  left: 50% !important;
+  top: var(--train-title-top, 38px) !important;
+  transform: translateX(-50%) !important;
+  margin: 0 !important;
+  color: var(--train-title-color, #fff) !important;
+  font-size: var(--train-title-size, 24px) !important;
+  font-weight: 800 !important;
+  letter-spacing: 1px !important;
+  text-shadow: 0 3px 18px rgba(0,0,0,0.62) !important;
+  white-space: nowrap !important;
+}
+
+.dailyTrainPage .dailySubActions {
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 第二个按钮原本是“返回主页”，这里视觉上改成左上角小于号 */
+.dailyTrainPage .dailySubActions button:not(.dailyTextLinkBtn) {
+  position: absolute !important;
+  left: var(--train-back-left, 21px) !important;
+  top: var(--train-back-top, 35px) !important;
+  width: 30px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  color: rgba(255,255,255,0.96) !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+  pointer-events: auto !important;
+  box-shadow: none !important;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.42) !important;
+}
+
+.dailyTrainPage .dailySubActions button:not(.dailyTextLinkBtn)::before {
+  content: "‹";
+  font-size: var(--train-back-size, 35px) !important;
+  line-height: 1 !important;
+}
+
+/* “屏幕时间详情”仍然可点击，但视觉上是文字，不是按钮 */
+.dailyTrainPage .dailyTextLinkBtn {
+  position: absolute !important;
+  right: var(--train-detail-right, 24px) !important;
+  top: var(--train-detail-top, 42px) !important;
+  width: auto !important;
+  height: auto !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--train-detail-color, rgba(241,223,177,0.96)) !important;
+  font-size: var(--train-detail-size, 13px) !important;
+  font-weight: 800 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  pointer-events: auto !important;
+  box-shadow: none !important;
+  text-shadow: 0 0 8px rgba(241,223,177,.28), 0 2px 6px rgba(0,0,0,.45) !important;
+}
+
+/* ======================================================
+   3. 列车动画
+   ====================================================== */
+.informationTrainStage {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 2 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+.informationTrainLane {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: var(--train-top) !important;
+  height: 172px !important;
+  opacity: var(--train-opacity) !important;
+}
+
+.informationTrainRunner {
+  position: absolute !important;
+  right: 0 !important;
+  top: 0 !important;
+  width: var(--train-width) !important;
+  height: 158px !important;
+  animation: none !important;
+  transition: none !important;
+  transform: translateX(0) scaleY(1.18) !important;
+  transform-origin: center center !important;
+  will-change: transform !important;
+  filter:
+    drop-shadow(0 22px 30px rgba(0,0,0,0.44))
+    drop-shadow(0 0 24px rgba(120,190,255,0.20)) !important;
+}
+
+.informationTrainStage.isRunning .informationTrainRunner {
+  transform: translateX(calc(-1 * var(--train-distance))) scaleY(1.18) !important;
+  transition: transform var(--train-duration) linear !important;
+}
+
+.informationTrainRunner::before {
+  content: "";
+  position: absolute;
+  right: calc(100% - 36px) !important;
+  top: 62px !important;
+  width: clamp(160px, calc(var(--train-width) * 0.42), 520px) !important;
+  height: 30px !important;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.24), rgba(103,196,255,0.38), transparent);
+  filter: blur(8px);
+  opacity: calc(var(--train-opacity) * 0.82) !important;
+}
+
+.informationTrainImage {
+  position: absolute !important;
+  inset: auto 0 auto 0 !important;
+  top: 18px !important;
+  width: 100% !important;
+  height: 150px !important;
+  object-fit: fill !important;
+  border-radius: 999px !important;
+}
+
+.informationTrainIcons {
+  position: absolute !important;
+  left: 30% !important;
+  right: 12% !important;
+  top: 64px !important;
+  height: 45px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  overflow: hidden !important;
+}
+
+.informationTrainIcons img,
+.informationTrainIcons span {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,0.92) !important;
+  border: 1px solid rgba(255,255,255,0.66) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.28), 0 0 10px rgba(255,255,255,0.22) !important;
+}
+
+.informationTrainIcons img {
+  object-fit: cover !important;
+}
+
+.informationTrainIcons span {
+  display: grid !important;
+  place-items: center !important;
+  color: #162033 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+
+.informationTrainMeta {
+  position: absolute !important;
+  left: var(--train-meta-left, 90px) !important;
+  top: var(--train-meta-top, 60px) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  color: white !important;
+  opacity: 0.95 !important;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.72) !important;
+  white-space: nowrap !important;
+}
+
+.informationTrainMeta strong {
+  font-size: var(--train-meta-title-size, 13px) !important;
+}
+
+.informationTrainMeta span {
+  font-size: var(--train-meta-text-size, 12px) !important;
+  color: rgba(255,255,255,0.86) !important;
+}
+
+@media (max-width: 900px) {
+  .informationTrainLane {
+    height: var(--train-lane-height, 118px) !important;
+  }
+
+  .informationTrainRunner {
+    height: var(--train-runner-height, 300px) !important;
+    transform: translateX(0) scaleY(var(--train-runner-scale-y, 1.28)) !important;
+  }
+
+  .informationTrainStage.isRunning .informationTrainRunner {
+    transform: translateX(calc(-1 * var(--train-distance))) scaleY(var(--train-runner-scale-y, 1.28)) !important;
+  }
+
+  .informationTrainImage {
+    top: var(--train-image-top, 20px) !important;
+    height: var(--train-image-height, 92px) !important;
+  }
+
+  .informationTrainIcons {
+    top: var(--train-icon-top, 49px) !important;
+    height: var(--train-icon-height, 3px) !important;
+    gap: var(--train-icon-gap, 5px) !important;
+  }
+
+  .informationTrainIcons img,
+  .informationTrainIcons span {
+    width: var(--train-icon-size, 20px) !important;
+    height: var(--train-icon-size, 20px) !important;
+    min-width: var(--train-icon-size, 20px) !important;
+  }
+}
+
+/* ======================================================
+   4. APP 使用榜电子屏
+   ====================================================== */
+.dailyTrainPage .trainCornerTable {
+  position: absolute !important;
+  z-index: 7 !important;
+  left: 4vw !important;
+  top: 15vh !important;
+  bottom: auto !important;
+  width: min(430px, 50vw) !important;
+  padding: 14px !important;
+  border-radius: 18px !important;
+  display: grid !important;
+  gap: 8px !important;
+  background:
+    linear-gradient(180deg, rgba(172,185,198,0.23), rgba(70,86,102,0.18)),
+    rgba(12,22,34,0.72) !important;
+  border: 1px solid rgba(192,211,226,0.28) !important;
+  box-shadow:
+    0 18px 46px rgba(0,0,0,0.32),
+    inset 0 0 24px rgba(146,221,255,0.08),
+    0 0 28px rgba(126,215,255,0.08) !important;
+  backdrop-filter: blur(8px) !important;
+  color: rgba(212,225,235,0.88) !important;
+  font-family: "Consolas", "Courier New", "Microsoft YaHei", monospace !important;
+}
+
+.dailyTrainPage .trainCornerTable::before {
+  display: none !important;
+  content: none !important;
+}
+
+.trainCornerTable .dailyRangeTabs {
+  position: relative !important;
+  z-index: 1 !important;
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+  margin: 0 0 -6px !important;
+}
+
+.trainCornerTable .dailyRangeTabs button {
+  min-height: 26px !important;
+  padding: 4px 5px !important;
+  border-radius: 999px !important;
+  background: rgba(189,202,213,0.14) !important;
+  color: rgba(219,231,239,0.72) !important;
+  border: 1px solid rgba(188,210,226,0.18) !important;
+  font-size: 11px !important;
+  letter-spacing: 0 !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+.trainCornerTable .dailyRangeTabs button.active {
+  background: rgba(128,211,255,0.16) !important;
+  color: rgba(154,230,255,0.95) !important;
+  border-color: rgba(147,224,255,0.42) !important;
+  box-shadow: 0 0 14px rgba(126,219,255,0.12) !important;
+  text-shadow: 0 0 10px rgba(126,219,255,0.22) !important;
+}
+
+.trainLedTable {
+  position: relative !important;
+  z-index: 1 !important;
+  background: rgba(8,17,28,0.52) !important;
+  border: 1px solid rgba(185,205,220,0.16) !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  padding: 8px 10px !important;
+}
+
+.trainLedHeader,
+.trainLedRow {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.35fr) 0.75fr 0.92fr !important;
+  align-items: center !important;
+  gap: 8px !important;
+  text-align: center !important;
+}
+
+.trainLedHeader {
+  padding: 7px 0 8px !important;
+  border-bottom: 1px solid rgba(153,220,255,0.22) !important;
+  color: rgba(153,229,255,0.94) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.5px !important;
+  text-shadow: 0 0 11px rgba(128,221,255,0.24) !important;
+}
+
+.trainLedHeader span,
+.trainLedHeader strong,
+.trainLedHeader em {
+  font-style: normal !important;
+  font-weight: 700 !important;
+}
+
+.trainLedRow {
+  min-height: 27px !important;
+  padding: 4px 0 !important;
+  border-bottom: 1px solid rgba(190,210,224,0.08) !important;
+  font-size: 13px !important;
+}
+
+.trainLedRow span,
+.trainLedRow strong,
+.trainLedRow em {
+  color: rgba(212,225,235,0.88) !important;
+  font-weight: 650 !important;
+  text-shadow: none !important;
+  text-align: center !important;
+}
+
+.trainLedRow span {
+  color: rgba(224,234,242,0.9) !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+
+.trainLedRow span b {
+  display: inline-block !important;
+  min-width: 20px !important;
+  margin-right: 5px !important;
+  color: rgba(158,229,255,0.82) !important;
+  font-weight: 700 !important;
+}
+
+.trainLedRow strong {
+  color: rgba(147,224,255,0.92) !important;
+}
+
+.trainLedRow em {
+  color: rgba(198,213,225,0.88) !important;
+  font-style: normal !important;
+  white-space: nowrap !important;
+}
+
+.trainLedTotalRow {
+  margin-top: 6px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid rgba(153,220,255,0.22) !important;
+  border-bottom: none !important;
+}
+
+.trainLedTotalRow span,
+.trainLedTotalRow strong,
+.trainLedTotalRow em {
+  color: rgba(160,232,255,0.94) !important;
+  font-weight: 760 !important;
+}
+
+.trainLedEmpty {
+  padding: 18px 0 8px;
+  color: rgba(180,226,244,0.72) !important;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .dailyTrainPage .trainCornerTable {
+    left: var(--train-panel-left, 4vw) !important;
+    top: var(--train-panel-top, 15vh) !important;
+    width: var(--train-panel-width, min(430px, 72vw)) !important;
+    padding: var(--train-panel-padding, 12px) !important;
+    border-radius: var(--train-panel-radius, 18px) !important;
+    background: var(--train-panel-bg) !important;
+    border-color: var(--train-panel-border, rgba(192,211,226,0.28)) !important;
+    box-shadow: var(--train-panel-shadow) !important;
+  }
+
+  .dailyTrainPage .trainCornerTable::before {
+    font-size: var(--train-panel-title-size, 15px) !important;
+    color: var(--train-panel-title-color, rgba(153,229,255,0.94)) !important;
+  }
+
+  .trainCornerTable .dailyRangeTabs {
+    gap: var(--train-tab-gap, 5px) !important;
+  }
+
+  .trainCornerTable .dailyRangeTabs button {
+    min-height: var(--train-tab-height, 26px) !important;
+    font-size: var(--train-tab-size, 11px) !important;
+    color: var(--train-tab-color, rgba(219,231,239,0.72)) !important;
+  }
+
+  .trainCornerTable .dailyRangeTabs button.active {
+    color: var(--train-tab-active-color, rgba(154,230,255,0.95)) !important;
+  }
+
+  .trainLedTable {
+    background: var(--train-table-bg, rgba(8,17,28,0.52)) !important;
+    border-color: var(--train-table-border, rgba(185,205,220,0.16)) !important;
+    border-radius: var(--train-table-radius, 14px) !important;
+    padding: var(--train-table-padding-y, 8px) var(--train-table-padding-x, 10px) !important;
+  }
+
+  .trainLedHeader,
+  .trainLedRow {
+    grid-template-columns: var(--train-grid-cols, minmax(0, 1.2fr) 0.72fr 0.86fr) !important;
+    gap: var(--train-grid-gap, 5px) !important;
+  }
+
+  .trainLedHeader {
+    font-size: var(--train-header-size, 12px) !important;
+    color: var(--train-header-color, rgba(153,229,255,0.94)) !important;
+  }
+
+  .trainLedRow {
+    font-size: var(--train-row-size, 11px) !important;
+    min-height: var(--train-row-height, 27px) !important;
+    border-bottom-color: var(--train-row-line, rgba(190,210,224,0.08)) !important;
+  }
+
+  .trainLedRow span,
+  .trainLedRow strong,
+  .trainLedRow em {
+    color: var(--train-row-color, rgba(212,225,235,0.88)) !important;
+  }
+
+  .trainLedRow span b {
+    color: var(--train-row-key-color, rgba(158,229,255,0.82)) !important;
+  }
+
+  .trainLedTotalRow span,
+  .trainLedTotalRow strong,
+  .trainLedTotalRow em {
+    color: var(--train-total-color, rgba(160,232,255,0.94)) !important;
+  }
+}
+
+/* ======================================================
+   5. 守望猫
+   ====================================================== */
+.dailyInsightCat {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  object-fit: contain;
+  filter: drop-shadow(0 22px 34px rgba(0,0,0,0.35));
+}
+
+.dailyTrainPage .trainInsightCat {
+  z-index: 6 !important;
+  right: 6vw !important;
+  bottom: 6vh !important;
+  width: min(18vw, 92px) !important;
+  max-height: 34vh !important;
+  opacity: 0.96;
+  filter: drop-shadow(0 18px 22px rgba(0,0,0,0.42)) !important;
+}
+
+@media (max-width: 900px) {
+  .dailyTrainPage .trainInsightCat {
+    width: var(--train-cat-width, min(18vw, 92px)) !important;
+    right: var(--train-cat-right, 6vw) !important;
+    bottom: var(--train-cat-bottom, 6vh) !important;
+    opacity: var(--train-cat-opacity, 0.96) !important;
+  }
+}
+
+/* ======================================================
+   6. 旧版静态列车条（保留兼容，不影响当前动画）
+   ====================================================== */
+.trainTracks {
+  align-self: center;
+  display: grid;
+  gap: 18px;
+  padding: 28px 8px 16px;
+}
+
+.trainLine {
+  display: grid;
+  grid-template-columns: 68px minmax(0,1fr) 74px;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+
+.trainLabel,
+.trainNumber {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.trainCar {
+  height: 24px;
+  min-width: 48px;
+  border-radius: 8px 18px 18px 8px;
+  box-shadow: inset 0 3px 8px rgba(255,255,255,0.24), 0 8px 18px rgba(0,0,0,0.22);
+}
+
+.train-gold .trainCar { background: linear-gradient(90deg, #b88a28, #ffd980); }
+.train-red .trainCar { background: linear-gradient(90deg, #a53035, #ff6d6d); }
+.train-blue .trainCar { background: linear-gradient(90deg, #256ec7, #75c6ff); }
+.train-silver .trainCar { background: linear-gradient(90deg, #8f98a8, #e8edf4); }
+
+
+/* 2026-07 列车电子屏：五个 TAB 压缩并把“详情”放到同一行 */
+.trainRangeToolbar {
+  display: grid !important;
+  grid-template-columns: minmax(0, 4fr) auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  margin: 0 0 -6px !important;
+}
+
+.trainRangeToolbar .trainRangeTabs,
+.trainRangeToolbar .dailyRangeTabs {
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  gap: 4px !important;
+}
+
+.trainRangeToolbar .trainRangeTabs button,
+.trainRangeToolbar .dailyRangeTabs button {
+  min-width: 0 !important;
+  padding-left: 3px !important;
+  padding-right: 3px !important;
+}
+
+.trainInlineDetailLink {
+  width: auto !important;
+  min-width: 28px !important;
+  height: var(--train-tab-height, 26px) !important;
+  margin: 0 !important;
+  padding: 0 1px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--train-detail-color, rgba(241,223,177,0.96)) !important;
+  font-size: var(--train-tab-size, 11px) !important;
+  font-weight: 800 !important;
+  line-height: var(--train-tab-height, 26px) !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+  text-shadow: 0 0 8px rgba(241,223,177,.28), 0 2px 6px rgba(0,0,0,.45) !important;
+}
+
+@media (max-width: 900px) {
+  .trainRangeToolbar {
+    grid-template-columns: minmax(0, 4fr) 30px !important;
+    gap: 6px !important;
+  }
+}

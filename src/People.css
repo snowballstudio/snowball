@@ -1,0 +1,1736 @@
+.peopleOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10060;
+  background: rgba(238, 235, 226, 0.82);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.peoplePanel {
+  position: relative;
+  width: min(1080px, 96vw);
+  height: min(780px, 94vh);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 16% 8%, rgba(255,255,255,0.86), transparent 30%),
+    linear-gradient(135deg, rgba(246, 241, 231, 0.98), rgba(231, 239, 238, 0.96));
+  border: 1px solid rgba(74, 82, 90, 0.14);
+  box-shadow: 0 28px 80px rgba(35, 42, 50, 0.24);
+  color: #243047;
+  padding: 22px;
+  display: grid;
+  grid-template-rows: auto minmax(300px, 1fr) minmax(235px, 0.82fr);
+  gap: 13px;
+}
+
+.peopleTopBar {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: start;
+  gap: 10px;
+}
+
+.peopleBackBtn {
+  width: 38px;
+  height: 38px;
+  border: none;
+  background: transparent;
+  color: #2e3d4f;
+  font-size: 31px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.peopleTitleBlock {
+  text-align: center;
+}
+
+.peopleTopBar h2 {
+  margin: 0;
+  font-size: 30px;
+  color: #2e3d4f;
+}
+
+.peopleTopBar p {
+  margin: 6px auto 0;
+  max-width: 560px;
+  color: #647080;
+  line-height: 1.55;
+}
+
+.peopleMapCard,
+.peopleTableCard {
+  min-height: 0;
+  border-radius: 24px;
+  background: rgba(255,255,255,0.62);
+  border: 1px solid rgba(68, 82, 96, 0.12);
+  box-shadow: 0 16px 38px rgba(35, 42, 50, 0.1);
+  padding: 15px;
+}
+
+.peopleMapControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: #657487;
+}
+
+.peopleMapControls select,
+.peopleSortControls select,
+.peopleEditor select,
+.peopleEditor input,
+.peopleEditor textarea {
+  border: 1px solid rgba(68, 82, 96, 0.16);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.84);
+  color: #243047;
+  padding: 9px 11px;
+  font-size: 14px;
+  outline: none;
+}
+
+.peopleMapControls select {
+  min-width: 118px;
+  border-radius: 999px;
+  padding: 9px 16px;
+}
+
+.peopleMapCanvas {
+  position: relative;
+  height: calc(100% - 44px);
+  min-height: 250px;
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(64, 75, 88, 0.08), transparent 11%),
+    radial-gradient(circle at 50% 50%, rgba(95, 120, 140, 0.08), transparent 34%),
+    linear-gradient(135deg, rgba(248,250,249,0.96), rgba(226,234,235,0.9));
+}
+
+.peopleSelf {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  width: 58px;
+  height: 58px;
+  margin: -29px 0 0 -29px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #394756;
+  color: #f6efe3;
+  font-weight: 700;
+  font-size: 20px;
+  box-shadow: 0 10px 26px rgba(25, 34, 44, 0.24);
+}
+
+.peopleRing {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  border: 1px solid rgba(52, 67, 80, 0.1);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.peopleRingNear { width: 29%; height: 45%; }
+.peopleRingMiddle { width: 54%; height: 72%; }
+.peopleRingFar { width: 82%; height: 94%; }
+
+.personDot {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: #283340;
+  border: 1px solid rgba(30, 42, 55, 0.18);
+  box-shadow: 0 9px 20px rgba(38, 48, 58, 0.16);
+}
+
+.personDot span {
+  position: relative;
+  width: 42%;
+  height: 58%;
+  display: block;
+}
+
+.personDot span::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 42%;
+  height: 32%;
+  border-radius: 50%;
+  background: rgba(33, 40, 48, 0.78);
+  transform: translateX(-50%);
+}
+
+.personDot span::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 64%;
+  height: 58%;
+  border-radius: 999px 999px 8px 8px;
+  background: rgba(33, 40, 48, 0.78);
+  transform: translateX(-50%);
+}
+
+.gender-female span::before {
+  width: 54%;
+  height: 38%;
+  border-radius: 52% 52% 44% 44%;
+}
+
+.gender-female span::after {
+  width: 80%;
+  height: 54%;
+  clip-path: polygon(50% 0, 94% 100%, 6% 100%);
+  border-radius: 8px;
+}
+
+.gender-none span::after {
+  width: 58%;
+  border-radius: 18px;
+}
+
+.tone-warm.depth-0 { background: rgba(210, 106, 88, 0.12); }
+.tone-warm.depth-1 { background: rgba(210, 106, 88, 0.18); }
+.tone-warm.depth-2 { background: rgba(210, 106, 88, 0.24); }
+.tone-warm.depth-3 { background: rgba(210, 106, 88, 0.31); }
+.tone-warm.depth-4 { background: rgba(210, 106, 88, 0.38); }
+.tone-warm.depth-5 { background: rgba(210, 106, 88, 0.45); }
+.tone-warm.depth-6 { background: rgba(210, 106, 88, 0.53); }
+.tone-warm.depth-7 { background: rgba(210, 106, 88, 0.61); }
+.tone-warm.depth-8 { background: rgba(210, 106, 88, 0.70); }
+.tone-warm.depth-9 { background: rgba(210, 106, 88, 0.80); }
+.tone-warm.depth-10 { background: rgba(210, 106, 88, 0.90); }
+
+.tone-cool.depth-0 { background: rgba(93, 139, 176, 0.12); }
+.tone-cool.depth-1 { background: rgba(93, 139, 176, 0.18); }
+.tone-cool.depth-2 { background: rgba(93, 139, 176, 0.24); }
+.tone-cool.depth-3 { background: rgba(93, 139, 176, 0.31); }
+.tone-cool.depth-4 { background: rgba(93, 139, 176, 0.38); }
+.tone-cool.depth-5 { background: rgba(93, 139, 176, 0.45); }
+.tone-cool.depth-6 { background: rgba(93, 139, 176, 0.53); }
+.tone-cool.depth-7 { background: rgba(93, 139, 176, 0.61); }
+.tone-cool.depth-8 { background: rgba(93, 139, 176, 0.70); }
+.tone-cool.depth-9 { background: rgba(93, 139, 176, 0.80); }
+.tone-cool.depth-10 { background: rgba(93, 139, 176, 0.90); }
+
+.tone-neutral { background: rgba(146, 157, 153, 0.42); }
+
+.peopleTableCard {
+  overflow: hidden;
+  padding-bottom: 40px;
+}
+
+.peopleTableTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.peopleSortControls {
+  display: flex;
+  gap: 8px;
+}
+
+.peopleSortControls button,
+.peopleTableHeader button,
+.peopleActions button,
+.peopleEditorActions button {
+  border: 1px solid rgba(68, 82, 96, 0.18);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.72);
+  color: #263447;
+  padding: 9px 15px;
+  font-size: 14px;
+}
+
+.peopleTableScroll {
+  height: calc(100% - 42px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.peopleTableHeader,
+.peopleTableRow {
+  display: grid;
+  grid-template-columns: 0.95fr 0.66fr 0.82fr 0.52fr 0.94fr 0.94fr 0.86fr 0.62fr 0.62fr;
+  gap: 8px;
+  align-items: center;
+  min-width: 880px;
+}
+
+.peopleTableHeader {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(238, 243, 245, 0.96);
+  border-radius: 14px;
+  padding: 7px;
+}
+
+.peopleTableHeader button {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 5px;
+  color: #566478;
+  font-size: 13px;
+}
+
+.peopleTableRow {
+  padding: 10px 7px;
+  border-bottom: 1px solid rgba(68, 82, 96, 0.1);
+  color: #2b3a4d;
+  font-size: 14px;
+}
+
+.peopleActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.peopleActions button {
+  border: none;
+  background: transparent;
+  padding: 4px 6px;
+  color: rgba(38, 52, 71, 0.68);
+  font-size: 16px;
+}
+
+.peopleActions .delete {
+  color: rgba(112, 51, 54, 0.58);
+}
+
+.peopleEmpty {
+  margin: 18px 8px;
+  color: #6c7785;
+}
+
+.peopleBottomLinks {
+  position: absolute;
+  left: 24px;
+  bottom: 18px;
+  z-index: 10;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+
+.peopleBottomLinks button {
+  border: none;
+  background: transparent;
+  color: #344456;
+  padding: 4px 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.peopleEditorOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10070;
+  background: rgba(23, 31, 42, 0.38);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.peopleEditor {
+  width: min(520px, 94vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  border-radius: 26px;
+  background: rgba(246, 242, 234, 0.98);
+  color: #243047;
+  padding: 22px;
+  box-shadow: 0 30px 80px rgba(25, 32, 40, 0.28);
+}
+
+.peopleBirthdayEditor p {
+  margin: 0 0 14px;
+  color: #657487;
+  line-height: 1.65;
+}
+
+.peopleEditor h3 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+
+.peopleEditor label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 12px;
+  color: #39485a;
+}
+
+.peopleEditor input,
+.peopleEditor select,
+.peopleEditor textarea {
+  width: 100%;
+}
+
+.peopleEditor textarea {
+  min-height: 86px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.peopleDepthBar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(68, 82, 96, 0.14);
+  overflow: hidden;
+  margin: -5px 0 14px;
+}
+
+.peopleDepthBar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: rgba(57, 71, 86, 0.62);
+}
+
+.peopleEditorGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.peopleEditorActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.peopleEditorActions button:first-child {
+  background: #394756;
+  color: #f7efe3;
+}
+
+@media (max-width: 900px) {
+  .peopleOverlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .peoplePanel {
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+    padding: 16px 12px;
+    grid-template-rows: auto minmax(335px, 0.95fr) minmax(300px, 0.82fr);
+  }
+
+  .peopleTopBar {
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
+  }
+
+  .peopleBackBtn {
+    width: 32px;
+    height: 32px;
+    font-size: 28px;
+  }
+
+  .peopleTopBar h2 {
+    font-size: 26px;
+  }
+
+  .peopleTopBar p {
+    font-size: 13px;
+  }
+
+  .peopleMapCanvas {
+    min-height: 285px;
+  }
+
+  .peopleTableHeader,
+  .peopleTableRow {
+    min-width: 860px;
+    font-size: 12px;
+  }
+
+  .peopleBottomLinks {
+    left: 14px;
+    bottom: 12px;
+    gap: 14px;
+  }
+}
+
+/* 2026-07 人间逻辑版：历史节点、头像 ICON、多选关键词、表格备注 */
+.peoplePanel {
+  grid-template-rows: auto minmax(310px, 1fr) minmax(250px, 0.86fr);
+}
+
+.peopleMapControls {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.peopleMapLeftControls,
+.peopleMapRightControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.peopleMapRightControls {
+  justify-content: flex-end;
+}
+
+.peopleMapControls input[type="month"] {
+  width: 132px;
+  border: 1px solid rgba(68, 82, 96, 0.16);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.84);
+  color: #243047;
+  padding: 8px 10px;
+  font-size: 13px;
+  outline: none;
+}
+
+.peopleMapMonthLabel {
+  min-width: 58px;
+  color: #7a8490;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.peopleSelf {
+  font-size: 18px;
+  transition: width 0.28s ease, height 0.28s ease, margin 0.28s ease;
+}
+
+.personDot {
+  overflow: hidden;
+  transition: width 0.28s ease, height 0.28s ease, left 0.28s ease, top 0.28s ease, opacity 0.28s ease;
+}
+
+.personDot img {
+  position: absolute;
+  inset: 7% 7% 13%;
+  width: 86%;
+  height: 80%;
+  object-fit: contain;
+  opacity: 0.66;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.personDot em {
+  position: absolute;
+  left: 50%;
+  top: 49%;
+  z-index: 2;
+  max-width: 72%;
+  transform: translate(-50%, -50%);
+  color: rgba(17, 24, 32, 0.78);
+  font-size: clamp(6px, 18%, 10px);
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.72);
+  pointer-events: none;
+}
+
+.personDot span {
+  width: 42%;
+  height: 58%;
+}
+
+.peopleTableCard {
+  padding-top: 12px;
+}
+
+.peopleTableScroll {
+  height: 100%;
+}
+
+.peopleTableHeader,
+.peopleTableRow {
+  grid-template-columns: 0.85fr 0.9fr 0.85fr 0.48fr 0.82fr 0.82fr 0.78fr 0.58fr 0.48fr 1.08fr;
+  min-width: 1040px;
+}
+
+.peopleGroupHeader {
+  display: grid;
+  grid-template-columns: auto 62px;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.peopleGroupHeader button {
+  min-width: 0;
+}
+
+.peopleGroupHeader select {
+  min-width: 0;
+  width: 62px;
+  border: 1px solid rgba(68, 82, 96, 0.14);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.72);
+  color: #566478;
+  padding: 4px 3px;
+  font-size: 11px;
+  outline: none;
+}
+
+.peopleNoteCell {
+  color: rgba(43, 58, 77, 0.82);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.peopleKeywordPicker {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.58);
+  border: 1px solid rgba(68, 82, 96, 0.12);
+}
+
+.peopleKeywordPicker strong {
+  display: block;
+  margin-bottom: 7px;
+  color: #5a6675;
+  font-size: 13px;
+}
+
+.peopleKeywordButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.peopleKeywordButtons button {
+  border: 1px solid rgba(68, 82, 96, 0.13);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.68);
+  color: #405064;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.peopleKeywordButtons button.active.warm {
+  border-color: rgba(190, 105, 82, 0.38);
+  background: rgba(214, 128, 98, 0.22);
+  color: #794333;
+}
+
+.peopleKeywordButtons button.active.cool {
+  border-color: rgba(72, 126, 172, 0.34);
+  background: rgba(102, 153, 194, 0.2);
+  color: #315b7d;
+}
+
+@media (max-width: 900px) {
+  .peoplePanel {
+    grid-template-rows: auto minmax(350px, 0.98fr) minmax(310px, 0.84fr);
+  }
+
+  .peopleMapControls {
+    align-items: flex-start;
+  }
+
+  .peopleMapLeftControls,
+  .peopleMapRightControls {
+    gap: 6px;
+  }
+
+  .peopleMapRightControls select {
+    max-width: 82px;
+  }
+
+  .peopleMapControls input[type="month"] {
+    width: 112px;
+    font-size: 12px;
+  }
+
+  .peopleMapMonthLabel {
+    display: none;
+  }
+
+  .peopleTableHeader,
+  .peopleTableRow {
+    min-width: 1000px;
+    grid-template-columns: 0.8fr 0.88fr 0.78fr 0.46fr 0.76fr 0.76fr 0.76fr 0.56fr 0.46fr 1fr;
+  }
+
+  .personDot img {
+    inset: 8% 8% 14%;
+    width: 84%;
+    height: 78%;
+  }
+}
+
+
+/* 2026-07 人间图表版：6 圈、紧凑画布、橙红/幽蓝色系、轻量避让 */
+.peoplePanel {
+  width: min(1140px, 98vw);
+  height: min(800px, 96vh);
+  padding: 16px;
+  gap: 10px;
+  grid-template-rows: auto minmax(330px, 1.08fr) minmax(250px, 0.82fr);
+}
+
+.peopleMapCard {
+  border: none;
+  box-shadow: none;
+  padding: 8px 8px 10px;
+  background: rgba(255,255,255,0.34);
+}
+
+.peopleMapControls {
+  margin-bottom: 6px;
+  padding: 0 2px;
+}
+
+.peopleMapCanvas {
+  height: calc(100% - 38px);
+  min-height: 305px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(33, 45, 58, 0.045), transparent 8.5%),
+    linear-gradient(135deg, rgba(250, 251, 248, 0.92), rgba(231, 239, 238, 0.88));
+}
+
+.peopleRing {
+  border: 1px solid rgba(52, 67, 80, 0.15);
+  background: transparent;
+}
+
+.peopleRing span {
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translate(100%, -50%);
+  color: rgba(52, 64, 78, 0.38);
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.peopleRing-selfLine {
+  border-color: rgba(52, 67, 80, 0.20);
+}
+
+.peopleRing-selfLine span {
+  display: none;
+}
+
+.peopleRing-frequency:nth-of-type(2) { border-color: rgba(52, 67, 80, 0.18); }
+.peopleRing-frequency:nth-of-type(3) { border-color: rgba(52, 67, 80, 0.15); }
+.peopleRing-frequency:nth-of-type(4) { border-color: rgba(52, 67, 80, 0.13); }
+.peopleRing-frequency:nth-of-type(5) { border-color: rgba(52, 67, 80, 0.11); }
+.peopleRing-frequency:nth-of-type(6) { border-color: rgba(52, 67, 80, 0.10); }
+
+.peopleRingNear,
+.peopleRingMiddle,
+.peopleRingFar {
+  width: auto;
+  height: auto;
+}
+
+.peopleSelf {
+  background: #394756;
+  min-width: 52px;
+  min-height: 52px;
+  font-size: 17px;
+  z-index: 5;
+}
+
+.personDot {
+  z-index: 6;
+  border-width: 1px;
+  box-shadow:
+    0 10px 22px rgba(38, 48, 58, 0.12),
+    inset 0 1px 0 rgba(255,255,255,0.42);
+}
+
+.personDot img {
+  opacity: 0.54;
+  mix-blend-mode: multiply;
+}
+
+.personDot em {
+  top: 50%;
+  max-width: 70%;
+  font-size: clamp(5.5px, 17%, 9px);
+  letter-spacing: -0.2px;
+  color: rgba(18, 24, 32, 0.8);
+}
+
+.tone-warm,
+.tone-cool,
+.tone-mixed,
+.tone-neutral {
+  background-color: transparent;
+}
+
+@media (max-width: 900px) {
+  .peoplePanel {
+    height: 100vh;
+    width: 100%;
+    padding: 14px 10px;
+    grid-template-rows: auto minmax(372px, 1.02fr) minmax(305px, 0.78fr);
+  }
+
+  .peopleMapCard {
+    padding: 6px 4px 8px;
+  }
+
+  .peopleMapCanvas {
+    min-height: 336px;
+    height: calc(100% - 36px);
+  }
+
+  .peopleRing span {
+    right: -8px;
+    font-size: 10px;
+  }
+
+  .peopleSelf {
+    min-width: 46px;
+    min-height: 46px;
+    font-size: 15px;
+  }
+
+  .personDot em {
+    font-size: clamp(5px, 16%, 8px);
+  }
+}
+
+/* 2026-07 人间图 v6：均匀同圈、缩小圆圈、收紧线圈 */
+.peopleMapCanvas {
+  overflow: visible;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(33, 45, 58, 0.035), transparent 7%),
+    linear-gradient(135deg, rgba(250, 251, 248, 0.93), rgba(231, 239, 238, 0.88));
+}
+
+.peopleRing {
+  border-color: rgba(52, 67, 80, 0.12);
+}
+
+.peopleRing span {
+  right: -8px;
+  color: rgba(52, 64, 78, 0.30);
+  font-size: 10px;
+}
+
+.peopleSelf {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  font-size: 13px;
+  box-shadow: 0 8px 20px rgba(25, 34, 44, 0.20);
+}
+
+.personDot {
+  box-shadow:
+    0 7px 16px rgba(38, 48, 58, 0.10),
+    inset 0 1px 0 rgba(255,255,255,0.45);
+}
+
+.personDot img {
+  opacity: 0.48;
+}
+
+.personDot em {
+  font-size: clamp(4.8px, 16%, 8px);
+}
+
+@media (max-width: 900px) {
+  .peopleMapCanvas {
+    overflow: hidden;
+  }
+
+  .peopleRing span {
+    right: -4px;
+    font-size: 9px;
+  }
+
+  .peopleSelf {
+    font-size: 12px;
+  }
+
+  .personDot em {
+    font-size: clamp(4.5px, 15%, 7.5px);
+  }
+}
+
+/* 2026-07 人间图 v7：格式收紧、冻结首列、去线圈文字 */
+.peoplePanel {
+  width: min(1140px, 98vw);
+  height: min(800px, 96vh);
+}
+
+.peopleMapCard {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.peopleMapControls {
+  padding: 0 4px;
+}
+
+.peopleMapLeftControls select,
+.peopleMapRightControls select {
+  width: 62px !important;
+  min-width: 0 !important;
+  max-width: 62px !important;
+  padding: 8px 20px 8px 9px !important;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.peopleMapCanvas {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(33, 45, 58, 0.025), transparent 6.5%),
+    linear-gradient(135deg, rgba(250, 251, 248, 0.94), rgba(231, 239, 238, 0.88));
+}
+
+.peopleRing {
+  border-color: rgba(52, 67, 80, 0.105) !important;
+}
+
+.peopleRing span {
+  display: none !important;
+}
+
+.peopleSelf {
+  font-size: 11px !important;
+  box-shadow: 0 7px 18px rgba(25, 34, 44, 0.18);
+}
+
+.personDot em {
+  top: 50%;
+  max-width: 78%;
+  color: rgba(255, 255, 255, 0.96) !important;
+  font-size: 11px !important;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-shadow:
+    0 1px 3px rgba(0,0,0,0.56),
+    0 0 2px rgba(0,0,0,0.34) !important;
+}
+
+.peopleBottomLinks {
+  gap: 14px;
+}
+
+.peopleBottomLinks button {
+  color: #3f4a56 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  padding: 2px 0 !important;
+}
+
+.peopleTableScroll {
+  overflow: auto;
+}
+
+.peopleTableHeader,
+.peopleTableRow {
+  width: max-content;
+  min-width: 100%;
+  grid-template-columns:
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    minmax(110px, max-content) !important;
+  column-gap: 12px !important;
+}
+
+.peopleTableHeader {
+  padding: 4px 6px !important;
+  border-radius: 10px;
+}
+
+.peopleTableHeader button {
+  font-size: 12px !important;
+  padding: 3px 5px !important;
+  line-height: 1.15 !important;
+}
+
+.peopleTableRow {
+  padding: 6px 7px !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  min-height: 0 !important;
+}
+
+.peopleTableHeader > button:first-child,
+.peopleTableRow > span:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  min-width: 64px;
+  background: rgba(245, 248, 247, 0.96);
+  box-shadow: 8px 0 10px rgba(245, 248, 247, 0.82);
+}
+
+.peopleTableRow > span:first-child {
+  z-index: 4;
+  background: rgba(248, 250, 249, 0.96);
+  font-weight: 600;
+}
+
+.peopleGroupHeader {
+  grid-template-columns: max-content 56px !important;
+}
+
+.peopleGroupHeader select {
+  width: 56px !important;
+  font-size: 10px !important;
+}
+
+.peopleActions button {
+  font-size: 14px !important;
+  padding: 2px 4px !important;
+}
+
+@media (max-width: 900px) {
+  .peopleMapLeftControls select,
+  .peopleMapRightControls select {
+    width: 58px !important;
+    max-width: 58px !important;
+    padding-left: 7px !important;
+    padding-right: 18px !important;
+    font-size: 12px !important;
+  }
+
+  .peopleMapCanvas {
+    overflow: hidden;
+  }
+
+  .personDot em {
+    font-size: 10px !important;
+  }
+
+  .peopleBottomLinks button {
+    font-size: 12px !important;
+  }
+
+  .peopleTableHeader,
+  .peopleTableRow {
+    column-gap: 10px !important;
+  }
+}
+
+
+/* 2026-07 人间终版逻辑补充：素材色、昵称、见证语、说明页 */
+.peopleInfoBtn {
+  align-self: start;
+  justify-self: end;
+  border: none;
+  background: transparent;
+  color: #657487;
+  padding: 8px 0;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.peopleWitnessCat {
+  position: absolute;
+  right: 2.5%;
+  bottom: 1.5%;
+  z-index: 2;
+  width: clamp(52px, 10%, 94px);
+  height: auto;
+  object-fit: contain;
+  opacity: 0.9;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 12px rgba(35, 42, 50, 0.10));
+}
+
+.personDot {
+  background-color: transparent !important;
+  background-clip: padding-box;
+  overflow: hidden;
+  border-color: rgba(45, 55, 66, 0.12) !important;
+}
+
+.personDot img {
+  mix-blend-mode: multiply;
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+.peopleFieldHint {
+  color: #87909a;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.peopleFieldError {
+  color: #9c4f4f;
+  font-size: 11px;
+}
+
+.peopleTableHeader,
+.peopleTableRow {
+  grid-template-columns:
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    minmax(110px, max-content)
+    minmax(120px, max-content) !important;
+}
+
+.peopleWitnessCell {
+  position: relative;
+  min-width: 116px;
+}
+
+.peopleWitnessToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: #647080;
+  padding: 2px 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.peopleWitnessToggle span {
+  font-size: 10px;
+  color: #929aa4;
+}
+
+.peopleWitnessText {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  width: min(290px, 72vw);
+  max-height: 180px;
+  overflow-y: auto;
+  border-radius: 14px;
+  background: rgba(250, 250, 248, 0.98);
+  border: 1px solid rgba(68, 82, 96, 0.12);
+  box-shadow: 0 14px 32px rgba(35, 42, 50, 0.16);
+  padding: 10px 12px;
+  white-space: normal;
+}
+
+.peopleWitnessText p {
+  margin: 0 0 8px;
+  color: #3e4a58;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.peopleWitnessText p:last-child { margin-bottom: 0; }
+
+.peopleWitnessPopupOverlay,
+.peopleInfoOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(24, 31, 40, 0.30);
+  backdrop-filter: blur(6px);
+}
+
+.peopleWitnessPopup {
+  position: relative;
+  width: min(430px, 92vw);
+  border-radius: 24px;
+  background: rgba(250, 248, 243, 0.99);
+  color: #2e3948;
+  padding: 32px 24px 24px;
+  box-shadow: 0 28px 70px rgba(30, 38, 47, 0.24);
+  text-align: center;
+}
+
+.peopleWitnessPopup img {
+  width: 72px;
+  height: auto;
+  margin-bottom: 10px;
+}
+
+.peopleWitnessPopup p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
+  text-align: left;
+}
+
+.peopleWitnessClose {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: #596575;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.peopleInfoOverlay {
+  background: rgba(238, 235, 226, 0.86);
+}
+
+.peopleInfoPage {
+  width: min(560px, 94vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 24px;
+  background: #fff;
+  color: #222;
+  padding: 20px 22px 28px;
+  box-shadow: 0 24px 68px rgba(35, 42, 50, 0.18);
+}
+
+.peopleInfoHeader {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.peopleInfoHeader h3 {
+  margin: 0;
+  text-align: center;
+  font-size: 23px;
+  font-weight: 600;
+}
+
+.peopleInfoBack {
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: #222;
+  font-size: 30px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.peopleInfoBody p {
+  margin: 0 0 18px;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.peopleInfoBody p:last-child { margin-bottom: 0; }
+
+@media (max-width: 900px) {
+  .peopleWitnessCat {
+    right: 1.5%;
+    bottom: 1%;
+    width: 58px;
+  }
+
+  .peopleMapMonthLabel {
+    display: inline-block !important;
+    max-width: 128px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 11px;
+  }
+
+  .peopleInfoPage {
+    width: 100%;
+    min-height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: 20px 20px 30px;
+  }
+
+  .peopleWitnessPopup {
+    width: min(390px, 92vw);
+  }
+}
+
+
+/* 2026-07 人间微调：删除确认、冻结编辑、列宽统一、昵称外置 */
+.peopleSelf {
+  background: #7b7f84 !important;
+  color: #d6b765 !important;
+}
+
+.personDot {
+  overflow: visible !important;
+}
+
+.personDot em {
+  top: calc(100% + 3px) !important;
+  max-width: 92px !important;
+  color: #4d555d !important;
+  font-size: 10px !important;
+  font-weight: 400 !important;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.94) !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.peopleTableHeader,
+.peopleTableRow {
+  grid-template-columns:
+    104px
+    58px
+    92px
+    72px
+    42px
+    86px
+    86px
+    74px
+    56px
+    38px
+    132px
+    132px !important;
+  column-gap: 10px !important;
+}
+
+.peopleTableHeader {
+  font-weight: 700;
+}
+
+.peopleTableHeader button {
+  font-weight: 700 !important;
+}
+
+.peopleTableRow {
+  font-size: 11px !important;
+}
+
+.peopleNameCell,
+.peopleTableHeader > button:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  background: rgba(248, 250, 249, 0.98);
+  box-shadow: 8px 0 10px rgba(245, 248, 247, 0.82);
+}
+
+.peopleNameCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 104px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.peopleNameCell strong {
+  font-weight: 700;
+}
+
+.peopleInlineEdit {
+  border: none;
+  background: transparent;
+  color: rgba(61, 73, 86, 0.62);
+  padding: 0 2px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.peopleGroupHeader {
+  width: 92px;
+  grid-template-columns: 1fr 28px !important;
+  gap: 2px !important;
+}
+
+.peopleGroupHeader select {
+  width: 28px !important;
+  min-width: 28px !important;
+  padding: 3px 0 !important;
+  font-size: 0 !important;
+  color: transparent !important;
+}
+
+.peopleGroupHeader select option {
+  font-size: 11px;
+  color: #566478;
+}
+
+.peopleActions {
+  justify-content: center !important;
+}
+
+.peopleTrashBtn {
+  font-size: 13px !important;
+  opacity: 0.62;
+}
+
+.peopleDeleteOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10140;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(24, 31, 40, 0.28);
+  backdrop-filter: blur(5px);
+}
+
+.peopleDeleteDialog {
+  width: min(360px, 90vw);
+  border-radius: 20px;
+  background: rgba(250, 249, 246, 0.99);
+  color: #35404d;
+  padding: 22px;
+  box-shadow: 0 24px 64px rgba(30, 38, 47, 0.20);
+}
+
+.peopleDeleteDialog h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.peopleDeleteDialog p {
+  margin: 0;
+  color: #69737f;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.peopleDeleteActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.peopleDeleteActions button {
+  border: 1px solid rgba(68, 82, 96, 0.12);
+  border-radius: 999px;
+  background: rgba(239, 241, 241, 0.92);
+  color: #586470;
+  padding: 9px 12px;
+  font-size: 13px;
+}
+
+.peopleDeleteActions .confirm {
+  background: rgba(232, 224, 220, 0.90);
+  color: #7a5555;
+}
+
+@media (max-width: 900px) {
+  .personDot em {
+    font-size: 9px !important;
+  }
+
+  .peopleTableHeader,
+  .peopleTableRow {
+    grid-template-columns:
+      100px
+      56px
+      88px
+      70px
+      40px
+      82px
+      82px
+      72px
+      54px
+      36px
+      124px
+      124px !important;
+  }
+
+  .peopleNameCell {
+    min-width: 100px;
+  }
+
+  .peopleGroupHeader {
+    width: 88px;
+  }
+}
+
+/* 2026-07 测试版前最终微调 */
+.peopleMapRightControls {
+  position: relative;
+}
+
+.peopleChineseMonthPicker {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 7px);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(68, 82, 96, 0.14);
+  border-radius: 14px;
+  background: rgba(250, 250, 248, 0.99);
+  box-shadow: 0 12px 28px rgba(35, 42, 50, 0.14);
+  white-space: nowrap;
+}
+
+.peopleChineseMonthPicker select {
+  width: auto !important;
+  min-width: 72px !important;
+  max-width: none !important;
+  padding: 6px 22px 6px 8px !important;
+  border-radius: 10px !important;
+  font-size: 12px !important;
+}
+
+.peopleChineseMonthPicker select:nth-child(2) {
+  min-width: 58px !important;
+}
+
+.peopleChineseMonthPicker button {
+  border: 1px solid rgba(68, 82, 96, 0.14);
+  border-radius: 999px;
+  background: rgba(239, 242, 242, 0.94);
+  color: #53606d;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.peopleSelf {
+  color: #fff !important;
+}
+
+.personDot em {
+  top: calc(100% + 6px) !important;
+  color: #444d56 !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+}
+
+.peopleTableCard {
+  transform: translateY(-5px);
+  padding-top: 4px !important;
+  padding-bottom: 34px !important;
+}
+
+.peopleTableHeader {
+  top: 0;
+  z-index: 12;
+  background: rgba(219, 226, 228, 0.99) !important;
+  border-radius: 8px !important;
+  padding-top: 3px !important;
+  padding-bottom: 3px !important;
+}
+
+.peopleTableHeader > button:first-child {
+  background: rgba(219, 226, 228, 1) !important;
+  box-shadow: 8px 0 10px rgba(219, 226, 228, 0.95) !important;
+}
+
+.peopleTableRow {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  line-height: 1.08 !important;
+}
+
+.peopleGroupHeader select {
+  width: 26px !important;
+  min-width: 26px !important;
+  color: #5e6974 !important;
+  font-size: 0 !important;
+  appearance: auto;
+  background-color: rgba(245, 247, 247, 0.9) !important;
+  padding: 2px 0 !important;
+}
+
+.peopleBottomLinks {
+  bottom: 7px !important;
+}
+
+.peopleEditorActions button,
+.peopleEditorActions button:first-child {
+  border: 1px solid rgba(68, 82, 96, 0.13) !important;
+  background: rgba(255,255,255,0.76) !important;
+  color: #344152 !important;
+}
+
+.peopleTrashBtn {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 2px !important;
+  opacity: 0.72;
+}
+
+.peopleTrashBtn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.peopleEditor input::placeholder,
+.peopleEditor textarea::placeholder {
+  color: rgba(82, 92, 102, 0.36);
+}
+
+@media (max-width: 900px) {
+  .peopleMapMonthLabel {
+    max-width: 96px !important;
+    font-size: 11px !important;
+  }
+
+  .peopleChineseMonthPicker {
+    right: -2px;
+    max-width: calc(100vw - 24px);
+  }
+
+  .peopleTableCard {
+    transform: translateY(-4px);
+  }
+
+  .peopleBottomLinks {
+    bottom: 5px !important;
+  }
+}
+
+
+/* 人间图：人物仅沿所属圆周轻移，松手后保存角度 */
+.personDot {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+
+.personDot.isDragging {
+  cursor: grabbing;
+  z-index: 12;
+  transition: none !important;
+  box-shadow:
+    0 10px 24px rgba(38, 48, 58, 0.18),
+    0 0 0 3px rgba(255,255,255,0.58);
+}
+
+.peopleDragTip {
+  color: rgba(63, 74, 86, 0.72);
+  font-size: 11px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .peopleBottomLinks {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+
+  .peopleDragTip {
+    font-size: 11px;
+  }
+}
+
+
+/* V10｜人间年月逻辑与手机版底部操作区调整 */
+.peopleInitialDatePrompt {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(78%, 360px);
+  color: rgba(74, 86, 98, 0.76);
+  font-size: 13px;
+  line-height: 1.65;
+  text-align: center;
+}
+
+.peopleBottomLinks {
+  left: 42px !important;
+  bottom: 2px !important;
+  transform: translateY(5px);
+}
+
+.peopleMapCard,
+.peopleTableCard {
+  transform: translateY(-12px) !important;
+}
+
+.peoplePanel {
+  grid-template-rows: auto minmax(300px, 1fr) minmax(235px, 0.82fr);
+  padding-bottom: 13px !important;
+}
+
+@media (max-width: 900px) {
+  .peoplePanel {
+    height: min(800px, 96vh) !important;
+    gap: 8px !important;
+  }
+  .peopleMapCard,
+  .peopleTableCard {
+    transform: translateY(-10px) !important;
+  }
+  .peopleBottomLinks {
+    left: 34px !important;
+    bottom: 0 !important;
+    transform: translateY(4px);
+  }
+}
+
+/* V98：人间设置改为可直接输入年月，避免在手机日期选择器中逐月翻动。 */
+.peopleBirthdayEditor input[type="text"] {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.peopleBirthdayEditor input::placeholder {
+  color: rgba(57, 72, 90, 0.46);
+  opacity: 1;
+}

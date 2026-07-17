@@ -1,0 +1,527 @@
+/* ======================================================
+   雪球 V1｜NUTRITION PAGE
+   营养光谱页面样式（独立整理版）
+   以后微调彩虹页，优先改这个文件。
+   ====================================================== */
+
+/* ======================================================
+   0. 手机营养页可调参数
+   你微调彩虹页时，优先改这里。
+   ====================================================== */
+@media (max-width: 900px) {
+  :root {
+    /* 顶部标题 */
+    --nutrition-title-top: 40px;
+    --nutrition-title-size: 25px;
+    --nutrition-back-left: 21px;
+    --nutrition-back-top: 36px;
+    --nutrition-back-size: 35px;
+
+    /* 页面背景 */
+    --nutrition-page-inset-x: 18px;
+    --nutrition-card-height: 100dvh;
+    --nutrition-bg-brightness: 0.92;
+    --nutrition-bg-saturate: 0.93;
+
+    /* 彩虹整体 */
+    --nutrition-rainbow-top: 130px;
+    --nutrition-rainbow-left: 48%;
+    --nutrition-rainbow-scale: 0.58;
+    --nutrition-rainbow-radius: 999px;
+    --nutrition-rainbow-dim-color: rgba(178, 184, 190, 0.58);
+    --nutrition-rainbow-empty-color: transparent;
+    --nutrition-rainbow-empty-opacity: 0;
+
+    /* 彩虹五条弧线：宽高和线宽 */
+    --nutrition-arc1-w: 620px;
+    --nutrition-arc1-h: 310px;
+    --nutrition-arc1-b: 22px;
+    --nutrition-arc2-w: 555px;
+    --nutrition-arc2-h: 278px;
+    --nutrition-arc2-b: 20px;
+    --nutrition-arc3-w: 495px;
+    --nutrition-arc3-h: 248px;
+    --nutrition-arc3-b: 18px;
+    --nutrition-arc4-w: 442px;
+    --nutrition-arc4-h: 221px;
+    --nutrition-arc4-b: 16px;
+    --nutrition-arc5-w: 396px;
+    --nutrition-arc5-h: 198px;
+    --nutrition-arc5-b: 14px;
+
+    /* 彩虹左侧标签（已经独立于彩虹缩放，直接按屏幕位置调） */
+    --nutrition-label-left: 25px;
+    --nutrition-label-top: 190px;
+    --nutrition-label-gap: 24px;
+    --nutrition-label-size: 10px;
+    --nutrition-label-tilt: -8deg;
+    --nutrition-label-bg: rgba(0,0,0,0.24);
+    --nutrition-label-color: rgba(255,255,255,0.96);
+
+    /* 云朵提示（位置不要动时，只改文字参数） */
+    --nutrition-cloud-top: 5px;
+    --nutrition-cloud-left: 50%;
+    --nutrition-cloud-offset-x: -50%;
+    --nutrition-cloud-offset-y: 280px;
+    --nutrition-cloud-width: 210px;
+    --nutrition-cloud-text-size: 12px;
+    --nutrition-cloud-text-width: 70%;
+    --nutrition-cloud-text-top: 58%;
+   --nutrition-cloud-text-color: #ffffff;
+    --nutrition-cloud-text-weight: 800;
+    --nutrition-cloud-text-line: 1.35;
+    --nutrition-cloud-text-shadow: 0 0 7px rgba(255, 255, 255, 0.144), 0 2px 7px rgba(0,0,0,.46);
+
+    /* 表格和TAB */
+    --nutrition-table-top: 480px;
+    --nutrition-table-left: 50%;
+    --nutrition-table-width: calc(100vw - 56px);
+    --nutrition-table-bg: rgba(72, 76, 79, 0.84);
+    --nutrition-table-radius: 18px;
+    --nutrition-table-border: rgba(255,255,255,.12);
+    --nutrition-table-line: rgba(255,255,255,.10);
+    --nutrition-table-padding-x: 12px;
+    --nutrition-table-col-gap: 8px;
+
+    --nutrition-tab-gap: 19px;
+    --nutrition-tab-size: 12px;
+    --nutrition-detail-left-gap: 16px;
+
+    --nutrition-row-height: 35px;
+    --nutrition-col-1: 0.58fr;
+    --nutrition-col-2: 0.86fr;
+    --nutrition-col-3: 1.72fr;
+    --nutrition-row-label-size: 12px;
+    --nutrition-row-value-size: 13px;
+    --nutrition-row-food-size: 13px;
+    --nutrition-row-value-color: #fff8d8;
+    --nutrition-row-food-color: rgba(255,255,255,.84);
+
+    /* 猫和动图 */
+    --nutrition-cat-width: 118px;
+    --nutrition-cat-left: 70px;
+    --nutrition-cat-bottom: 13px;
+    --nutrition-motion-width: 118px;
+  }
+}
+
+/* ======================================================
+   1. 页面结构
+   ====================================================== */
+.dailyNutritionPage {
+  position: relative;
+}
+
+@media (max-width: 900px) {
+  .dailyNutritionPage {
+    width: 100vw !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .dailyNutritionPage .nutritionSpectrumCard {
+    position: fixed !important;
+    inset: 0 var(--nutrition-page-inset-x) !important;
+    height: var(--nutrition-card-height) !important;
+    min-height: var(--nutrition-card-height) !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .dailyNutritionPage .nutritionBg,
+  .dailyNutritionPage .dailyInsightBg {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    filter: brightness(var(--nutrition-bg-brightness)) saturate(var(--nutrition-bg-saturate)) !important;
+  }
+
+  .dailyNutritionPage .nutritionInsightContent,
+  .dailyNutritionPage .dailyInsightContent {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 2 !important;
+  }
+}
+
+/* ======================================================
+   2. 顶部标题与返回
+   ====================================================== */
+@media (max-width: 900px) {
+  .dailyNutritionPage .nutritionSubTop {
+    position: fixed !important;
+    left: var(--nutrition-page-inset-x) !important;
+    right: var(--nutrition-page-inset-x) !important;
+    top: 0 !important;
+    height: 86px !important;
+    z-index: 8 !important;
+    display: block !important;
+    pointer-events: none !important;
+  }
+
+  .dailyNutritionPage .nutritionTitle,
+  .dailyNutritionPage .dailyPlainTitle {
+    position: absolute !important;
+    left: 50% !important;
+    top: var(--nutrition-title-top) !important;
+    transform: translateX(-50%) !important;
+    margin: 0 !important;
+    color: #fff !important;
+    font-size: var(--nutrition-title-size) !important;
+    font-weight: 800 !important;
+    letter-spacing: 1px !important;
+    text-shadow: 0 3px 14px rgba(0,0,0,.42) !important;
+    white-space: nowrap !important;
+  }
+
+  .dailyNutritionPage .nutritionBackBtn {
+    position: absolute !important;
+    left: var(--nutrition-back-left) !important;
+    top: var(--nutrition-back-top) !important;
+    width: 30px !important;
+    height: 40px !important;
+    border: none !important;
+    background: transparent !important;
+    color: rgba(255,255,255,.96) !important;
+    font-size: var(--nutrition-back-size) !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    pointer-events: auto !important;
+    text-shadow: 0 2px 10px rgba(0,0,0,.42) !important;
+  }
+}
+
+/* ======================================================
+   3. 彩虹
+   ====================================================== */
+.rainbowSpectrum {
+  position: absolute;
+  pointer-events: none;
+}
+
+.rainbowArc {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  border-style: solid;
+  border-bottom: 0 !important;
+  border-left-color: transparent !important;
+  border-right-color: transparent !important;
+  border-radius: var(--nutrition-rainbow-radius) var(--nutrition-rainbow-radius) 0 0;
+  opacity: .96;
+}
+
+.rainbowArc.dim {
+  opacity: .42;
+  filter: grayscale(.18);
+}
+
+.rainbowArc.empty {
+  border-color: transparent !important;
+  opacity: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .dailyNutritionPage .rainbowSpectrum {
+    left: var(--nutrition-rainbow-left) !important;
+    top: var(--nutrition-rainbow-top) !important;
+    width: 620px !important;
+    height: 320px !important;
+    transform: translateX(-50%) scale(var(--nutrition-rainbow-scale)) !important;
+    transform-origin: top center !important;
+    overflow: visible !important;
+  }
+
+  .dailyNutritionPage .rainbowArcLayer {
+    position: absolute !important;
+    inset: 0 !important;
+    clip-path: inset(0 calc(100% - var(--rainbow-visible, 100%)) 0 0) !important;
+  }
+
+  .dailyNutritionPage .rainbowArc1 { width: var(--nutrition-arc1-w) !important; height: var(--nutrition-arc1-h) !important; border-width: var(--nutrition-arc1-b) !important; border-color: rgba(200,80,80,.90) !important; }
+  .dailyNutritionPage .rainbowArc2 { width: var(--nutrition-arc2-w) !important; height: var(--nutrition-arc2-h) !important; border-width: var(--nutrition-arc2-b) !important; border-color: rgba(236, 194, 86, 0.7) !important; }
+  .dailyNutritionPage .rainbowArc3 { width: var(--nutrition-arc3-w) !important; height: var(--nutrition-arc3-h) !important; border-width: var(--nutrition-arc3-b) !important; border-color: rgba(67, 204, 131, 0.68) !important; }
+  .dailyNutritionPage .rainbowArc4 { width: var(--nutrition-arc4-w) !important; height: var(--nutrition-arc4-h) !important; border-width: var(--nutrition-arc4-b) !important; border-color: rgba(29, 119, 209, 0.66) !important; }
+  .dailyNutritionPage .rainbowArc5 { width: var(--nutrition-arc5-w) !important; height: var(--nutrition-arc5-h) !important; border-width: var(--nutrition-arc5-b) !important; border-color: rgba(178, 105, 202, 0.62) !important; }
+
+  /* 拆分后恢复营养不足的颜色逻辑：
+     filled = 原彩色；dim(<2种) = 灰色；empty(=0) = 更淡并显示空缺感。 */
+  .dailyNutritionPage .rainbowArc.dim {
+    border-color: var(--nutrition-rainbow-dim-color) !important;
+    opacity: 0.66 !important;
+    filter: grayscale(1) saturate(0.15) brightness(1.08) !important;
+  }
+
+  .dailyNutritionPage .rainbowArc.empty {
+    border-color: var(--nutrition-rainbow-empty-color) !important;
+    opacity: var(--nutrition-rainbow-empty-opacity) !important;
+    filter: grayscale(1) saturate(0) brightness(1.05) !important;
+  }
+}
+
+/* ======================================================
+   4. 彩虹左侧标签
+   ====================================================== */
+.rainbowLabelStack {
+  position: absolute;
+  pointer-events: none;
+}
+
+.rainbowBandLabel {
+  position: absolute;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 8px;
+  color: rgba(255,255,255,.94);
+  background: rgba(0,0,0,.24);
+  font-weight: 700;
+  line-height: 1.1;
+  text-shadow: 0 2px 6px rgba(0,0,0,.55);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .dailyNutritionPage .rainbowLabelStack {
+    position: absolute !important;
+    left: var(--nutrition-label-left) !important;
+    top: var(--nutrition-label-top) !important;
+    width: 140px !important;
+    height: 145px !important;
+    transform: rotate(var(--nutrition-label-tilt)) !important;
+    transform-origin: left top !important;
+    z-index: 30 !important;
+    overflow: visible !important;
+  }
+
+  .dailyNutritionPage .rainbowBandLabel {
+    font-size: var(--nutrition-label-size) !important;
+    color: var(--nutrition-label-color) !important;
+    background: var(--nutrition-label-bg) !important;
+  }
+
+  .dailyNutritionPage .rainbowBandLabel1 { top: calc(var(--nutrition-label-gap) * 0) !important; }
+  .dailyNutritionPage .rainbowBandLabel2 { top: calc(var(--nutrition-label-gap) * 1) !important; }
+  .dailyNutritionPage .rainbowBandLabel3 { top: calc(var(--nutrition-label-gap) * 2) !important; }
+  .dailyNutritionPage .rainbowBandLabel4 { top: calc(var(--nutrition-label-gap) * 3) !important; }
+  .dailyNutritionPage .rainbowBandLabel5 { top: calc(var(--nutrition-label-gap) * 4) !important; }
+}
+
+/* ======================================================
+   5. 云朵提示
+   ====================================================== */
+.nutritionCloudNote {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.nutritionCloudNote img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 8px 14px rgba(0,0,0,.28));
+}
+
+.nutritionCloudNote span {
+  position: absolute;
+  left: 50%;
+  top: var(--nutrition-cloud-text-top);
+  transform: translate(-50%, -50%);
+  width: var(--nutrition-cloud-text-width);
+  text-align: center;
+  font-weight: var(--nutrition-cloud-text-weight);
+  line-height: var(--nutrition-cloud-text-line);
+  color: var(--nutrition-cloud-text-color);
+  text-shadow: var(--nutrition-cloud-text-shadow);
+}
+
+@media (max-width: 900px) {
+  .dailyNutritionPage .nutritionCloudNote {
+    left: var(--nutrition-cloud-left) !important;
+    top: var(--nutrition-cloud-top) !important;
+    width: var(--nutrition-cloud-width) !important;
+    transform:
+      translateX(var(--nutrition-cloud-offset-x))
+      translateY(var(--nutrition-cloud-offset-y)) !important;
+  }
+
+  .dailyNutritionPage .nutritionCloudNote span {
+    left: 50% !important;
+    top: var(--nutrition-cloud-text-top) !important;
+    transform: translate(-50%, -50%) !important;
+    width: var(--nutrition-cloud-text-width) !important;
+    color: var(--nutrition-cloud-text-color) !important;
+    font-size: var(--nutrition-cloud-text-size) !important;
+    font-weight: var(--nutrition-cloud-text-weight) !important;
+    line-height: var(--nutrition-cloud-text-line) !important;
+    text-shadow: var(--nutrition-cloud-text-shadow) !important;
+  }
+}
+
+/* ======================================================
+   6. TAB + 饮食详情
+   ====================================================== */
+@media (max-width: 900px) {
+  .dailyNutritionPage .nutritionTableNavLine {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: var(--nutrition-detail-left-gap) !important;
+    width: 100% !important;
+    padding: 0 4px 6px !important;
+  }
+
+  .dailyNutritionPage .nutritionRangeTabs,
+  .dailyNutritionPage .dailyRangeTabs {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: var(--nutrition-tab-gap) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 0 0 auto !important;
+  }
+
+  .dailyNutritionPage .nutritionRangeTabs button,
+  .dailyNutritionPage .dailyRangeTabs button {
+    border: none !important;
+    background: transparent !important;
+    color: rgba(255,255,255,.92) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-width: 0 !important;
+    width: auto !important;
+    font-size: var(--nutrition-tab-size) !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    box-shadow: none !important;
+  }
+
+  .dailyNutritionPage .nutritionRangeTabs button.active,
+  .dailyNutritionPage .dailyRangeTabs button.active {
+    color: #f1dfb1 !important;
+    text-shadow: 0 0 9px rgba(241,223,177,.46), 0 2px 6px rgba(0,0,0,.48) !important;
+  }
+
+  .dailyNutritionPage .nutritionDetailLink {
+    flex: 0 0 auto !important;
+    border: none !important;
+    background: transparent !important;
+    color: rgba(241,223,177,.96) !important;
+    font-size: var(--nutrition-tab-size) !important;
+    font-weight: 800 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    text-shadow: 0 0 8px rgba(241,223,177,.28), 0 2px 6px rgba(0,0,0,.45) !important;
+  }
+}
+
+/* ======================================================
+   7. 营养成分表
+   ====================================================== */
+@media (max-width: 900px) {
+  .dailyNutritionPage .nutritionTablePanel,
+  .dailyNutritionPage .dailyCornerTableRight {
+    position: absolute !important;
+    left: var(--nutrition-table-left) !important;
+    top: var(--nutrition-table-top) !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: var(--nutrition-table-width) !important;
+    transform: translateX(-50%) !important;
+    z-index: 5 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .dailyNutritionPage .nutritionMiniTable {
+    width: 100% !important;
+    overflow: hidden !important;
+    border-radius: var(--nutrition-table-radius) !important;
+    background: var(--nutrition-table-bg) !important;
+    border: 1px solid var(--nutrition-table-border) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+
+  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow {
+    display: grid !important;
+    grid-template-columns: var(--nutrition-col-1) var(--nutrition-col-2) var(--nutrition-col-3) !important;
+    gap: var(--nutrition-table-col-gap) !important;
+    align-items: center !important;
+    min-height: var(--nutrition-row-height) !important;
+    padding: 0 var(--nutrition-table-padding-x) !important;
+    border-bottom: 1px solid var(--nutrition-table-line) !important;
+    color: rgba(255,255,255,.92) !important;
+  }
+
+  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow:last-child {
+    border-bottom: none !important;
+  }
+
+  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow span {
+    font-size: var(--nutrition-row-label-size) !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+  }
+
+  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow strong {
+    font-size: var(--nutrition-row-value-size) !important;
+    color: var(--nutrition-row-value-color) !important;
+    white-space: nowrap !important;
+  }
+
+  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow em {
+    font-size: var(--nutrition-row-food-size) !important;
+    font-style: normal !important;
+    color: var(--nutrition-row-food-color) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+}
+
+/* ======================================================
+   8. 猫与营养动图
+   ====================================================== */
+@media (max-width: 900px) {
+  .dailyNutritionPage .nutritionInsightCat {
+    position: absolute !important;
+    left: var(--nutrition-cat-left) !important;
+    bottom: var(--nutrition-cat-bottom) !important;
+    width: var(--nutrition-cat-width) !important;
+    max-width: var(--nutrition-cat-width) !important;
+    height: auto !important;
+    z-index: 6 !important;
+    object-fit: contain !important;
+    filter: drop-shadow(0 10px 18px rgba(0,0,0,.34)) !important;
+  }
+
+  .dailyNutritionPage .nutritionInsightCatMotion {
+    width: var(--nutrition-motion-width) !important;
+    max-width: var(--nutrition-motion-width) !important;
+    animation: nutritionCatBreathe 1.9s ease-in-out infinite;
+  }
+}
+
+@keyframes nutritionCatBreathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.018); }
+}
