@@ -1449,7 +1449,7 @@
 .footprintFullPage .simpleMap.fullMap.china {
   background-image: url('/snowball_china_photo_map.png') !important;
   background-position: center 54% !important;
-  background-size: 94% 108% !important;
+  background-size: 100% 100% !important;
   background-repeat: no-repeat !important;
   background-color: #ffffff !important;
 }

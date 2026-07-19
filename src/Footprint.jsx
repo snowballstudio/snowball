@@ -95,7 +95,7 @@ export default function Footprint({
   }, [sortedFootprints])
 
   const footprintRangeText = useMemo(() => {
-    if (!footprintRangeParts) return '从现在开始'
+    if (!footprintRangeParts) return '尚未开始记录'
     const { first, last } = footprintRangeParts
     return `从${first.y}年${first.m}月到${last.y}年${last.m}月`
   }, [footprintRangeParts])
@@ -267,7 +267,7 @@ export default function Footprint({
                     key={`${footprintView}-${footprintCatRoute[0]?.x}-${footprintCatRoute[0]?.y}`}
                     className="footprintMapStaticCat"
                     src="/refine/footprint_background_cat.png"
-                    alt="雪球停在家里"
+                    alt="雪粒停在家里"
                     style={{
                       '--fp-cat-route-x1': `${footprintCatRoute[0]?.x || 28}%`,
                       '--fp-cat-route-y1': `${footprintCatRoute[0]?.y || 62}%`,
@@ -308,7 +308,7 @@ export default function Footprint({
       
               {yearsMode === 'setHome' ? (
                 <div className="yearsCard footprintEditorCard footprintHomeSetCard">
-                  <p className="footprintTip">请在地图上点击家的位置。保存后，雪球会从这里出发。</p>
+                  <p className="footprintTip">请在地图上点击家的位置。保存后，雪粒会从这里出发。</p>
                   <div className="footprintHomeSetPreview">
                     {pendingHomePosition ? `当前位置：${pendingHomePosition.x}%，${pendingHomePosition.y}%` : '还没有选择位置'}
                   </div>
@@ -319,7 +319,7 @@ export default function Footprint({
                 </div>
               ) : yearsMode === 'addMap' ? (
                 <div className="yearsCard footprintEditorCard">
-                  <p className="footprintTip">可在地图上直接点添加新足迹。</p>
+                  <p className="footprintTip">可输入地名或在地图上点精确方位添加足迹。</p>
                   <div className="footprintField footprintYearMonthField">
                     <span>年月</span>
                     <div className="footprintInlinePair">
@@ -380,7 +380,7 @@ export default function Footprint({
                         onChange={e => { handleFootprintPhotos(e.target.files); e.target.value = '' }}
                       />
                     </label>
-                    <button type="button" className="askSnowballMemoryBtn" onClick={askSnowballFootprintMemory}>? 问问雪球帮忙回忆</button>
+                    <button type="button" className="askSnowballMemoryBtn" onClick={askSnowballFootprintMemory}>? 问问雪粒帮忙回忆</button>
                   </div>
                   {(footprintDraft.photos || []).length > 0 && (
                     <div className="footprintPhotoPreviewGrid">
@@ -450,7 +450,7 @@ export default function Footprint({
                     从<strong>{footprintRangeParts.first.y}</strong>年<strong>{footprintRangeParts.first.m}</strong>月到<strong>{footprintRangeParts.last.y}</strong>年<strong>{footprintRangeParts.last.m}</strong>月，你一共去过
                   </>
                 ) : (
-                  <>从现在开始，你一共去过</>
+                  <>尚未开始记录，你一共去过</>
                 )}
                 <strong>{uniquePlaces}</strong>个地方，留下
                 <strong>{totalFootprints}</strong>条足迹。
@@ -463,7 +463,7 @@ export default function Footprint({
               maxFrames={13}
               frameMs={MOTION.frameMs.footprint}
               fallback="/refine/footprint_background_cat.png"
-              ariaLabel="足迹主页里的雪球"
+              ariaLabel="足迹主页里的雪粒"
             />
 
             <div className="footprintHomeContent">
@@ -528,9 +528,9 @@ export default function Footprint({
               </div>
 
               <div className="footprintMapTextLinks">
-                <button type="button" onClick={() => openFootprintMap('world')}>世界地图</button>
-                <button type="button" onClick={() => openFootprintMap('china')}>全国地图</button>
-                <button type="button" onClick={() => openFootprintMap('local')}>身边地图</button>
+                <button type="button" onClick={() => openFootprintMap('world')}>世界足迹</button>
+                <button type="button" onClick={() => openFootprintMap('china')}>中国足迹</button>
+                <button type="button" onClick={() => openFootprintMap('local')}>身边足迹</button>
               </div>
             </div>
           </div>

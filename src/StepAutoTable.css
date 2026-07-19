@@ -1,0 +1,86 @@
+.stepAutoPage {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  box-sizing: border-box;
+  background: #f4f6f7;
+  color: #263238;
+  padding: max(18px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+
+.stepAutoTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.stepAutoTop h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.stepAutoTop p {
+  margin: 0;
+  font-size: 12px;
+  color: #66747a;
+}
+
+.stepAutoBack {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 30px;
+  line-height: 1;
+  padding: 0 8px;
+}
+
+.stepAutoScroll {
+  height: calc(100% - 72px);
+  overflow: auto;
+  border: 1px solid rgba(50, 70, 78, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.stepAutoTable {
+  min-width: 1540px;
+}
+
+.stepAutoRow {
+  display: grid;
+  grid-template-columns: 115px 90px 150px 130px 145px 130px 100px 100px 80px 115px 100px 260px 170px;
+  align-items: center;
+  min-height: 46px;
+  border-bottom: 1px solid rgba(50, 70, 78, 0.12);
+}
+
+.stepAutoRow > span {
+  box-sizing: border-box;
+  padding: 8px 10px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.stepAutoHeader {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-height: 50px;
+  background: #e7ecee;
+  font-weight: 700;
+}
+
+.stepAutoStrong {
+  font-weight: 700;
+}
+
+.stepAutoNote {
+  color: #56666d;
+}
+
+.stepAutoEmpty {
+  margin: 24px;
+  color: #66747a;
+}

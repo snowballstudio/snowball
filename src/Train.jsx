@@ -3,7 +3,7 @@ import './Train.css'
 
 /* ======================================================
    APP 名称别名表
-   key 是雪球统一名称；数组里可随时增加手机系统返回的真实 APP 名称。
+   key 是雪粒统一名称；数组里可随时增加手机系统返回的真实 APP 名称。
    Package Name 不参与当前匹配，只在 APP 详情原始数据中保存。
    ====================================================== */
 export const APP_ALIAS_TABLE = {
@@ -53,7 +53,7 @@ function compactAppName(value) {
 }
 
 /**
- * 把手机返回的真实 APP 名称转换为雪球统一名称。
+ * 把手机返回的真实 APP 名称转换为雪粒统一名称。
  * 未匹配时返回空字符串，原始名称仍保存在详情表中。
  */
 export function snowballAppNameFor(realAppName) {

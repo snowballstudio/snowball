@@ -9,6 +9,9 @@ import People from './People.jsx'
 import Things from './Things.jsx'
 // Snowball V1 v90: independent daily/app-detail device sync with per-date refresh
 import { NoticeModal, StatusPair } from './components/SnowballShared'
+import Onboarding from './components/onboarding/Onboarding.jsx'
+import StepAutoTable from './StepAutoTable.jsx'
+import { ingestStepPayload, stepValueForDate } from './stepDataService.js'
 
 const STORAGE_KEY = 'healthy-snowball-v8'
 const TEST_PASSWORD = 'snowball'
@@ -62,11 +65,11 @@ const VIDEO_MAP = {
 
 const REWARD_VIDEO = '/three_days_bonus.mp4'
 
-const USAGE_TEXT = `声明：雪球是一款生活管理APP，旨在帮助梳理与自律，其中涉及的各项数据分析仅供参考，不构成任何健康诊断与建议。
+const USAGE_TEXT = `声明：雪粒是一款生活管理APP，旨在帮助梳理与自律，其中涉及的各项数据分析仅供参考，不构成任何健康诊断与建议。
 
-雪球的数据来源取决于用户的授权提供，仅存在用户单机，不作任何他用，云端和外界无法触及。
+雪粒的数据来源取决于用户的授权提供，仅存在用户单机，不作任何他用，云端和外界无法触及。
 
-雪球的形象随着用户每天的数据变化而变化。
+雪粒的形象随着用户每天的数据变化而变化。
 
 步数越多 → 体型越壮
 及时休息 → 毛形浓密
@@ -75,7 +78,7 @@ const USAGE_TEXT = `声明：雪球是一款生活管理APP，旨在帮助梳理
 
 步数和屏幕时间经首次授权后，每天自动获取，可手动添加或更改。
 
-饮食和心情数据来自每天与雪球通话，录音流畅度受设备类型影响，可临时打字完成对话。
+饮食和心情数据来自每天与雪粒通话，录音流畅度受设备类型影响，可临时打字完成对话。
 
 后期植入人工智能后，通话将近似真人效果。
 
@@ -166,7 +169,7 @@ const FOOTPRINT_POSITIONS = {
     埃及: { x: 53, y: 55 }, 南非: { x: 56, y: 82 }, 摩洛哥: { x: 46, y: 55 },
   },
   china: {
-    北京: { x: 69, y: 38 }, 天津: { x: 74, y: 41 }, 上海: { x: 82, y: 60 }, 重庆: { x: 56, y: 64 }, 河北: { x: 69, y: 44 }, 山西: { x: 64, y: 47 }, 辽宁: { x: 78, y: 34 }, 吉林: { x: 85, y: 28 }, 黑龙江: { x: 85, y: 18 }, 江苏: { x: 78, y: 56 }, 浙江: { x: 79, y: 67 }, 安徽: { x: 73, y: 62 }, 福建: { x: 75, y: 76 }, 江西: { x: 70, y: 72 }, 山东: { x: 74, y: 50 }, 河南: { x: 64, y: 55 }, 湖北: { x: 65, y: 63 }, 湖南: { x: 63, y: 72 }, 广东: { x: 69, y: 81 }, 海南: { x: 61, y: 94 }, 四川: { x: 47, y: 63 }, 贵州: { x: 55, y: 74 }, 云南: { x: 45, y: 81 }, 陕西: { x: 59, y: 56 }, 甘肃: { x: 47, y: 43 }, 青海: { x: 39, y: 49 }, 台湾: { x: 82, y: 80 }, 内蒙古: { x: 58, y: 38 }, 广西: { x: 58, y: 83 }, 西藏: { x: 27, y: 62 }, 宁夏: { x: 54, y: 47 }, 新疆: { x: 26, y: 33 }, 香港: { x: 69, y: 88 }, 澳门: { x: 65, y: 87 },
+    北京: { x: 66, y: 39 }, 天津: { x: 71, y: 41 }, 上海: { x: 75, y: 60 }, 重庆: { x: 51, y: 69 }, 河北: { x: 64, y: 44 }, 山西: { x: 60, y: 47 }, 辽宁: { x: 74, y: 34 }, 吉林: { x: 78, y: 28 }, 黑龙江: { x: 78, y: 19 }, 江苏: { x: 71, y: 56 }, 浙江: { x: 71, y: 67 }, 安徽: { x: 68, y: 58 }, 福建: { x: 69, y: 76 }, 江西: { x: 65, y: 70 }, 山东: { x: 68, y: 50 }, 河南: { x: 61, y: 55 }, 湖北: { x: 58, y: 63 }, 湖南: { x: 59, y: 74 }, 广东: { x: 62, y: 83 }, 海南: { x: 56, y: 94 }, 四川: { x: 43, y: 63 }, 贵州: { x: 51, y: 75 }, 云南: { x: 41, y: 81 }, 陕西: { x: 54, y: 56 }, 甘肃: { x: 47, y: 53}, 青海: { x: 35, y: 49 }, 台湾: { x: 76, y: 80 }, 内蒙古: { x: 58, y: 35 }, 广西: { x: 52, y: 83 }, 西藏: { x: 27, y: 63 }, 宁夏: { x: 51, y: 47 }, 新疆: { x: 26, y: 33 }, 香港: { x: 65, y: 88 }, 澳门: { x: 61, y: 87 },
   },
   local: {
     公园: { x: 45, y: 48 }, 海边: { x: 80, y: 74 }, 餐饮: { x: 25, y: 75 }, 商场: { x: 40, y: 20 }, 展馆: { x: 56, y: 15 }, 亲友: { x: 23, y: 42 }, 娱乐: { x: 88, y: 34 }, 山野: { x: 10, y: 20 },
@@ -273,6 +276,7 @@ const DEFAULT = {
   upgradeSeenKeys: [],
   records: [],
   screenRecords: [],
+  stepAutoRecords: [],
   messages: [],
   installDate: todayText(),
   yearsScene: 'park',
@@ -580,14 +584,14 @@ function dailySummaryText(data, sleepOk) {
   const steps = Number(data.yesterdaySteps || 0)
   const stepText =
     steps < 5000
-      ? `你昨天只走了${steps}步，今天记得多多走路，雪球明天也许会长胖。`
+      ? `你上次只走了${steps}步，今天记得多多走路，雪粒明天也许会长胖。`
       : steps < 10000
-        ? `你昨天顺利地走了${steps}步，雪球长胖了，变好看了。`
-        : `你昨天成功地走了${steps}步，雪球的身体越来越壮了。`
+        ? `你上次顺利地走了${steps}步，雪粒长胖了，变好看了。`
+        : `你上次成功地走了${steps}步，雪粒的身体越来越壮了。`
 
   const sleepText = sleepOk
-    ? `你昨晚${data.yesterdaySleepTime || '23点以前'}以后就没用手机了，这让雪球的毛发保持着蓬松浓密。`
-    : `你昨晚11点以后还用了手机，雪球的毛发变稀疏了，今天试试早点放下手机吧。`
+    ? `你上次${data.yesterdaySleepTime || '晚上11点半'}以后就没用手机了，这让雪粒的毛发保持着蓬松浓密。`
+    : `你上次晚上11点半以后还用了手机，雪粒的毛发变稀疏了，今天试试早点放下手机吧。`
 
   return `新天愉快！${stepText}${sleepText}`
 }
@@ -992,6 +996,7 @@ function normalizeStoredData(raw) {
     upgradeSeenKeys,
     records: records.sort((a, b) => dateKey(b.date).localeCompare(dateKey(a.date))),
     screenRecords: (base.screenRecords || []).map(normalizeScreenRecord),
+    stepAutoRecords: Array.isArray(base.stepAutoRecords) ? base.stepAutoRecords : [],
   }
 }
 
@@ -1085,30 +1090,30 @@ const FOOD_ALIAS = {
   奶制品: ['牛奶', '奶', '鲜奶', '酸奶', '起司', '奶酪', '椰奶', '芝士', '乳酪', '奶昔'],
   豆制品: ['豆浆', '豆奶', '豆腐', '老豆腐', '冻豆腐', '豆腐皮', '豆腐丝', '嫩豆腐', '麻婆豆腐', '家常豆腐', '油豆腐', '豆皮' ],
   鸡鸭鹅: ['鸡鸭鹅', '鸡', '鸡肉', '炸鸡', '鸡腿', '鸡翅', '鸡块', '鸡排', '鸡爪', '鸡胸脯', '油鸡', '鸡柳','熏鸡',  '烤鸡', '鸭', '烧鸭','烧鹅','鸭肉', '烤鸭'],
-  牛羊肉: ['牛肉', '牛', '煎牛排', '牛排','牛柳','牛肉丸','烤牛排','和牛','牛肚','百叶','羊排','烤羊排','羊','羊肉','涮羊肉','牛蹄筋','羊蝎子','肥羊'],
-  猪肉: ['猪肉', '猪', '肉', '猪', '红烧肉','炒肉丝','辣椒炒肉丝','肉片','炒肉','猪柳', '蹄膀', '猪皮冻', '猪腰子', '猪大肠', '猪爪', '猪耳朵', '夫妻肺片', '猪肚', '大排', '小排', '唐排', '回锅肉', '肉丝','肉糜','炒肉','五花肉', '肉丸'],
+  牛羊肉: ['牛肉', '牛', '煎牛排', '牛排','牛腩','牛腿肉','牛柳','牛腱子','牛肉丝','牛肉丸','烤牛排','和牛','牛肚','百叶','羊排','烤羊排','羊','羊肉','涮羊肉','牛蹄筋','羊蝎子','肥羊'],
+  猪肉: ['猪肉', '猪', '肉', '猪', '红烧肉','狮子头','红烧狮子头','酱肘子','炒肉丝','辣椒炒肉丝','肉片','炒肉','猪柳', '蹄膀', '猪皮冻', '红烧排骨', '肉汤', '猪脚', '猪耳朵', '夫妻肺片', '猪肚', '大排', '小排', '唐排', '回锅肉', '肉丝','肉糜','炒肉','五花肉', '肉丸'],
   香肠: ['香肠', '火腿肠', '午餐肉', '腊肠'],
-  鱼虾蟹贝: ['虾蟹', '虾', '老虎虾', '基围虾', '琵琶虾', '蟹', '鱼', '三文鱼','黄鱼', '带鱼', '鳕鱼', '海鱼', '海鲜', '草鱼', '河鱼',  '活鱼','鱼片', '鱼丸', '水煮鱼', '烤鱼', '大闸蟹',  '金枪鱼', '螃蟹', '龙虾'],
+  鱼虾蟹贝: ['虾蟹', '虾', '老虎虾', '基围虾', '香蕉虾', '小河虾','明虾', '斑节虾',  '琵琶虾', '桂鱼', '鲈鱼', '生蚝', '扇贝', '泥蟹', '青蟹', '蟹', '鱼', '草鱼', '黑鱼', '鳊鱼', '多宝鱼', '鸦片鱼', '大闸蟹', '海鲜', '鲫鱼', '三文鱼','黄鱼', '带鱼', '鳕鱼', '海鱼', '鲍鱼', '胖头鱼', '河鱼',  '活鱼','鱼片', '鱼丸', '水煮鱼', '烤鱼', '小龙虾',  '金枪鱼', '螃蟹', '龙虾'],
   其它蛋白: ['其它蛋白'],
-  白菜: ['白菜', '黄牙菜','娃娃菜','大白菜'],
+  白菜: ['白菜', '黄牙菜','卷心菜','包心白菜','娃娃菜','大白菜'],
   绿叶菜: ['青菜', '小青菜', '油菜', '上海青', '油麦菜', '菠菜', '米苋', '空心菜', '茼蒿', '芥兰', '芥菜', '西洋菜', '香菜', '生菜', '木耳菜', '秋葵', '蒜苔'],
   花椰菜: ['西兰花', '花菜', '甘蓝', '有机花菜', '有机西兰花', '菜心', '菜花'],
   胡白萝卜: ['胡萝卜', '红萝卜', '萝卜', '萝卜丝', '白萝卜', '萝卜菜'],
   洋葱: ['洋葱'],
   芹菜: ['芹菜'],
   豆角豆荚: ['豆角', '扁豆', '荷兰豆', '四季豆', '毛豆', '长豆角', '刀豆', '豇豆', '蚕豆', '菜豆', '甜豆'],
-  辣椒茄子: ['辣椒', '青椒', '红椒','尖椒','灯笼椒','黄椒','菜椒','尖辣椒','茄子','番茄','西红柿','柿子'],
+  辣椒茄子: ['辣椒', '青椒', '红椒','尖椒','螺丝椒','杭椒','灯笼椒','黄椒','菜椒','尖辣椒','茄子','番茄','西红柿','柿子'],
   苹果: ['苹果', '嘎啦果', '嘎啦', '青苹果', '红富士', '火箭苹果', '黄焦'],
   橙橘柚: ['橙子', '橘子', '柚子', '葡萄柚', '手剥橙', '果粒橙', '沙糖桔', '甜橙', '脐橙', '桔子'],
   香蕉: ['香蕉'],
   葡萄: ['葡萄'],
-  草莓: ['草莓'],
+  草莓: ['草莓', '蓝莓', '红莓', '桑葚', '覆盆子', '黑莓'],
   瓜类: ['西瓜', '黄瓜', '南瓜', '冬瓜', '苦瓜', '甜瓜','香瓜','葫芦瓜','菜瓜','伊丽莎白','早春红玉','哈密瓜'],
   桃李杏: ['桃子', '李子', '杏子', '布林', '桃', '李', '杏', '油奈', '毛桃', '黄桃', '白桃', '油桃', '蟠桃', '水蜜桃'],
-  其它蔬菜: ['其它蔬菜', '素菜'],
-  其它水果: ['其它水果', '菠萝', '樱桃','梨', '香梨', '火龙果', '猕猴桃'],
-  坚果: ['坚果', '核桃', '瓜子',  '花生',  '杏仁',  '火山果',  '开心果',  '松仁',  '芝麻',  '南瓜子',  '西瓜子',  '小核桃', '腰果'],
-  海带: ['海带'],
+  其它蔬菜: ['其它蔬菜', '韭菜','香菜','包菜','手撕包菜','素菜'],
+  其它水果: ['其它水果', '菠萝', '牛油果', '车厘子', '热情果', '圣女果','山竹','樱桃','梨', '鸭梨', '杨梅', '香梨', '火龙果', '猕猴桃'],
+  坚果: ['坚果', '核桃', '瓜子',  '花生',  '杏仁',  '火山果',  '巴达木', '榛子', '开心果',  '松仁',  '芝麻',  '南瓜子',  '西瓜子',  '小核桃', '腰果'],
+  海带: ['海带','海苔','海参','海蜇','海蜇皮'],
   紫菜: ['紫菜'],
   菌类: ['菌类', '蘑菇', '香菇', '杏鲍菇', '鸡腿菇', '木耳', '野山菌', '牛肝菌', '银耳','草菇', '金针菇'],
   粗粮杂粮: ['其它杂粮', '燕麦', '小米', '黑豆', '红豆', '绿豆', '赤豆', '薏米', '莲子', '荞麦', '黑米', '云豆', '西米'],
@@ -1233,7 +1238,7 @@ function dailyFoodInfo(foodText, tasteText = '') {
   return {
     good,
     label: good ? '雪白' : '暗淡',
-    healthLabel: hasFood ? (good ? '合理' : '待改') : '没记',
+    healthLabel: hasFood ? (good ? '合理' : '待改进') : '未记录',
     foodCount: foodTags.length,
     normalTaste,
     heavyTaste,
@@ -1249,7 +1254,7 @@ function dailyMoodInfo(moodText) {
   return {
     good,
     mood: good ? '好' : '不好',
-    statusLabel: hasMood ? (good ? '正面' : '欠佳') : '没记',
+    statusLabel: hasMood ? (good ? '正面' : '欠佳') : '未记录',
     eyes: good ? '圆亮' : '无神',
     positive,
     negative,
@@ -1453,7 +1458,7 @@ function screenMinutesFromRecord(item = {}) {
 }
 
 function normalizeScreenRecord(item = {}, index = 0) {
-  // 兼容旧记录：旧版只有 app；新版把 app 继续作为“雪球 APP 名”。
+  // 兼容旧记录：旧版只有 app；新版把 app 继续作为“雪粒 APP 名”。
   const realAppName = String(item.realAppName ?? item.rawAppName ?? item.systemAppName ?? item.appName ?? '').trim()
   const existingSnowballName = String(item.app ?? item.canonicalApp ?? item.snowballAppName ?? '').trim()
   const matchedSnowballName = snowballAppNameFor(realAppName || existingSnowballName)
@@ -1558,7 +1563,7 @@ function appTop10FromEntries(entries = [], range = 'today', dailyRecords = []) {
 
 
 
-function ChromaKeyVideo({ className = '', style = {}, ariaLabel = '雪球动画' }) {
+function ChromaKeyVideo({ className = '', style = {}, ariaLabel = '雪粒动画' }) {
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
 
@@ -1731,7 +1736,7 @@ function PngSequence({
   fallback = '',
   fallbackStyle = {},
   crossfade = false,
-  ariaLabel = '雪球动图',
+  ariaLabel = '雪粒动图',
 }) {
   const [frames, setFrames] = useState([])
   const [frameIndex, setFrameIndex] = useState(0)
@@ -1864,6 +1869,13 @@ function mergeNativeDailyDays(prev, payload = {}, { force = false, liveToday = f
   const days = nativePayloadDays(payload)
   if (!days.length) return prev
 
+  const platform = Capacitor.getPlatform()
+  const stepAutoRecords = ingestStepPayload(prev.stepAutoRecords || [], payload, {
+    platform,
+    liveToday,
+    capturedAt: Date.now(),
+  })
+
   let records = ensureDailyDateSkeleton(prev.records || [])
   days.forEach(day => {
     const dayDate = formatDateForDaily(day?.date || todayText())
@@ -1871,20 +1883,22 @@ function mergeNativeDailyDays(prev, payload = {}, { force = false, liveToday = f
     const isToday = dateKey(dayDate) === dateKey(todayText())
     const patch = {
       deviceSyncedAt: Date.now(),
-      deviceSource: Capacitor.getPlatform(),
+      deviceSource: platform,
       autoSource: 'device',
       ...(isToday ? { deviceTodayFetchedAt: Date.now() } : { deviceHistoricalFetchedAt: Date.now() }),
     }
 
-    const mayWriteSteps = force || !existing.stepsManual
+    const mayWriteSteps = force || (!isToday && !existing.stepsManual && !existing.stepsAutoImportedAt)
     const mayWriteScreen = force || !existing.screenManual
     const mayWriteOffscreen = force || !existing.offscreenManual
+    const resolvedSteps = stepValueForDate(stepAutoRecords, dayDate)
 
-    if (mayWriteSteps && Number.isFinite(Number(day?.steps))) {
-      patch.steps = Math.max(0, Math.round(Number(day.steps)))
+    if (mayWriteSteps && resolvedSteps !== null) {
+      patch.steps = resolvedSteps
       patch.stepsAutoFetchedAt = Date.now()
+      patch.stepsAutoImportedAt = Date.now()
     }
-    if (Capacitor.getPlatform() === 'android') {
+    if (platform === 'android') {
       if (mayWriteScreen && Number.isFinite(Number(day?.screenMinutes))) {
         patch.screenMinutes = Math.max(0, Math.round(Number(day.screenMinutes)))
         patch.screenAutoFetchedAt = Date.now()
@@ -1902,15 +1916,34 @@ function mergeNativeDailyDays(prev, payload = {}, { force = false, liveToday = f
     records = mergeDailyRecord(records, dayDate, patch)
   })
 
+  // 累计 Catch Up 可能生成不在本次 payload 中的昨日/漏登日结果。
+  stepAutoRecords.forEach(stepRow => {
+    const dayDate = formatDateForDaily(stepRow.date)
+    const isToday = dateKey(dayDate) === dateKey(todayText())
+    if (isToday && !force) return
+    const existing = dailyRecordForDate(records, dayDate) || emptyDailyRecord(dayDate)
+    if (!force && (existing.stepsManual || existing.stepsAutoImportedAt)) return
+    const resolvedSteps = stepValueForDate(stepAutoRecords, dayDate)
+    if (resolvedSteps === null) return
+    records = mergeDailyRecord(records, dayDate, {
+      steps: resolvedSteps,
+      stepsAutoFetchedAt: Date.now(),
+      stepsAutoImportedAt: Date.now(),
+      stepAutoSource: stepRow.calculatedSource || '',
+      deviceHistoricalFetchedAt: existing.deviceHistoricalFetchedAt || Date.now(),
+    })
+  })
+
   const yesterday = yesterdayText()
   const yesterdayRecord = dailyRecordForDate(records, yesterday)
   return {
     ...prev,
+    stepAutoRecords,
     records: records.sort((a, b) => dateKey(b.date).localeCompare(dateKey(a.date))),
     yesterdaySteps: yesterdayRecord ? Number(yesterdayRecord.steps || 0) : prev.yesterdaySteps,
     yesterdaySleepTime: yesterdayRecord?.offscreenTime || yesterdayRecord?.yesterdaySleep || prev.yesterdaySleepTime,
     lastDeviceSyncAt: Date.now(),
-    lastDeviceSyncPlatform: Capacitor.getPlatform(),
+    lastDeviceSyncPlatform: platform,
     lastSavedAt: Date.now(),
   }
 }
@@ -1963,7 +1996,7 @@ function App() {
       const saved = localStorage.getItem(STORAGE_KEY)
       return saved ? normalizeStoredData(JSON.parse(saved)) : normalizeStoredData(DEFAULT)
     } catch (error) {
-      console.warn('雪球读取本机数据失败，已使用默认数据。', error)
+      console.warn('雪粒读取本机数据失败，已使用默认数据。', error)
       return normalizeStoredData(DEFAULT)
     }
   })
@@ -2014,7 +2047,6 @@ function App() {
   const homeInteractionRunRef = useRef(0)
   const [rewardFrame, setRewardFrame] = useState(1)
   const [callActive, setCallActive] = useState(false)
-  const [welcomeModal, setWelcomeModal] = useState(null)
   const [dailyModal, setDailyModal] = useState(null)
   const [nutritionMotionNoticeKey, setNutritionMotionNoticeKey] = useState('')
   const [dailyDateModal, setDailyDateModal] = useState(null)
@@ -2048,7 +2080,7 @@ function App() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataForLocalStorage(data)))
     } catch (error) {
-      console.warn('雪球没有成功保存到本机存储。', error)
+      console.warn('雪粒没有成功保存到本机存储。', error)
     }
   }, [data])
 
@@ -2066,10 +2098,10 @@ function App() {
         status = await DeviceData.getStatus()
         if (!status?.usageAccessGranted && !localStorage.getItem(DEVICE_USAGE_PROMPT_KEY)) {
           localStorage.setItem(DEVICE_USAGE_PROMPT_KEY, '1')
-          const accepted = window.confirm('雪球需要“使用情况访问权限”才能自动获取屏幕时间。现在前往系统设置授权吗？注：授权后数据将存在单机，仅本人可见。')
+          const accepted = window.confirm('雪粒需要“使用情况访问权限”才能自动获取屏幕时间。现在前往系统设置授权吗？注：授权后数据将存在单机，仅本人可见。')
           if (accepted) {
             await DeviceData.openUsageAccessSettings()
-            throw new Error('完成“使用情况访问权限”后，请关闭并重新打开雪球。')
+            throw new Error('完成“使用情况访问权限”后，请关闭并重新打开雪粒。')
           }
         }
       } else if (Capacitor.getPlatform() === 'ios' && !status?.healthPermissionGranted) {
@@ -2147,7 +2179,7 @@ function App() {
           }
         })
       } catch (error) {
-        console.warn('雪球自动获取手机数据暂未完成；仍可继续使用手动数据。', error)
+        console.warn('雪粒自动获取手机数据暂未完成；仍可继续使用手动数据。', error)
       }
     }
 
@@ -2261,7 +2293,7 @@ function App() {
   async function playHomeCatInteraction() {
     if (homeInteractionPlaying) return
 
-    // 只有四项全部达标时，雪球才有精神回应。
+    // 只有四项全部达标时，雪粒才有精神回应。
     // 没有记录按不达标处理，因此 score 不会被误判为健康。
     if (homeInteractionScore < 4) return
 
@@ -2344,51 +2376,51 @@ function App() {
     const brainReady = currentBrainScore >= 10
 
     const stepText = stepMissing
-      ? <>昨天的步数还没回来，雪球先安静地等着你补上。</>
+      ? <>昨天的步数还没回来，雪粒先安静地等着你补上。</>
       : stepGreat
-        ? <>昨天运动特别足，雪球今天<StatusWord type="gold">胖嘟嘟</StatusWord>的，很有精神。</>
+        ? <>昨天运动特别足，雪粒今天<StatusWord type="gold">胖嘟嘟</StatusWord>的，很有精神。</>
         : stepGood
-          ? <>昨天运动够了，雪球的体型保持得<StatusWord type="good">正好</StatusWord>。</>
-          : <>昨天活动偏少，雪球有点<StatusWord type="warn">偏瘦</StatusWord>，今天多走走就会好起来。</>
+          ? <>昨天运动够了，雪粒的体型保持得<StatusWord type="good">正好</StatusWord>。</>
+          : <>昨天活动偏少，雪粒有点<StatusWord type="warn">偏瘦</StatusWord>，今天多走走就会好起来。</>
 
     const sleepText = sleepMissing
-      ? <>昨天的离机时间还没有记录，雪球的毛发状态还在等待更新。</>
+      ? <>昨天的离机时间还没有记录，雪粒的毛发状态还在等待更新。</>
       : sleepGoodFlag
-        ? <>昨天休息比较准时，雪球的毛发显得<StatusWord type="good">浓密</StatusWord>柔软。</>
-        : <>昨天休息有点晚，雪球今天有些没精神，毛发也有点<StatusWord type="warn">稀疏</StatusWord>。</>
+        ? <>昨天休息比较准时，雪粒的毛发显得<StatusWord type="good">浓密</StatusWord>柔软。</>
+        : <>昨天休息有点晚，雪粒今天有些没精神，毛发也有点<StatusWord type="warn">稀疏</StatusWord>。</>
 
     const foodText = foodMissing
-      ? <>今天还没有饮食记录，可以和雪球聊聊吃了什么，也可以稍后手动补上。</>
+      ? <>今天还没有饮食记录，可以和雪粒聊聊吃了什么，也可以稍后手动补上。</>
       : foodGoodFlag
-        ? <>今天吃得不错，雪球的毛色保持<StatusWord type="snow">雪白</StatusWord>，看起来很干净。</>
-        : <>今天食物品种还可以更丰富一点，雪球的毛色显得有些<StatusWord type="warn">暗淡</StatusWord>。</>
+        ? <>今天吃得不错，雪粒的毛色保持<StatusWord type="snow">雪白</StatusWord>，看起来很干净。</>
+        : <>今天食物品种还可以更丰富一点，雪粒的毛色显得有些<StatusWord type="warn">暗淡</StatusWord>。</>
 
     const moodText = moodMissing
-      ? <>今天还没有心情记录，雪球很想听你说说今天过得怎么样。</>
+      ? <>今天还没有心情记录，雪粒很想听你说说今天过得怎么样。</>
       : moodGoodFlag
-        ? <>今天心情不错，雪球开心地睁着<StatusWord type="blue">圆亮眼睛</StatusWord>看着你。</>
-        : <>今天似乎有点心情不佳，雪球的瞳孔有些<StatusWord type="muted">无神</StatusWord>。</>
+        ? <>今天心情不错，雪粒开心地睁着<StatusWord type="blue">圆亮眼睛</StatusWord>看着你。</>
+        : <>今天似乎有点心情不佳，雪粒的瞳孔有些<StatusWord type="muted">无神</StatusWord>。</>
 
     let summaryLine
     if (allGood) {
-      summaryLine = <>今天整体状态很好，雪球<StatusWord type="good">活泼漂亮</StatusWord>，已经准备好回应你了。</>
+      summaryLine = <>今天整体状态很好，雪粒<StatusWord type="good">活泼漂亮</StatusWord>，已经准备好回应你了。</>
     } else if (goodCount >= 2) {
-      summaryLine = <>今天状态不错，还可以继续改善。雪球会陪你一起恢复<StatusWord type="good">活泼漂亮</StatusWord>。</>
+      summaryLine = <>今天状态不错，还可以继续改善。雪粒会陪你一起恢复<StatusWord type="good">活泼漂亮</StatusWord>。</>
     } else {
-      summaryLine = <>今天只是普通的一天。早点休息、多走一走，雪球明天有机会重新<StatusWord type="good">漂亮起来</StatusWord>。</>
+      summaryLine = <>今天只是普通的一天。早点休息、多走一走，雪粒明天有机会重新<StatusWord type="good">漂亮起来</StatusWord>。</>
     }
 
     let companionLine
     if (allGood && brainReady) {
-      companionLine = <>今天你和雪球已经互动过了。拍拍它，看看它会不会<StatusWord type="blue">动起来</StatusWord>。</>
+      companionLine = <>今天你和雪粒已经互动过了。拍拍它，看看它会不会<StatusWord type="blue">动起来</StatusWord>。</>
     } else if (allGood && hasTalked) {
-      companionLine = <>今天已经和雪球通话了，再多聊几句，拍拍它，它就可能会<StatusWord type="blue">动起来</StatusWord>。</>
+      companionLine = <>今天已经和雪粒通话了，再多聊几句，拍拍它，它就可能会<StatusWord type="blue">动起来</StatusWord>。</>
     } else if (allGood) {
-      companionLine = <>今天还没有和雪球通话。和它说说今天发生了什么，再拍拍它，说不定会有一点小惊喜。</>
+      companionLine = <>今天还没有和雪粒通话。和它说说今天发生了什么，再拍拍它，说不定会有一点小惊喜。</>
     } else if (hasTalked) {
-      companionLine = <>雪球已经了解你的饮食和心情了。今晚早点睡、多走走，等状态回升，它就更有机会动起来。</>
+      companionLine = <>雪粒已经了解你的饮食和心情了。今晚早点睡、多走走，等状态回升，它就更有机会动起来。</>
     } else {
-      companionLine = <>今天还没有和雪球通话。和它互动，再把生活节作息调整好，明天就有机会看到雪球活动起来。</>
+      companionLine = <>今天还没有和雪粒通话。和它互动，再把生活节作息调整好，明天就有机会看到雪粒活动起来。</>
     }
 
     return {
@@ -2444,8 +2476,8 @@ function App() {
     if (nutritionMotionNoticeKey === key) return
     setNutritionMotionNoticeKey(key)
     setDailyModal({
-      title: '雪球动起来了',
-      text: '恭喜，你的饮食种类丰富，保持了低碳水，雪球动起来了。',
+      title: '雪粒动起来了',
+      text: '恭喜，你的饮食种类丰富，保持了低碳水，雪粒动起来了。',
     })
   }, [dailyMode, nutritionMotionOn, dailyStatRange, dailyNutritionStats, dailyTasteStats, nutritionMotionNoticeKey])
 
@@ -2552,23 +2584,17 @@ function App() {
   }, [data.lastResetDate])
 
   useEffect(() => {
-    if (data.hasSeenWelcome) return
-    const text = '雪球是一款智能生活管理APP，它以数据可视化与猫的形态变化的方式，提供及时有趣的反馈，助你回顾和规划生活，越活越有滋味。'
-    setWelcomeModal({ title: '欢迎安装雪球', text })
-  }, [data.hasSeenWelcome])
-
-  useEffect(() => {
     if (!data.hasSeenWelcome) return
 
     const today = dateKey(todayText())
-    const greetingKey = `${today}|${homeYesterdaySteps}|${homeYesterdaySleep || '没记'}`
+    const greetingKey = `${today}|${homeYesterdaySteps}|${homeYesterdaySleep || '未记录'}`
     if (data.lastGreetingDate === greetingKey) return
 
    const summary = dailySummaryText({ yesterdaySteps: homeYesterdaySteps, yesterdaySleepTime: homeYesterdaySleep }, sleepOk)
 const text = summary
 
 setDailyModal({
-  title:'雪球的今日回顾',
+  title:'雪粒的今日回顾',
   text
 })
     setData(prev => ({
@@ -2598,10 +2624,10 @@ setDailyModal({
 
     const text =
       reached === 7
-        ? '雪球已经与你共处7天了，成了能手猫，开始真正熟悉你的生活节奏。'
+        ? '雪粒已经与你共处7天了，成了能手猫，开始真正熟悉你的生活节奏。'
         : reached === 30
-          ? '雪球已经与你共处30天了，成了高手猫，它将对你的生活提供更好的观察、反馈与分析。'
-          : '雪球已经与你共处100天了。它有了继承者，新的世代开始了。'
+          ? '雪粒已经与你共处30天了，成了高手猫，它将对你的生活提供更好的观察、反馈与分析。'
+          : '雪粒已经与你共处100天了。它有了继承者，新的世代开始了。'
 
     // 升级是成长提示，不修改三天奖励记录；只清掉正在残留或排队显示的奖励层，避免两个弹窗串台。
     if (rewardTimerRef.current) {
@@ -2611,11 +2637,6 @@ setDailyModal({
     setShowReward(false)
     setUpgradeModal({ title: `陪伴满${reached}天`, text, key: upgradeKey })
   }, [elapsed, data.installDate, data.hasSeenWelcome, data.upgradeSeenKeys])
-
-  function closeWelcome() {
-    setWelcomeModal(null)
-    setData(prev => ({ ...prev, hasSeenWelcome: true }))
-  }
 
   function closeDaily() {
     setDailyModal(null)
@@ -2641,10 +2662,10 @@ setDailyModal({
   function showUpgrade(day) {
   const text =
     day === 7
-      ? '雪球已经与你共处7天了，成了能手猫，开始真正熟悉你的生活节奏。'
+      ? '雪粒已经与你共处7天了，成了能手猫，开始真正熟悉你的生活节奏。'
       : day === 30
-        ? '雪球已经与你共处30天了，成了高手猫，将为你的生活提供更好的观察、反馈与分析。'
-        : '雪球已经与你共处100天了，它有了继承者，新的世代开始了。'
+        ? '雪粒已经与你共处30天了，成了高手猫，将为你的生活提供更好的观察、反馈与分析。'
+        : '雪粒已经与你共处100天了，它有了继承者，新的世代开始了。'
 
   setUpgradeModal({ title: `陪伴第${day}天`, text, key: String(day) })
 }
@@ -3280,7 +3301,7 @@ setDailyModal({
   }
 
   async function readNativeDate(date) {
-    if (!Capacitor.isNativePlatform()) throw new Error('只有安装到手机后的雪球才能读取设备数据。')
+    if (!Capacitor.isNativePlatform()) throw new Error('只有安装到手机后的雪粒才能读取设备数据。')
     const targetDate = formatDateForDaily(date || yesterdayText())
     return DeviceData.readDailyData({ days: 1, startDate: targetDate, cutoffHour: 5 })
   }
@@ -3291,7 +3312,7 @@ setDailyModal({
       const result = await readNativeDate(targetDate)
       if (!Array.isArray(result?.days) || !result.days.length) throw new Error('手机没有返回这一天的数据。')
       setData(prev => mergeNativeDailyDays(prev, result, { force: true }))
-      setDailyModal({ title: '重新获取完成', text: `${targetDate} 的步数、离机时间和屏幕总时长已用手机数据更新。APP 详情表没有改变。` })
+      setDailyModal({ title: '重新获取完成', text: `${targetDate} 的步数已从雪粒步数自动获取表重新写入；离机时间和屏幕总时长也已用手机数据更新。APP 详情表没有改变。` })
     } catch (error) {
       setDailyModal({ title: '重新获取失败', text: String(error?.message || error || '请检查健康和使用情况权限。') })
     }
@@ -3327,6 +3348,12 @@ setDailyModal({
 
   function closeDeveloperMode() {
     setData(prev => ({ ...prev, developerMode: false, lastSavedAt: Date.now() }))
+  }
+
+  function openStepAutoTable() {
+    if (!data.developerMode) return
+    setDailyMode('steps-auto')
+    setShowDataPanel(true)
   }
 
   function openScreenDetailForDate(date, returnMode = null) {
@@ -3836,7 +3863,7 @@ setDailyModal({
       homePositions: { ...(prev.homePositions || {}), [footprintView]: pendingHomePosition },
       lastSavedAt: Date.now(),
     }))
-    setFootprintModal({ title: '住址已设置', text: `${FOOTPRINT_TYPES[footprintView]}地图的家已经设置好了。以后雪球会从这里出发。` })
+    setFootprintModal({ title: '住址已设置', text: `${FOOTPRINT_TYPES[footprintView]}地图的家已经设置好了。以后粒会从这里出发。` })
     setYearsMode('browseFull')
   }
 
@@ -3860,7 +3887,7 @@ setDailyModal({
     const year = Number(draft.year || 0)
     const month = Number(draft.month || 0)
     if (!year || !month) {
-      setFootprintModal({ title: '雪球还不知道月份', text: '先填写年份和月度，雪球才知道该去哪里找记录。' })
+      setFootprintModal({ title: '雪粒还不知道月份', text: '先填写年份和月度，雪粒才知道该去哪里找记录。' })
       return
     }
 
@@ -3870,7 +3897,7 @@ setDailyModal({
     })
 
     if (!monthRecords.length) {
-      setFootprintModal({ title: '雪球翻了翻记录', text: '抱歉，雪球也没找到记录。' })
+      setFootprintModal({ title: '雪粒翻了翻记录', text: '抱歉，雪粒也没找到记录。' })
       return
     }
 
@@ -3892,8 +3919,8 @@ setDailyModal({
     const moodText = moods.length ? `心情记录里，出现过：${[...new Set(moods)].slice(0, 5).join('、')}。` : '那个月没有留下清楚的心情记录。'
 
     setFootprintModal({
-      title: '雪球帮你想了想',
-      text: `${year}年${month}月，雪球找到 ${monthRecords.length} 条日常记录。平均步数约 ${avgSteps} 步。${topDays ? `步数最高的几天是：${topDays}。` : '还没有可用的步数高峰。'}${moodText}`,
+      title: '雪粒帮你想了想',
+      text: `${year}年${month}月，雪粒找到 ${monthRecords.length} 条日常记录。平均步数约 ${avgSteps} 步。${topDays ? `步数最高的几天是：${topDays}。` : '还没有可用的步数高峰。'}${moodText}`,
     })
   }
 
@@ -4039,7 +4066,7 @@ setDailyModal({
         }
       })
     }).catch(() => {
-      setFootprintModal({ title: '照片没有读成功', text: '这张照片雪球没有读到，请换一张再试。' })
+      setFootprintModal({ title: '照片没有读成功', text: '这张照片雪粒没有读到，请换一张再试。' })
     })
   }
 
@@ -4050,7 +4077,7 @@ setDailyModal({
 
     compressFootprintImage(file, 900, 0.55).then(async image => {
       if (!image) {
-        setFootprintModal({ title: '照片没有读成功', text: '这张照片雪球没有读到，请换一张再试。' })
+        setFootprintModal({ title: '照片没有读成功', text: '这张照片雪粒没有读到，请换一张再试。' })
         return
       }
 
@@ -4080,7 +4107,7 @@ setDailyModal({
         return next
       })
     }).catch(() => {
-      setFootprintModal({ title: '照片没有读成功', text: '这张照片雪球没有读到，请换一张再试。' })
+      setFootprintModal({ title: '照片没有读成功', text: '这张照片雪粒没有读到，请换一张再试。' })
     })
   }
 
@@ -4099,7 +4126,7 @@ setDailyModal({
 
   function footprintSentence() {
   if (!footprints.length) {
-    return '开始记录以后，这里会慢慢写下你和雪球共同走过的人生。'
+    return '开始记录以后，这里会慢慢写下你和雪粒共同走过的人生。'
   }
 
   const sorted = [...footprints].sort((a, b) => {
@@ -4402,15 +4429,19 @@ const homeFloatingFootprintMemory = ''
         />
       )}
 
-      {welcomeModal && <NoticeModal title={welcomeModal.title} text={welcomeModal.text} onClose={closeWelcome} />}
+      <Onboarding
+        data={data}
+        setData={setData}
+        deviceData={DeviceData}
+      />
       {usageModal && (
         <div className="noticeOverlay usageInfoOverlay" role="dialog" aria-modal="true" aria-label="使用说明">
           <div className="noticeBox usageInfoBox">
             <h2>使用说明</h2>
             <div className="usageInfoText">{USAGE_TEXT}</div>
             <div className="usageVersionBlock">
-              <p>雪球 Snowball</p>
-              <button type="button" className="usageVersionTap" onClick={handleVersionTap}>Version 0.9.7 Test</button>
+              <p>雪粒 Snowlet</p>
+              <button type="button" className="usageVersionTap" onClick={handleVersionTap}>Version 1.1</button>
               <p>Copyright © 2026</p>
               <p>专利申请中 · 仅供测试使用</p>
               {data.developerMode && (
@@ -4483,7 +4514,7 @@ const homeFloatingFootprintMemory = ''
           {dailyMode === 'home' || dailyMode === 'edit' ? (
             <div className="dailyPanelScene">
               <img className="dailyPanelBg" src="/daily_background.png" alt="日常背景" />
-              <img className="dailyPanelCat" src="/daily_cat.png" alt="日常雪球" />
+              <img className="dailyPanelCat" src="/daily_cat.png" alt="日常雪粒" />
             </div>
           ) : null}
 
@@ -4523,6 +4554,11 @@ const homeFloatingFootprintMemory = ''
               openDailyDetail={openDailyDetail}
               onBackHome={() => setShowDataPanel(false)}
             />
+          ) : dailyMode === 'steps-auto' ? (
+            <StepAutoTable
+              records={data.stepAutoRecords || []}
+              onBack={() => setDailyMode('home')}
+            />
           ) : dailyMode === 'screen' ? (
             <div className="dailyPage dailySubPage dailyScreenPage dailyScreenRawPage">
               <div className="dailyTableCard dailyScreenDetailCard dailyScreenPlainCard" style={{ overflowX: 'auto' }}>
@@ -4531,17 +4567,17 @@ const homeFloatingFootprintMemory = ''
                 </label>
                 <div className="screenDetailScroll">
                   <div className="screenDetailHeader screenDetailHeaderEdit">
-                    <span>日期</span><span>雪球APP</span><span>真实APP</span><span>Package</span><span>屏时</span><span>次数</span><span></span>
+                    <span>日期</span><span>雪粒APP</span><span>真实APP</span><span>Package</span><span>屏时</span><span>次数</span><span></span>
                   </div>
                   <div className="screenDetailBody">
                   {(data.screenRecords || []).map((row, index) => ({ row, index })).filter(item => dateKey(item.row.date) === dateKey(selectedScreenDate)).map(({ row, index }) => (
                     <div className="screenDetailRow screenDetailEditRow" key={row.id || index}>
                       <input value={row.date || selectedScreenDate} disabled />
-                      <select value={row.app || ''} onChange={e => updateScreenRecord(index, 'app', e.target.value)} title={row.app ? '雪球已识别名称' : '未匹配时可手动选择'}>
+                      <select value={row.app || ''} onChange={e => updateScreenRecord(index, 'app', e.target.value)} title={row.app ? '雪粒已识别名称' : '未匹配时可手动选择'}>
                         <option value="">未匹配</option>
                         {APP_OPTIONS.map(app => <option key={app} value={app}>{app}</option>)}
                       </select>
-                      <input value={row.realAppName || ''} onChange={e => updateScreenRecord(index, 'realAppName', e.target.value)} placeholder="手机返回名称" title="输入真实名称后自动匹配雪球 APP 名" />
+                      <input value={row.realAppName || ''} onChange={e => updateScreenRecord(index, 'realAppName', e.target.value)} placeholder="手机返回名称" title="输入真实名称后自动匹配雪粒 APP 名" />
                       <input value={row.packageName || ''} onChange={e => updateScreenRecord(index, 'packageName', e.target.value)} placeholder="Package Name" />
                       <input value={formatHoursInputFromMinutes(screenMinutesFromRecord(row))} type="number" min="0" step="0.1" onChange={e => updateScreenRecord(index, 'minutes', e.target.value)} placeholder="小时" />
                       <input value={row.pickups || ''} type="number" min="0" onChange={e => updateScreenRecord(index, 'pickups', e.target.value)} placeholder="次数" />
@@ -4585,7 +4621,9 @@ const homeFloatingFootprintMemory = ''
                       ? <span className="dailyLinkedHeader" key={item}>屏时<button type="button" className="dailyHeaderNavLink dailyTrainHeaderLink" onClick={() => openTrainPage('yesterday')} aria-label="查看信息列车"><span className="dailyHeaderNavText">查看信息列车</span><span className="dailyHeaderNavIcon" aria-hidden="true">🚆</span></button></span>
                       : item === '食物' && dailyViewTab === 'food'
                         ? <span className="dailyLinkedHeader" key={item}>食物<button type="button" className="dailyHeaderNavLink dailyNutritionHeaderLink" onClick={() => openNutritionPage('today')} aria-label="查看营养光谱"><span className="dailyHeaderNavText">查看营养光谱</span><span className="dailyHeaderNavIcon" aria-hidden="true">🌈</span></button></span>
-                        : <span key={item}>{item}</span>
+                        : item === '步数' && dailyViewTab === 'steps' && data.developerMode
+                          ? <span className="dailyLinkedHeader" key={item}>步数<button type="button" className="dailyHeaderNavLink" onClick={openStepAutoTable} aria-label="查看步数自动获取表"><span className="dailyHeaderNavText">详情</span></button></span>
+                          : <span key={item}>{item}</span>
                   ))}
                   <span></span>
                   <span></span>
@@ -4825,7 +4863,7 @@ const homeFloatingFootprintMemory = ''
         <div className="noticeOverlay">
           <div className="noticeBox thingConfirmBox footprintHomePromptBox">
             <h2>{FOOTPRINT_TYPES[footprintHomePrompt] || '这个地图'}还没有设置住址</h2>
-            <p>设置后，雪球会在这个地图的家中等待你，并自动绘制从家到最常去地点的路线。</p>
+            <p>设置后，粒会在这个地图的家中等待你，并自动绘制从家到最常去地点的路线。</p>
             <div className="thingConfirmButtons footprintHomePromptButtons">
               <button onClick={() => startSetHomePosition(footprintHomePrompt || footprintView)}>立即设置住址</button>
               <button onClick={() => beginAddFootprint(footprintHomePrompt || footprintView)}>继续添加足迹</button>
@@ -4863,7 +4901,7 @@ const homeFloatingFootprintMemory = ''
             />
             <h2>太好了！</h2>
             <p>你连续7天保持了良好的作息、饮食，</p>
-            <p>雪球的状态刚刚好，它很开心。</p>
+            <p>雪粒的状态刚刚好，它很开心。</p>
             <button onClick={() => setShowReward(false)}>知道了</button>
           </div>
         </div>

@@ -31,10 +31,10 @@ export default function Nutrition({
             maxFrames={13}
             frameMs={260}
             fallback="/refine/things01.png"
-            ariaLabel="营养光谱动起来的雪球"
+            ariaLabel="营养光谱动起来的雪粒"
           />
         ) : (
-          <img className="dailyInsightCat nutritionInsightCat" src="/refine/nutrition_default_cat.png" alt="营养光谱雪球" />
+          <img className="dailyInsightCat nutritionInsightCat" src="/refine/nutrition_default_cat.png" alt="营养光谱雪粒" />
         )}
 
         <div className="dailyInsightContent nutritionInsightContent">

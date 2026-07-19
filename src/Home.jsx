@@ -1,5 +1,18 @@
 import './Home.css'
 
+function formatHomeRestTime(value) {
+  const text = String(value || '未记录').trim()
+  const match = text.match(/^(\d{1,2})\s*[:：]\s*(\d{2})$/)
+
+  if (!match) return text.replace(/：/g, ' : ')
+
+  const rawHour = Number(match[1])
+  const minute = match[2]
+  const displayHour = rawHour >= 24 ? rawHour % 24 : rawHour
+
+  return `${displayHour} : ${minute}`
+}
+
 export default function Home({
   MOTION,
   bgImg,
@@ -62,20 +75,20 @@ export default function Home({
       {isHomeVisible && (
         <div className="homeFixedTopBar">
           <div className="homeFixedBrand">
-            <strong>雪球</strong>
+            <strong>雪粒</strong>
             <span>第 {adoptDays} 天 · {gen.label}</span>
           </div>
           <button type="button" onClick={() => setUsageModal(true)}>使用说明</button>
         </div>
       )}
       <section className="heroCard">
-        <img className="sceneBg" src={bgImg} alt="雪球的背景" />
+        <img className="sceneBg" src={bgImg} alt="雪粒的背景" />
 
         <div
           className={`catVisual homeCatButton ${interactionPlaying ? 'interacting' : ''} ${canPlayMotionVideo ? 'videoMode' : 'idle'}`}
           role="button"
           tabIndex={0}
-          aria-label="拍拍雪球"
+          aria-label="拍拍雪粒"
           onClick={playHomeCatInteraction}
           onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') playHomeCatInteraction() }}
         >
@@ -116,7 +129,7 @@ export default function Home({
                   transform: `scale(${MOTION.interactionStageScale?.[gen.stage] || 1})`,
                   transformOrigin: 'center bottom',
                 }}
-                alt="雪球正在回应"
+                alt="雪粒正在回应"
                 draggable="false"
               />
             </span>
@@ -136,10 +149,10 @@ export default function Home({
                 transform: `scale(${MOTION.stageScale[gen.stage] || 1})`,
                 transformOrigin: 'center bottom',
               }}
-              ariaLabel="雪球正在通话中轻轻走动"
+              ariaLabel="雪粒正在通话中轻轻走动"
             />
           ) : (
-            <img className="mainCat" src={catImg} style={{ filter: imageFilter }} alt="雪球" />
+            <img className="mainCat" src={catImg} style={{ filter: imageFilter }} alt="雪粒" />
           )}
         </div>
       </section>
@@ -164,7 +177,7 @@ export default function Home({
         <div className="messages" ref={messagesRef}>
           {data.messages.map((m, i) => (
             <div key={i} className={`messageRow ${m.from}`}>
-              {m.from === 'cat' && <img src={catImg} style={{ filter: imageFilter }} alt="雪球头像" />}
+              {m.from === 'cat' && <img src={catImg} style={{ filter: imageFilter }} alt="雪粒头像" />}
               <div className={`bubble ${m.from}`}>{m.text}</div>
             </div>
           ))}
@@ -195,17 +208,16 @@ export default function Home({
         <div className="homeCausalStatus">
           <button type="button" className="homeCausalRow" onClick={() => openDailyDetail('steps')}>
             <span className="homeCausalIcon">👟</span>
-            <span className="homeCausalLeft">你昨日 <strong>{homeYesterdaySteps}</strong> 步</span>
+            <span className="homeCausalLeft">你上次步数 <strong>{homeYesterdaySteps}</strong> </span>
             <span className="homeCausalArrow">→</span>
             <span className="homeCausalRight">它体型 <strong>{body.label}</strong></span>
           </button>
 
           <button type="button" className="homeCausalRow" onClick={() => openDailyDetail('offscreen')}>
             <span className="homeCausalIcon">🌙</span>
-            <span className="homeCausalLeft">你昨日 <strong>
-  {String(homeYesterdaySleep || '未记录')
-    .replace(/：/g, ' : ')}
-</strong> 息</span>
+            <span className="homeCausalLeft">你上次休息 <strong>
+  {formatHomeRestTime(homeYesterdaySleep)}
+</strong> </span>
             <span className="homeCausalArrow">→</span>
             <span className="homeCausalRight">它毛形 <strong>{furDisplay}</strong></span>
           </button>
@@ -257,13 +269,13 @@ export default function Home({
             maxFrames={MAX_MOTION_FRAMES}
             frameMs={MOTION.frameMs.footprint}
             fallback="/refine/footprint_background_cat.png"
-            ariaLabel="雪球在雪地上走过"
+            ariaLabel="雪粒在雪地上走过"
           />
         </div>
       </section>
 
       {isHomeVisible && (
-      <nav className="homeBottomNav" aria-label="雪球主页功能">
+      <nav className="homeBottomNav" aria-label="雪粒主页功能">
         <button type="button" onClick={() => openNutritionPage('today')}>
           <span>🌈</span>
           <em>营养</em>

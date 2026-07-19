@@ -455,7 +455,7 @@ function buildWitnessText(before, person, savedMonth) {
     return `${monthText}，你补充了${displayName}的备注。这份人物记录因此更完整，也更接近此刻的真实。`.slice(0, 100)
   }
   if (changes.includes('start') || changes.includes('relation') || changes.includes('nickname')) {
-    return `${monthText}，你修正了${displayName}的关系资料。雪球已经记下这次变化。`.slice(0, 100)
+    return `${monthText}，你修正了${displayName}的关系资料。雪粒已经记下这次变化。`.slice(0, 100)
   }
   return ''
 }
@@ -849,7 +849,7 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
             </div>
           </div>
           <div className="peopleMapCanvas" ref={mapCanvasRef}>
-            <img className="peopleWitnessCat" src="/refine/people_background_cat.png" alt="雪球在见证人间" />
+            <img className="peopleWitnessCat" src="/refine/people_background_cat.png" alt="雪粒在见证人间" />
             {!activeBirthDate && <div className="peopleInitialDatePrompt">请先在“设置”中填写初始年月，人间图随后自动生成。</div>}
             {activeBirthDate && RING_LABELS.map(ring => (
               <div
@@ -900,7 +900,7 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
                 </select>
               </div>
               {[
-                ['relation', '关系'], ['gender', '性别'], ['start', '开始'], ['end', '结束'], ['frequency', '联系频率'], ['impressionDepth', '印象值'], ['actions', ''], ['note', '备注'], ['witness', '雪球的见证语'],
+                ['relation', '关系'], ['gender', '性别'], ['start', '开始'], ['end', '结束'], ['frequency', '联系频率'], ['impressionDepth', '印象值'], ['actions', ''], ['note', '备注'], ['witness', '粒的见证语'],
               ].map(([key, label]) => (
                 <button type="button" key={key} onClick={() => toggleSort(key)}>
                   {label}{sortKey === key ? (sortDirection === 'asc' ? ' ↑' : ' ↓') : ''}
@@ -928,13 +928,13 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
                 </span>
                 <span className="peopleNoteCell">{person.note || '—'}</span>
                 <span className={`peopleWitnessCell ${expandedWitnessId === person.id ? 'open' : ''}`}>
-                  <button type="button" className="peopleWitnessToggle" onClick={() => setExpandedWitnessId(prev => prev === person.id ? null : person.id)} aria-label="展开雪球的见证语">
+                  <button type="button" className="peopleWitnessToggle" onClick={() => setExpandedWitnessId(prev => prev === person.id ? null : person.id)} aria-label="展开粒的见证语">
                     {expandedWitnessId === person.id ? '⌄' : '›'}
                     <span>{person.witnessEntries?.length || 0}</span>
                   </button>
                   {expandedWitnessId === person.id && (
                     <div className="peopleWitnessText">
-                      {(person.witnessEntries || []).length ? person.witnessEntries.map((text, index) => <p key={index}>{text}</p>) : <p>雪球还没有留下见证语。</p>}
+                      {(person.witnessEntries || []).length ? person.witnessEntries.map((text, index) => <p key={index}>{text}</p>) : <p>粒还没有留下见证语。</p>}
                     </div>
                   )}
                 </span>
@@ -1014,7 +1014,7 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
         <div className="peopleWitnessPopupOverlay">
           <div className="peopleWitnessPopup">
             <button type="button" className="peopleWitnessClose" onClick={() => setWitnessPopup('')} aria-label="关闭">×</button>
-            <img src="/refine/people_background_cat.png" alt="雪球" />
+            <img src="/refine/people_background_cat.png" alt="雪粒" />
             <p>{witnessPopup}</p>
           </div>
         </div>

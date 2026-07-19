@@ -1,0 +1,134 @@
+/* 雪粒首次启动：协议确认与系统授权 */
+.onboardingOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 13000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    18px
+    max(18px, env(safe-area-inset-bottom));
+  background: rgba(2, 8, 15, 0.82);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+
+.onboardingCard {
+  width: min(430px, 92vw);
+  max-height: min(680px, calc(100vh - 40px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  padding: 25px 23px 22px;
+  border: 1px solid rgba(230, 235, 240, 0.17);
+  border-radius: 25px;
+  background: #0d1828;
+  color: #f4f0e6;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.58);
+  text-align: left;
+}
+
+.onboardingCard h2 {
+  margin: 0 0 14px;
+  font-size: 22px;
+  line-height: 1.3;
+}
+
+.onboardingCard p {
+  margin: 0;
+  color: #dfe7f4;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.onboardingDocumentLinks,
+.onboardingPermissionList {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.onboardingDocumentLinks button {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 14px;
+  border: 1px solid rgba(156, 175, 200, 0.25);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #c7d8eb;
+  font-size: 15px;
+  text-align: center;
+}
+
+.onboardingPermissionList div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border: 1px solid rgba(156, 175, 200, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #e8eef6;
+}
+
+.onboardingPermissionList span {
+  color: #9fbea9;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.onboardingPermissionList strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.onboardingSmallText {
+  color: rgba(223, 231, 244, 0.72) !important;
+  font-size: 12px !important;
+}
+
+.onboardingMessage {
+  margin-top: 14px !important;
+  color: #e5cda2 !important;
+}
+
+.onboardingActions {
+  display: grid;
+  grid-template-columns: 0.84fr 1.16fr;
+  gap: 10px;
+  margin-top: 21px;
+}
+
+.onboardingPrimaryButton,
+.onboardingSecondaryButton {
+  min-height: 46px;
+  margin: 0;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 999px;
+  color: white;
+  font-size: 14px;
+}
+
+.onboardingPrimaryButton {
+  background: #8fa99b;
+}
+
+.onboardingSecondaryButton {
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.onboardingSingleButton {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.onboardingPrimaryButton:disabled {
+  opacity: 0.62;
+}

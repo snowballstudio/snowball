@@ -7,15 +7,19 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "assets": "capacitor-assets generate --assetPath assets",
+    "assets:ios": "capacitor-assets generate --ios --assetPath assets",
+    "assets:android": "capacitor-assets generate --android --assetPath assets"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
+    "@capacitor/ios": "^8.4.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "@capacitor/ios": "^8.4.1"
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
