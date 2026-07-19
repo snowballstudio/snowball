@@ -1,8 +1,10 @@
 import UIKit
 import Capacitor
 
-class MainViewController: CAPBridgeViewController {
-    override open func capacitorDidLoad() {
+@objc(MainViewController)
+public final class MainViewController: CAPBridgeViewController {
+    public override func capacitorDidLoad() {
+        super.capacitorDidLoad()
         bridge?.registerPluginInstance(DeviceDataPlugin())
     }
 }
