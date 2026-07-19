@@ -70,6 +70,22 @@
   min-height: 50px;
   background: #e7ecee;
   font-weight: 700;
+  border-bottom: 1px solid rgba(50, 70, 78, 0.22);
+  box-shadow: 0 5px 12px rgba(38, 50, 56, 0.18);
+}
+
+.stepAutoHeader > span {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  background: #e7ecee;
+  border-right: 1px solid rgba(50, 70, 78, 0.10);
+}
+
+.stepAutoHeader > span:last-child{
+    border-left:1px solid rgba(50,70,78,.12);
+    border-right:none;
+    box-shadow:none;
 }
 
 .stepAutoStrong {

@@ -1734,3 +1734,63 @@
   color: rgba(57, 72, 90, 0.46);
   opacity: 1;
 }
+
+
+/* ======================================================
+   V1.1｜人间页面外壳固定
+   关闭整页拖动；地图、人物表和编辑弹窗保留自己的滚动。
+   ====================================================== */
+@media (max-width: 900px) {
+  .peopleOverlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    align-items: stretch !important;
+  }
+
+  .peoplePanel {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  .peopleMapCard,
+  .peopleTableCard {
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .peopleTableScroll {
+    overflow: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .peopleEditorOverlay,
+  .peopleInfoOverlay,
+  .peopleDeleteOverlay,
+  .peopleWitnessPopupOverlay {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  .peopleEditor,
+  .peopleInfoPage {
+    max-height: calc(100dvh - 36px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}

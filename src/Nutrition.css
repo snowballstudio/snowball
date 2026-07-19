@@ -525,3 +525,61 @@
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-3px) scale(1.018); }
 }
+
+
+/* ======================================================
+   V1.1｜手机端全宽底板
+   页面背景铺满整个视口；内部表格和内容仍保留原有边距。
+   ====================================================== */
+@media (max-width: 900px) {
+  :root {
+    --nutrition-page-inset-x: 0px;
+  }
+
+  .dailyNutritionPage {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #10161b !important;
+    overflow: hidden !important;
+  }
+
+  .dailyNutritionPage .nutritionSpectrumCard {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .dailyNutritionPage .nutritionBg,
+  .dailyNutritionPage .dailyInsightBg {
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100% !important;
+  }
+
+  .dailyNutritionPage .nutritionSubTop {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+  }
+}
+
+
+/* V1.2 去掉彩虹页上下滚动 */
+.dailyNutritionPage,
+.dailyNutritionPage .nutritionSpectrumCard,
+.dailyNutritionPage .nutritionInsightContent,
+.dailyNutritionPage .dailyInsightContent{
+  overflow:hidden !important;
+}

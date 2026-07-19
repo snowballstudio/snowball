@@ -66,7 +66,7 @@
   --fp-history-top: calc(var(--fp-home-bg-height) + 25px);
   --fp-history-left: 16px;
   --fp-history-right: 16px;
-  --fp-history-bottom: 56px;
+  --fp-history-bottom: 84px;
 
   /* 主页历史列表：标题“足迹历史” */
   --fp-history-title-size: 14px;
@@ -111,9 +111,12 @@
   --fp-record-type-color: var(--fp-blue);
 
   /* 主页底部地图链接 */
-  --fp-home-link-bottom: 20px;
-  --fp-home-link-size: 12px;
+  --fp-home-link-bottom: 26px;
+  --fp-home-link-size: 11.5px;
   --fp-home-link-gap: 60px;
+  --fp-home-link-bar-height: 54px;
+  --fp-home-link-bar-bg: rgba(239, 240, 242, 0.96);
+  --fp-home-link-bar-line: rgba(129, 132, 134, 0.18);
 
   /* 地图浏览/编辑页 */
   --fp-full-padding: 0px;
@@ -299,7 +302,7 @@
 }
 
 .footprintHomeTitle p strong {
-  color: #f75612 !important;
+  color: #f6186d !important;
   font-size: 1.22em !important;
   font-weight: 900 !important;
   text-shadow: 0 1px 5px rgba(255,255,255,0.32) !important;
@@ -554,10 +557,16 @@
   right: 0 !important;
   bottom: var(--fp-home-link-bottom) !important;
   z-index: 20 !important;
+  min-height: var(--fp-home-link-bar-height) !important;
+  box-sizing: border-box !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
   gap: var(--fp-home-link-gap) !important;
+  padding: 12px 16px 10px !important;
+  background: var(--fp-home-link-bar-bg) !important;
+  border-top: 1px solid var(--fp-home-link-bar-line) !important;
+  box-shadow: 0 -4px 12px rgba(28, 36, 44, 0.05) !important;
   pointer-events: auto !important;
 }
 
@@ -1118,8 +1127,10 @@
     --fp-history-left: 14px;
     --fp-history-right: 14px;
     --fp-history-top: calc(var(--fp-home-bg-height) + 8px);
-    --fp-history-bottom: 52px;
+    --fp-history-bottom: 82px;
+    --fp-home-link-bottom: calc(16px + env(safe-area-inset-bottom));
     --fp-home-link-gap: 26px;
+    --fp-home-link-bar-height: 52px;
     --fp-map-panel-height: 32vh;
     --fp-cat-width: 40px;
     --fp-popup-width: min(360px, 84%);

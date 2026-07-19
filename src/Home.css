@@ -1649,3 +1649,35 @@ top: 2px;
     display: none !important;
   }
 }
+
+
+/* ======================================================
+   V1.1｜主页外壳固定、正文局部滚动、底栏真正冻结
+   ====================================================== */
+@media (max-width: 900px) {
+  .phoneShell {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .homeBottomNav {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    z-index: 12000 !important;
+    transform: translateZ(0);
+  }
+}

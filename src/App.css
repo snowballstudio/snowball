@@ -4816,3 +4816,93 @@ button.dailyScreenValuePlain { cursor: pointer; }
   justify-self: center !important;
   white-space: nowrap !important;
 }
+
+
+/* ======================================================
+   V1.1｜手机端视口锁定
+   禁止整个 WebView / body 上下漂移；滚动交给页面内部容器。
+   ====================================================== */
+@media (max-width: 900px) {
+  html,
+  body,
+  #root {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  body {
+    position: fixed !important;
+    inset: 0 !important;
+    touch-action: manipulation;
+  }
+
+  #root,
+  .app {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .app {
+    display: block !important;
+  }
+}
+
+
+/* ======================================================
+   V1.1｜iPhone Safe Area 白边统一修复
+   安全区和 WebView 根背景统一为雪球炭黑色。
+   ====================================================== */
+:root {
+  --snowball-safe-bg: #11161b;
+}
+
+html,
+body,
+#root {
+  background: var(--snowball-safe-bg) !important;
+}
+
+@media (max-width: 900px) {
+  html,
+  body,
+  #root,
+  .app {
+    background-color: var(--snowball-safe-bg) !important;
+  }
+
+  html {
+    min-height: 100%;
+  }
+
+  body {
+    min-height: 100%;
+    color-scheme: dark;
+  }
+
+  #root,
+  .app {
+    min-height: 100dvh !important;
+  }
+
+  /* 在 iPhone 刘海与 Home Indicator 区域下方提供统一深色底板。 */
+  .app::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--snowball-safe-bg);
+    pointer-events: none;
+  }
+}

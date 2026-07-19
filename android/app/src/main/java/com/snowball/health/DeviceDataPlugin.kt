@@ -1,14 +1,23 @@
 package com.snowball.health
 
+import android.Manifest
 import android.app.AppOpsManager
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Process
+import android.os.Handler
+import android.os.Looper
 import android.os.Build
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
@@ -20,18 +29,30 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.ActivityCallback
+import com.getcapacitor.annotation.Permission
+import com.getcapacitor.annotation.PermissionCallback
 import com.getcapacitor.annotation.CapacitorPlugin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.coroutines.resume
 import kotlin.math.max
 
-@CapacitorPlugin(name = "DeviceData")
+@CapacitorPlugin(
+    name = "DeviceData",
+    permissions = [
+        Permission(
+            strings = [Manifest.permission.ACTIVITY_RECOGNITION],
+            alias = "activityRecognition"
+        )
+    ]
+)
 class DeviceDataPlugin : Plugin() {
     private val scope = CoroutineScope(Dispatchers.IO)
     private val stepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
@@ -44,11 +65,21 @@ class DeviceDataPlugin : Plugin() {
             result.put("healthAvailable", sdkStatus == HealthConnectClient.SDK_AVAILABLE)
             result.put("healthProviderUpdateRequired", sdkStatus == HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED)
             result.put("usageAccessGranted", hasUsageAccess())
+            result.put("stepCounterAvailable", hasStepCounterSensor())
+            result.put("activityRecognitionPermissionGranted", hasActivityRecognitionPermission())
             val manufacturer = Build.MANUFACTURER.orEmpty()
             val isHuawei = manufacturer.equals("HUAWEI", ignoreCase = true) || manufacturer.equals("HONOR", ignoreCase = true)
             result.put("deviceManufacturer", manufacturer)
             result.put("isHuaweiDevice", isHuawei)
-            result.put("stepProvider", if (isHuawei) "huawei-health-kit-required" else "health-connect")
+            result.put(
+                "stepProvider",
+                when {
+                    sdkStatus == HealthConnectClient.SDK_AVAILABLE -> "health-connect"
+                    hasStepCounterSensor() -> "system-step-counter"
+                    isHuawei -> "huawei-health-kit-required"
+                    else -> "unavailable"
+                }
+            )
             var granted = false
             if (sdkStatus == HealthConnectClient.SDK_AVAILABLE) {
                 try {
@@ -59,6 +90,24 @@ class DeviceDataPlugin : Plugin() {
             result.put("healthPermissionGranted", granted)
             withContext(Dispatchers.Main) { call.resolve(result) }
         }
+    }
+
+    @PluginMethod
+    fun requestActivityRecognitionPermission(call: PluginCall) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || hasActivityRecognitionPermission()) {
+            val out = JSObject()
+            out.put("granted", true)
+            call.resolve(out)
+            return
+        }
+        requestPermissionForAlias("activityRecognition", call, "activityRecognitionPermissionResult")
+    }
+
+    @PermissionCallback
+    private fun activityRecognitionPermissionResult(call: PluginCall) {
+        val out = JSObject()
+        out.put("granted", hasActivityRecognitionPermission())
+        call.resolve(out)
     }
 
     @PluginMethod
@@ -114,6 +163,9 @@ class DeviceDataPlugin : Plugin() {
                     healthClient?.permissionController?.getGrantedPermissions()?.contains(stepsPermission) == true
                 } catch (_: Exception) { false }
 
+                val today = LocalDate.now(zone)
+                val cumulativeSteps = readCurrentCumulativeSteps()
+
                 for (offset in 0 until days) {
                     val date = startDate.minusDays(offset.toLong())
                     val calendarStart = date.atStartOfDay(zone).toInstant()
@@ -121,7 +173,7 @@ class DeviceDataPlugin : Plugin() {
                     val snowballStart = date.atTime(cutoffHour, 0).atZone(zone).toInstant()
                     val snowballEnd = date.plusDays(1).atTime(cutoffHour, 0).atZone(zone).toInstant()
 
-                    var steps = 0L
+                    var healthConnectSteps: Long? = null
                     if (canReadSteps && healthClient != null) {
                         try {
                             val aggregate = healthClient.aggregate(
@@ -130,8 +182,10 @@ class DeviceDataPlugin : Plugin() {
                                     timeRangeFilter = TimeRangeFilter.between(calendarStart, calendarEnd)
                                 )
                             )
-                            steps = aggregate[StepsRecord.COUNT_TOTAL] ?: 0L
-                        } catch (_: Exception) { }
+                            healthConnectSteps = aggregate[StepsRecord.COUNT_TOTAL] ?: 0L
+                        } catch (_: Exception) {
+                            healthConnectSteps = null
+                        }
                     }
 
                     val usage = if (hasUsageAccess()) readUsageWindow(
@@ -146,7 +200,14 @@ class DeviceDataPlugin : Plugin() {
 
                     val day = JSObject()
                     day.put("date", date.format(formatter))
-                    day.put("steps", steps)
+                    if (healthConnectSteps != null) {
+                        day.put("healthConnectSteps", healthConnectSteps)
+                        day.put("steps", healthConnectSteps)
+                    }
+                    if (date == today && cumulativeSteps != null) {
+                        day.put("cumulativeSteps", cumulativeSteps)
+                        day.put("stepCounter", cumulativeSteps)
+                    }
                     day.put("screenMinutes", usage.screenMinutes)
                     day.put("offscreenTime", usage.offscreenTime)
                     val apps = JSArray()
@@ -168,6 +229,77 @@ class DeviceDataPlugin : Plugin() {
                 withContext(Dispatchers.Main) { call.resolve(result) }
             } catch (error: Exception) {
                 withContext(Dispatchers.Main) { call.reject("Failed to read device data", error) }
+            }
+        }
+    }
+
+    private fun hasStepCounterSensor(): Boolean {
+        val manager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        return manager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) != null
+    }
+
+    private fun hasActivityRecognitionPermission(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACTIVITY_RECOGNITION
+            ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private suspend fun readCurrentCumulativeSteps(): Long? {
+        if (!hasStepCounterSensor() || !hasActivityRecognitionPermission()) return null
+
+        return suspendCancellableCoroutine { continuation ->
+            val manager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            val sensor = manager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+
+            if (sensor == null) {
+                continuation.resume(null)
+                return@suspendCancellableCoroutine
+            }
+
+            val handler = Handler(Looper.getMainLooper())
+            var completed = false
+
+            lateinit var listener: SensorEventListener
+            val timeout = Runnable {
+                if (!completed) {
+                    completed = true
+                    manager.unregisterListener(listener)
+                    if (continuation.isActive) continuation.resume(null)
+                }
+            }
+
+            listener = object : SensorEventListener {
+                override fun onSensorChanged(event: SensorEvent?) {
+                    if (completed) return
+                    completed = true
+                    handler.removeCallbacks(timeout)
+                    manager.unregisterListener(this)
+                    val value = event?.values?.firstOrNull()?.toLong()
+                    if (continuation.isActive) continuation.resume(value)
+                }
+
+                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+            }
+
+            handler.post {
+                val registered = manager.registerListener(
+                    listener,
+                    sensor,
+                    SensorManager.SENSOR_DELAY_NORMAL
+                )
+                if (!registered && !completed) {
+                    completed = true
+                    if (continuation.isActive) continuation.resume(null)
+                } else {
+                    handler.postDelayed(timeout, 2500L)
+                }
+            }
+
+            continuation.invokeOnCancellation {
+                handler.removeCallbacks(timeout)
+                manager.unregisterListener(listener)
             }
         }
     }

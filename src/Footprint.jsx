@@ -469,7 +469,7 @@ export default function Footprint({
             <div className="footprintHomeContent">
               <div className="footprintSceneSetting">
                 <label>
-                  <span>设置背景</span>
+                  <span></span>
                   <select value={data.yearsScene || 'park'} onChange={e => changeFootprintScene(e.target.value)}>
                     {Object.entries(YEARS_SCENES).map(([key, scene]) => (
                       <option key={key} value={key}>{scene.label}</option>

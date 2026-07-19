@@ -656,8 +656,23 @@ function formatClockFromMinutes(minutes) {
 }
 
 function recordScreenMinutes(record) {
-  const direct = minutesFromValue(record?.screenMinutes ?? record?.screenTime ?? record?.screenHours ?? record?.screen)
-  if (direct !== null) return direct
+  // 日常记录中的 screenMinutes 从原生端开始就统一使用“分钟”。
+  // 不能再交给 minutesFromValue；否则 21 会被误判成 21 小时。
+  const directMinutes = record?.screenMinutes
+  if (directMinutes !== null && directMinutes !== undefined && directMinutes !== '') {
+    const numeric = Number(directMinutes)
+    if (Number.isFinite(numeric)) return Math.max(0, Math.round(numeric))
+  }
+
+  // 旧字段 screenHours 明确以小时保存，单独换算成分钟。
+  const directHours = record?.screenHours
+  if (directHours !== null && directHours !== undefined && directHours !== '') {
+    const numeric = Number(directHours)
+    if (Number.isFinite(numeric)) return Math.max(0, Math.round(numeric * 60))
+  }
+
+  const legacy = minutesFromValue(record?.screenTime ?? record?.screen)
+  if (legacy !== null) return legacy
   return 0
 }
 
@@ -1865,11 +1880,12 @@ function nativePayloadDays(payload = {}) {
   return Array.isArray(payload?.days) ? payload.days : []
 }
 
-function mergeNativeDailyDays(prev, payload = {}, { force = false, liveToday = false } = {}) {
+function mergeNativeDailyDays(prev, payload = {}, { force = false, liveToday = false, refreshDates = [] } = {}) {
   const days = nativePayloadDays(payload)
   if (!days.length) return prev
 
   const platform = Capacitor.getPlatform()
+  const refreshDateKeys = new Set((refreshDates || []).map(item => dateKey(formatDateForDaily(item))))
   const stepAutoRecords = ingestStepPayload(prev.stepAutoRecords || [], payload, {
     platform,
     liveToday,
@@ -1888,9 +1904,19 @@ function mergeNativeDailyDays(prev, payload = {}, { force = false, liveToday = f
       ...(isToday ? { deviceTodayFetchedAt: Date.now() } : { deviceHistoricalFetchedAt: Date.now() }),
     }
 
-    const mayWriteSteps = force || (!isToday && !existing.stepsManual && !existing.stepsAutoImportedAt)
-    const mayWriteScreen = force || !existing.screenManual
-    const mayWriteOffscreen = force || !existing.offscreenManual
+    const shouldRefreshDate = refreshDateKeys.has(dateKey(dayDate))
+    const mayWriteSteps = force || (
+      !existing.stepsManual &&
+      (isToday || shouldRefreshDate || !existing.stepsAutoImportedAt)
+    )
+    const mayWriteScreen = force || (
+      !existing.screenManual &&
+      (isToday || shouldRefreshDate || !existing.screenAutoFetchedAt)
+    )
+    const mayWriteOffscreen = force || (
+      !existing.offscreenManual &&
+      (isToday || shouldRefreshDate || !existing.offscreenAutoFetchedAt)
+    )
     const resolvedSteps = stepValueForDate(stepAutoRecords, dayDate)
 
     if (mayWriteSteps && resolvedSteps !== null) {
@@ -1920,9 +1946,10 @@ function mergeNativeDailyDays(prev, payload = {}, { force = false, liveToday = f
   stepAutoRecords.forEach(stepRow => {
     const dayDate = formatDateForDaily(stepRow.date)
     const isToday = dateKey(dayDate) === dateKey(todayText())
-    if (isToday && !force) return
+    const shouldRefreshDate = refreshDateKeys.has(dateKey(dayDate))
     const existing = dailyRecordForDate(records, dayDate) || emptyDailyRecord(dayDate)
-    if (!force && (existing.stepsManual || existing.stepsAutoImportedAt)) return
+    if (!force && existing.stepsManual) return
+    if (!force && !isToday && !shouldRefreshDate && existing.stepsAutoImportedAt) return
     const resolvedSteps = stepValueForDate(stepAutoRecords, dayDate)
     if (resolvedSteps === null) return
     records = mergeDailyRecord(records, dayDate, {
@@ -1948,17 +1975,18 @@ function mergeNativeDailyDays(prev, payload = {}, { force = false, liveToday = f
   }
 }
 
-function mergeNativeScreenDays(prev, payload = {}, { force = false, liveToday = false } = {}) {
+function mergeNativeScreenDays(prev, payload = {}, { force = false, liveToday = false, refreshDates = [] } = {}) {
   const days = nativePayloadDays(payload)
   if (!days.length) return prev
 
+  const refreshDateKeys = new Set((refreshDates || []).map(item => dateKey(formatDateForDaily(item))))
   let screenRecords = [...(prev.screenRecords || [])]
   days.forEach(day => {
     const dayDate = formatDateForDaily(day?.date || todayText())
     const dayKey = dateKey(dayDate)
     const isToday = dayKey === dateKey(todayText())
     const exists = screenRecords.some(item => dateKey(item?.date) === dayKey)
-    const shouldReplace = force || (liveToday && isToday)
+    const shouldReplace = force || (liveToday && isToday) || refreshDateKeys.has(dayKey)
     if (exists && !shouldReplace) return
 
     if (shouldReplace) screenRecords = screenRecords.filter(item => dateKey(item?.date) !== dayKey)
@@ -1991,6 +2019,51 @@ function mergeNativeScreenDays(prev, payload = {}, { force = false, liveToday = 
 }
 
 function App() {
+  useEffect(() => {
+    // 让 iOS WebView 内容延伸至刘海和 Home Indicator 安全区，
+    // 并把系统可见底色统一为雪球炭黑色。
+    let viewport = document.querySelector('meta[name="viewport"]')
+    if (!viewport) {
+      viewport = document.createElement('meta')
+      viewport.setAttribute('name', 'viewport')
+      document.head.appendChild(viewport)
+    }
+
+    const currentViewport = viewport.getAttribute('content') || ''
+    const viewportParts = currentViewport
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean)
+      .filter(item => !item.startsWith('viewport-fit='))
+
+    const requiredViewportParts = [
+      'width=device-width',
+      'initial-scale=1',
+      'maximum-scale=1',
+      'viewport-fit=cover',
+    ]
+
+    const mergedViewport = [
+      ...viewportParts.filter(item =>
+        !requiredViewportParts.some(required => item.split('=')[0] === required.split('=')[0])
+      ),
+      ...requiredViewportParts,
+    ]
+
+    viewport.setAttribute('content', mergedViewport.join(', '))
+
+    let themeColor = document.querySelector('meta[name="theme-color"]')
+    if (!themeColor) {
+      themeColor = document.createElement('meta')
+      themeColor.setAttribute('name', 'theme-color')
+      document.head.appendChild(themeColor)
+    }
+    themeColor.setAttribute('content', '#11161b')
+
+    document.documentElement.style.backgroundColor = '#11161b'
+    document.body.style.backgroundColor = '#11161b'
+  }, [])
+
   const [data, setData] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
@@ -2087,11 +2160,21 @@ function App() {
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return undefined
+
     let alive = true
+    let syncing = false
+    let lastRunAt = 0
 
     async function ensureNativePermissions() {
       let status = await DeviceData.getStatus()
       if (Capacitor.getPlatform() === 'android') {
+        if (status?.stepCounterAvailable && !status?.activityRecognitionPermissionGranted) {
+          try {
+            await DeviceData.requestActivityRecognitionPermission()
+          } catch (error) {
+            console.warn('系统累计步数权限未完成。', error)
+          }
+        }
         if (status?.healthAvailable && !status?.healthPermissionGranted) {
           try { await DeviceData.requestHealthPermissions() } catch (error) { console.warn('Health Connect 授权未完成。', error) }
         }
@@ -2101,7 +2184,7 @@ function App() {
           const accepted = window.confirm('雪粒需要“使用情况访问权限”才能自动获取屏幕时间。现在前往系统设置授权吗？注：授权后数据将存在单机，仅本人可见。')
           if (accepted) {
             await DeviceData.openUsageAccessSettings()
-            throw new Error('完成“使用情况访问权限”后，请关闭并重新打开雪粒。')
+            throw new Error('完成“使用情况访问权限”后，请返回或重新打开雪粒。')
           }
         }
       } else if (Capacitor.getPlatform() === 'ios' && !status?.healthPermissionGranted) {
@@ -2110,28 +2193,40 @@ function App() {
       return DeviceData.getStatus()
     }
 
+    function currentStoredData() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY)
+        return saved ? normalizeStoredData(JSON.parse(saved)) : data
+      } catch (_) {
+        return data
+      }
+    }
+
+    function missingHistoricalDates(records = [], startDate, endDate) {
+      const existingKeys = new Set((records || []).map(record => dateKey(record?.date)).filter(Boolean))
+      return dateListInclusive(startDate, endDate)
+        .filter(item => !existingKeys.has(dateKey(item)))
+    }
+
     async function runOneDailyAutoSync() {
+      const now = Date.now()
+      if (syncing || now - lastRunAt < 1200) return
+      syncing = true
+      lastRunAt = now
+
       try {
         const status = await ensureNativePermissions()
+        if (!alive) return
+
+        const platform = Capacitor.getPlatform()
         const today = formatDateForDaily(todayText())
-        const todayKey = dateKey(today)
-        const current = (() => {
-          try {
-            const saved = localStorage.getItem(STORAGE_KEY)
-            return saved ? normalizeStoredData(JSON.parse(saved)) : data
-          } catch (_) { return data }
-        })()
-
-        const skeletonRecords = ensureDailyDateSkeleton(current.records || [])
-        if (skeletonRecords.length !== (current.records || []).length) {
-          setData(prev => ({ ...prev, records: ensureDailyDateSkeleton(prev.records || []), lastSavedAt: Date.now() }))
-        }
-
+        const yesterday = yesterdayText()
+        const current = currentStoredData()
         const dailySupported = Boolean(status?.healthPermissionGranted)
-        const screenSupported = Capacitor.getPlatform() === 'android' && Boolean(status?.usageAccessGranted)
+        const screenSupported = platform === 'android' && Boolean(status?.usageAccessGranted)
         if (!dailySupported && !screenSupported) return
 
-        // 今天是进行中的数据：每次启动都刷新一次。
+        // 一、今日是进行中数据：每次打开 APP 或从后台回到前台都刷新。
         const todayResult = await DeviceData.readDailyData({
           days: 1,
           startDate: today,
@@ -2139,53 +2234,104 @@ function App() {
         })
         if (alive && Array.isArray(todayResult?.days) && todayResult.days.length) {
           setData(prev => {
-            let next = { ...prev, records: ensureDailyDateSkeleton(prev.records || []) }
+            let next = { ...prev }
             if (dailySupported || screenSupported) {
-              next = mergeNativeDailyDays(next, todayResult, { force: false, liveToday: true })
+              next = mergeNativeDailyDays(next, todayResult, {
+                force: false,
+                liveToday: true,
+                refreshDates: [today],
+              })
             }
             if (screenSupported) {
-              next = mergeNativeScreenDays(next, todayResult, { force: false, liveToday: true })
+              next = mergeNativeScreenDays(next, todayResult, {
+                force: false,
+                liveToday: true,
+                refreshDates: [today],
+              })
             }
             return next
           })
         }
 
-        // 昨天以及漏登日期：每天只自动补一次，之后手动修改优先。
-        const dailyNeedsHistory = dailySupported && current.lastDeviceDailyAutoSyncDate !== todayKey
-        const screenNeedsHistory = screenSupported && current.lastDeviceScreenAutoSyncDate !== todayKey
-        if (!dailyNeedsHistory && !screenNeedsHistory) return
-
-        const historyDays = Math.max(
-          current.deviceDailyInitialImportDone && current.deviceScreenInitialImportDone ? 1 : DEVICE_INITIAL_IMPORT_DAYS,
-          daysFromYesterdayBackTo(skeletonRecords),
+        // 二、历史数据：
+        // 首次安装读取最近 7 天；以后每次登录都刷新昨天，
+        // 并补齐从安装日起任何不存在的日期（包括测试时手工删除的日期）。
+        const firstImport = !current.deviceDailyInitialImportDone || !current.deviceScreenInitialImportDone
+        const yesterdayDate = parseLocalDate(yesterday)
+        const firstImportStart = new Date(
+          yesterdayDate.getFullYear(),
+          yesterdayDate.getMonth(),
+          yesterdayDate.getDate(),
         )
+        firstImportStart.setDate(firstImportStart.getDate() - (DEVICE_INITIAL_IMPORT_DAYS - 1))
+
+        const installStart = parseLocalDate(current.installDate || today)
+        const historyStart = firstImport
+          ? formatDateForDaily(firstImportStart)
+          : formatDateForDaily(installStart > yesterdayDate ? yesterdayDate : installStart)
+
+        const missingDates = missingHistoricalDates(current.records || [], historyStart, yesterday)
+        const refreshDates = [...new Set([yesterday, ...missingDates].map(formatDateForDaily))]
+        if (!refreshDates.length) return
+
+        const oldestRefreshDate = refreshDates
+          .map(parseLocalDate)
+          .sort((a, b) => a - b)[0]
+        const historyDays = Math.max(
+          1,
+          Math.floor((yesterdayDate - oldestRefreshDate) / 86400000) + 1,
+        )
+
         const historyResult = await DeviceData.readDailyData({
           days: historyDays,
-          startDate: yesterdayText(),
+          startDate: yesterday,
           cutoffHour: 5,
         })
         if (!alive || !Array.isArray(historyResult?.days) || !historyResult.days.length) return
 
         setData(prev => {
-          let next = { ...prev, records: ensureDailyDateSkeleton(prev.records || []) }
-          if (dailyNeedsHistory) next = mergeNativeDailyDays(next, historyResult, { force: false })
-          if (screenNeedsHistory) next = mergeNativeScreenDays(next, historyResult, { force: false })
+          let next = { ...prev }
+          if (dailySupported || screenSupported) {
+            next = mergeNativeDailyDays(next, historyResult, {
+              force: false,
+              refreshDates,
+            })
+          }
+          if (screenSupported) {
+            next = mergeNativeScreenDays(next, historyResult, {
+              force: false,
+              refreshDates,
+            })
+          }
           return {
             ...next,
-            deviceDailyInitialImportDone: dailyNeedsHistory ? true : prev.deviceDailyInitialImportDone,
-            deviceScreenInitialImportDone: screenNeedsHistory ? true : prev.deviceScreenInitialImportDone,
-            lastDeviceDailyAutoSyncDate: dailyNeedsHistory ? todayKey : prev.lastDeviceDailyAutoSyncDate,
-            lastDeviceScreenAutoSyncDate: screenNeedsHistory ? todayKey : prev.lastDeviceScreenAutoSyncDate,
+            deviceDailyInitialImportDone: dailySupported ? true : prev.deviceDailyInitialImportDone,
+            deviceScreenInitialImportDone: screenSupported ? true : prev.deviceScreenInitialImportDone,
+            lastDeviceDailyAutoSyncDate: dailySupported ? dateKey(today) : prev.lastDeviceDailyAutoSyncDate,
+            lastDeviceScreenAutoSyncDate: screenSupported ? dateKey(today) : prev.lastDeviceScreenAutoSyncDate,
+            lastDeviceAutoSyncAt: Date.now(),
           }
         })
       } catch (error) {
         console.warn('雪粒自动获取手机数据暂未完成；仍可继续使用手动数据。', error)
+      } finally {
+        syncing = false
       }
     }
 
+    function handleVisible() {
+      if (document.visibilityState === 'visible') runOneDailyAutoSync()
+    }
 
     runOneDailyAutoSync()
-    return () => { alive = false }
+    document.addEventListener('visibilitychange', handleVisible)
+    window.addEventListener('focus', handleVisible)
+
+    return () => {
+      alive = false
+      document.removeEventListener('visibilitychange', handleVisible)
+      window.removeEventListener('focus', handleVisible)
+    }
   }, [])
 
 
@@ -2586,24 +2732,34 @@ function App() {
   useEffect(() => {
     if (!data.hasSeenWelcome) return
 
-    const today = dateKey(todayText())
-    const greetingKey = `${today}|${homeYesterdaySteps}|${homeYesterdaySleep || '未记录'}`
+    // 雪粒的一天从 05:00 开始：
+    // 00:00—04:59 不播报；05:00 后当天只播报一次。
+    // 昨日步数或离机时间随后刷新、手动修改，都不再重复触发。
+    const now = new Date()
+    if (now.getHours() < 5) return
+
+    const greetingKey = dateKey(now)
     if (data.lastGreetingDate === greetingKey) return
 
-   const summary = dailySummaryText({ yesterdaySteps: homeYesterdaySteps, yesterdaySleepTime: homeYesterdaySleep }, sleepOk)
-const text = summary
+    const summary = dailySummaryText(
+      {
+        yesterdaySteps: homeYesterdaySteps,
+        yesterdaySleepTime: homeYesterdaySleep,
+      },
+      sleepOk,
+    )
 
-setDailyModal({
-  title:'雪粒的今日回顾',
-  text
-})
+    setDailyModal({
+      title: '雪粒的今日回顾',
+      text: summary,
+    })
+
     setData(prev => ({
-  ...prev,
-  lastGreetingDate: greetingKey,
-  chatStep: 'idle',
-}))
-
-  }, [data.hasSeenWelcome, data.date, data.lastGreetingDate, homeYesterdaySteps, homeYesterdaySleep, sleepOk])
+      ...prev,
+      lastGreetingDate: greetingKey,
+      chatStep: 'idle',
+    }))
+  }, [data.hasSeenWelcome, data.lastGreetingDate, homeYesterdaySteps, homeYesterdaySleep, sleepOk])
 
   useEffect(() => {
     if (!data.hasSeenWelcome) return
@@ -3623,7 +3779,8 @@ setDailyModal({
       yesterdaySleep: formatClockForDaily(baseData.yesterdaySleepTime) || '',
       offscreenTime: formatClockForDaily(baseData.yesterdaySleepTime) || '',
       todaySleep: baseData.todaySleepTime || '',
-      screenMinutes: recordScreenMinutes({ screenMinutes: baseData.screenMinutes }),
+      // 编辑框显示的是“小时”，保存回日常记录时统一转成分钟。
+      screenMinutes: Math.max(0, Math.round(Number(baseData.screenMinutes || 0) * 60)),
       food: foodKeyword || '',
       taste: baseData.foodTaste || '',
       mood: moodKeyword || '',

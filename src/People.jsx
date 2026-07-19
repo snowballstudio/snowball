@@ -499,7 +499,9 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
   const [editing, setEditing] = useState(null)
   const [draft, setDraft] = useState(EMPTY_PERSON)
   const [showBirthdayEditor, setShowBirthdayEditor] = useState(false)
-  const [birthdayDraft, setBirthdayDraft] = useState(monthSlashDraft(birthDate))
+  const initialBirthdayParts = monthPartsFromValue(normalizeMonthOnly(birthDate))
+  const [birthdayYearDraft, setBirthdayYearDraft] = useState(initialBirthdayParts.year || '')
+  const [birthdayMonthDraft, setBirthdayMonthDraft] = useState(initialBirthdayParts.month || '')
   const [mapMonthMode, setMapMonthMode] = useState('today')
   const [customMapMonth, setCustomMapMonth] = useState(currentMonthValue())
   const [customMonthPickerOpen, setCustomMonthPickerOpen] = useState(false)
@@ -532,7 +534,13 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
   const dragRef = useRef(null)
   const suppressClickRef = useRef({ id: null, until: 0 })
 
-  const activeBirthDate = normalizeMonthOnly(birthDate || birthdayDraft)
+  const activeBirthDate = normalizeMonthOnly(
+    birthDate || (
+      birthdayYearDraft && birthdayMonthDraft
+        ? `${birthdayYearDraft}/${birthdayMonthDraft}`
+        : ''
+    )
+  )
   const activeTodayMonth = testTodayMonth || currentMonthValue()
   const selectedPreset = HISTORY_PRESETS.find(item => item.key === mapMonthMode)
   const activeMapMonth = mapMonthMode === 'custom'
@@ -662,13 +670,25 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
   }
 
   function saveBirthday() {
+    const year = String(birthdayYearDraft || '').replace(/[^0-9]/g, '').slice(0, 4)
+    const monthNumber = Number(String(birthdayMonthDraft || '').replace(/[^0-9]/g, '').slice(0, 2))
+    const month = monthNumber >= 1 && monthNumber <= 12 ? pad2(monthNumber) : ''
+    const normalizedBirthday = normalizeMonthOnly(year && month ? `${year}/${month}` : '')
+
+    if (!normalizedBirthday) {
+      window.alert('请分别填写四位年份和1—12月。')
+      return
+    }
+
     const nextTestTodayMonth = testTodayUnlocked ? normalizeMonthOnly(testTodayDraft) : ''
 
+    setBirthdayYearDraft(year)
+    setBirthdayMonthDraft(month)
     setTestTodayMonth(nextTestTodayMonth)
     setTestTodayDraft(monthChineseDraft(nextTestTodayMonth || currentMonthValue()))
     setData(prev => ({
       ...prev,
-      peopleBirthDate: normalizeMonthOnly(birthdayDraft),
+      peopleBirthDate: normalizedBirthday,
       lastSavedAt: Date.now(),
     }))
     setShowBirthdayEditor(false)
@@ -945,7 +965,13 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
 
         <div className="peopleBottomLinks">
           <button type="button" onClick={openAdd}>＋ 新增</button>
-          <button type="button" onClick={() => { setBirthdayDraft(monthSlashDraft(activeBirthDate)); setTestTodayDraft(monthChineseDraft(testTodayMonth || currentMonthValue())); setShowBirthdayEditor(true) }}>设置</button>
+          <button type="button" onClick={() => {
+            const parts = monthPartsFromValue(activeBirthDate)
+            setBirthdayYearDraft(parts.year || '')
+            setBirthdayMonthDraft(parts.month || '')
+            setTestTodayDraft(monthChineseDraft(testTodayMonth || currentMonthValue()))
+            setShowBirthdayEditor(true)
+          }}>设置</button>
           <span className="peopleDragTip">小贴士：手指按住圆圈轻移可调整位置。</span>
         </div>
       </section>
@@ -1038,7 +1064,39 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
           <div className="peopleEditor peopleBirthdayEditor">
             <h3>设置</h3>
             <p>初始年月是“我”来到人间的起点，也可以按自己的理解设置。人物圆圈按关系持续月数与人生月数的比例生成；没有填写时，人物记录可以保存，但人间图暂不生成。</p>
-            <label>初始年月<input type="text" inputMode="numeric" value={birthdayDraft} placeholder="1999/01" maxLength={7} onChange={event => setBirthdayDraft(event.target.value.replace(/[^0-9/]/g, '').slice(0, 7))} /></label>
+            <div className="peopleEditorGrid peopleBirthdayGrid">
+              <label>
+                初始年份
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={birthdayYearDraft}
+                  placeholder="例如：1999"
+                  maxLength={4}
+                  onChange={event => {
+                    setBirthdayYearDraft(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))
+                  }}
+                />
+              </label>
+              <label>
+                月份
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={birthdayMonthDraft}
+                  placeholder="例如：1或12"
+                  maxLength={2}
+                  onChange={event => {
+                    setBirthdayMonthDraft(event.target.value.replace(/[^0-9]/g, '').slice(0, 2))
+                  }}
+                  onBlur={() => {
+                    if (!birthdayMonthDraft) return
+                    const month = Number(birthdayMonthDraft)
+                    if (month >= 1 && month <= 12) setBirthdayMonthDraft(pad2(month))
+                  }}
+                />
+              </label>
+            </div>
             <label>今天（年月）
               <input
                 type="text"

@@ -721,3 +721,14 @@
     gap: 6px !important;
   }
 }
+
+
+/* V1.2 去掉列车页上下滚动 */
+html,body{
+  overflow:hidden;
+}
+.dailyTrainPage,
+.dailyTrainPage .dailyInsightCard,
+.dailyTrainPage .dailyInsightContent{
+  overflow:hidden !important;
+}
