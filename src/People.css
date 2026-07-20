@@ -1041,6 +1041,7 @@
 
   .peopleMapCanvas {
     overflow: hidden;
+    
   }
 
   .personDot em {
@@ -1554,7 +1555,7 @@
 .peopleTableCard {
   transform: translateY(-5px);
   padding-top: 4px !important;
-  padding-bottom: 34px !important;
+  padding-bottom: 14px !important;
 }
 
 .peopleTableHeader {
@@ -1713,10 +1714,13 @@
     height: min(800px, 96vh) !important;
     gap: 8px !important;
   }
-  .peopleMapCard,
-  .peopleTableCard {
+  .peopleMapCard {
     transform: translateY(-10px) !important;
-  }
+}
+
+.peopleTableCard {
+    transform: translateY(-15px) !important;
+}
   .peopleBottomLinks {
     left: 34px !important;
     bottom: 0 !important;
@@ -1792,5 +1796,34 @@
     overflow-y: auto !important;
     overscroll-behavior: contain !important;
     -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+
+/* ======================================================
+   V1.1｜人间图独立上移与底部留白微调
+   只移动圆圈、人物、“我”和猫；筛选栏与地图外框保持不动。
+   ====================================================== */
+.peopleGraphLayer {
+  position: absolute;
+  inset: 0;
+  transform: translateY(-14px);
+}
+
+@media (max-width: 900px) {
+  .peopleGraphLayer {
+    transform: translateY(-14px);
+  }
+
+  /* 数据表略微缩短，为底部操作文字多留约半个小字号的空间。 */
+  .peopleTableCard {
+    margin-bottom: 6px !important;
+      height: calc(100% - 12px);
+  }
+
+  /* 新增 / 设置 / 提示整体上移约半个小字号。 */
+  .peopleBottomLinks {
+    bottom: 16px !important;
+    transform: translateY(0) !important;
   }
 }

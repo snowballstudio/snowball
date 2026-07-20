@@ -816,7 +816,7 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
           <button className="peopleBackBtn" type="button" onClick={onClose} aria-label="返回">‹</button>
           <div className="peopleTitleBlock">
             <h2>人间的我</h2>
-            <p>生命中出现过的人，亲疏新旧，冷暖自知。</p>
+            <p>生命中有交集的人，亲疏冷暖自知。</p>
           </div>
           <button className="peopleInfoBtn" type="button" onClick={() => setShowPeopleInfo(true)}>说明</button>
         </header>
@@ -869,6 +869,7 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
             </div>
           </div>
           <div className="peopleMapCanvas" ref={mapCanvasRef}>
+          <div className="peopleGraphLayer"></div>
             <img className="peopleWitnessCat" src="/refine/people_background_cat.png" alt="雪粒在见证人间" />
             {!activeBirthDate && <div className="peopleInitialDatePrompt">请先在“设置”中填写初始年月，人间图随后自动生成。</div>}
             {activeBirthDate && RING_LABELS.map(ring => (
@@ -920,7 +921,7 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
                 </select>
               </div>
               {[
-                ['relation', '关系'], ['gender', '性别'], ['start', '开始'], ['end', '结束'], ['frequency', '联系频率'], ['impressionDepth', '印象值'], ['actions', ''], ['note', '备注'], ['witness', '粒的见证语'],
+                ['relation', '关系'], ['gender', '性别'], ['start', '开始'], ['end', '结束'], ['frequency', '联系频率'], ['impressionDepth', '印象值'], ['actions', ''], ['note', '备注'], ['witness', '雪粒的见证语'],
               ].map(([key, label]) => (
                 <button type="button" key={key} onClick={() => toggleSort(key)}>
                   {label}{sortKey === key ? (sortDirection === 'asc' ? ' ↑' : ' ↓') : ''}
@@ -948,13 +949,13 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
                 </span>
                 <span className="peopleNoteCell">{person.note || '—'}</span>
                 <span className={`peopleWitnessCell ${expandedWitnessId === person.id ? 'open' : ''}`}>
-                  <button type="button" className="peopleWitnessToggle" onClick={() => setExpandedWitnessId(prev => prev === person.id ? null : person.id)} aria-label="展开粒的见证语">
+                  <button type="button" className="peopleWitnessToggle" onClick={() => setExpandedWitnessId(prev => prev === person.id ? null : person.id)} aria-label="展开雪粒的见证语">
                     {expandedWitnessId === person.id ? '⌄' : '›'}
                     <span>{person.witnessEntries?.length || 0}</span>
                   </button>
                   {expandedWitnessId === person.id && (
                     <div className="peopleWitnessText">
-                      {(person.witnessEntries || []).length ? person.witnessEntries.map((text, index) => <p key={index}>{text}</p>) : <p>粒还没有留下见证语。</p>}
+                      {(person.witnessEntries || []).length ? person.witnessEntries.map((text, index) => <p key={index}>{text}</p>) : <p>雪粒还没有留下见证语。</p>}
                     </div>
                   )}
                 </span>

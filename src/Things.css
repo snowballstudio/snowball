@@ -2937,7 +2937,7 @@
   .thingsPanel {
     padding-left: 14px !important;
     padding-right: 14px !important;
-    padding-bottom: calc(14px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: 14px !important;
     overflow: hidden !important;
   }
 

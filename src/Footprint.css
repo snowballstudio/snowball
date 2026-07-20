@@ -173,7 +173,9 @@
   position: fixed !important;
   inset: 0 !important;
   width: 100vw !important;
-  height: 100vh !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -1487,3 +1489,8 @@
   color: var(--fp-year-header-color) !important;
   font-weight: 500 !important;
 }
+
+
+/* V1.2｜iOS 足迹底部修复
+   fixed + inset:0 已经决定可视高度，不再叠加 100vh。
+   这样主页底部地图链接、三个地图页底部操作区都会落在真实可视区域内。 */

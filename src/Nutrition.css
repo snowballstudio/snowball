@@ -73,7 +73,7 @@
     --nutrition-cloud-text-shadow: 0 0 7px rgba(255, 255, 255, 0.144), 0 2px 7px rgba(0,0,0,.46);
 
     /* 表格和TAB */
-    --nutrition-table-top: 480px;
+    --nutrition-table-top: 450px;
     --nutrition-table-left: 50%;
     --nutrition-table-width: calc(100vw - 56px);
     --nutrition-table-bg: rgba(72, 76, 79, 0.84);
