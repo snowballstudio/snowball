@@ -119,8 +119,22 @@ public class DeviceDataPlugin: CAPPlugin, CAPBridgedPlugin {
                     ])
                 }
             } catch {
+                let nsError = error as NSError
+
+                print("""
+                SNOWBALL HEALTHKIT ERROR
+                domain: \(nsError.domain)
+                code: \(nsError.code)
+                description: \(nsError.localizedDescription)
+                userInfo: \(nsError.userInfo)
+                """)
+
                 await MainActor.run {
-                    call.reject("Failed to read HealthKit step data", nil, error)
+                    call.reject(
+                        "HealthKit error \(nsError.domain) \(nsError.code): \(nsError.localizedDescription)",
+                        nil,
+                        error
+                    )
                 }
             }
         }
