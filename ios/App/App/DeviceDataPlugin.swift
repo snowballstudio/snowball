@@ -149,7 +149,7 @@ public class DeviceDataPlugin: CAPPlugin, CAPBridgedPlugin {
             let predicate = HKQuery.predicateForSamples(
                 withStart: startDate,
                 end: endDate,
-                options: [.strictStartDate, .strictEndDate]
+                options: [.strictStartDate]
             )
 
             let query = HKStatisticsQuery(
@@ -157,8 +157,16 @@ public class DeviceDataPlugin: CAPPlugin, CAPBridgedPlugin {
                 quantitySamplePredicate: predicate,
                 options: .cumulativeSum
             ) { _, result, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
+                if let nsError = error as NSError? {
+                    // HealthKit code 11 = 指定日期没有任何步数样本。
+                    // 对雪粒来说这是正常业务状态，按 0 步返回，
+                    // 不应中断其它日期的读取。
+                    if nsError.domain == "com.apple.healthkit" && nsError.code == 11 {
+                        continuation.resume(returning: 0)
+                        return
+                    }
+
+                    continuation.resume(throwing: nsError)
                     return
                 }
 
