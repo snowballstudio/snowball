@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f8f5">
+<title>雪粒｜安卓最新版下载</title>
+<style>
+:root{--bg:#f7f8f5;--text:#30363b;--muted:#7b8588;--green:#788f84;--dark:#5f766b;--line:rgba(60,72,68,.12)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:radial-gradient(circle at 50% 2%,rgba(205,218,209,.45),transparent 34%),linear-gradient(180deg,#fbfcfa,var(--bg));color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+body{min-height:100dvh;display:grid;place-items:center;padding:max(28px,env(safe-area-inset-top)) 18px max(28px,env(safe-area-inset-bottom))}
+main{width:min(520px,100%);text-align:center}.mark{width:82px;height:82px;margin:0 auto 20px;position:relative;filter:drop-shadow(0 14px 22px rgba(76,95,85,.12))}
+.mark:before,.mark:after{content:"";position:absolute;border-radius:50%;background:linear-gradient(145deg,#fff 5%,#dce6df 100%);border:1px solid rgba(86,110,97,.14)}
+.mark:before{inset:8px}.mark:after{width:24px;height:24px;right:4px;bottom:2px}
+h1{margin:0;font-family:"Songti SC","STSong",serif;font-size:clamp(42px,12vw,58px);font-weight:600;letter-spacing:.12em;text-indent:.12em}
+.slogan{margin:10px 0 28px;color:var(--green);font-size:16px;letter-spacing:.12em;text-indent:.12em}
+.card{padding:28px 24px 24px;border:1px solid var(--line);border-radius:28px;background:rgba(255,255,255,.88);box-shadow:0 24px 70px rgba(43,53,49,.10);backdrop-filter:blur(16px)}
+.version{min-height:24px;margin-bottom:8px;font-size:17px;font-weight:700}.meta{min-height:22px;margin:0 0 22px;color:var(--muted);font-size:13px;line-height:1.65}
+.download{width:100%;min-height:54px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:linear-gradient(180deg,#839b8f,var(--dark));color:#fff;text-decoration:none;font-size:17px;font-weight:700;box-shadow:0 12px 26px rgba(74,99,86,.22)}
+.download[aria-disabled="true"]{opacity:.62;pointer-events:none}.secondary{display:inline-block;margin-top:18px;color:var(--dark);font-size:14px;text-decoration:none;border-bottom:1px solid rgba(95,118,107,.28);padding-bottom:2px}
+.tip{margin:22px 4px 0;color:var(--muted);font-size:13px;line-height:1.8}.status{margin-top:14px;color:#9a7474;font-size:12px;line-height:1.6}footer{margin-top:24px;color:#a0a8aa;font-size:12px}
+</style>
+</head>
+<body>
+<main>
+<div class="mark" aria-hidden="true"></div>
+<h1>雪粒</h1>
+<p class="slogan">看见生活的有趣</p>
+<section class="card" aria-live="polite">
+<div id="version" class="version">正在获取最新版本…</div>
+<p id="meta" class="meta">请稍候</p>
+<a id="download" class="download" href="https://github.com/snowballstudio/snowball/releases/latest" aria-disabled="true">下载安卓最新版</a>
+<a class="secondary" href="https://github.com/snowballstudio/snowball/releases/latest">查看版本说明</a>
+<p class="tip">下载完成后，请允许浏览器安装应用。<br>雪粒目前提供 Android 测试版。</p>
+<div id="status" class="status" hidden></div>
+</section>
+<footer>Snowball Studio</footer>
+</main>
+<script>
+const api="https://api.github.com/repos/snowballstudio/snowball/releases/latest";
+const releasePage="https://github.com/snowballstudio/snowball/releases/latest";
+const v=document.getElementById("version"),m=document.getElementById("meta"),d=document.getElementById("download"),s=document.getElementById("status");
+const bytes=n=>n?(n/1048576).toFixed(n/1048576>=100?0:1)+" MB":"";
+const date=x=>x?new Intl.DateTimeFormat("zh-CN",{year:"numeric",month:"long",day:"numeric"}).format(new Date(x)):"";
+fetch(api,{headers:{Accept:"application/vnd.github+json"}}).then(r=>{if(!r.ok)throw Error(r.status);return r.json()}).then(x=>{
+const apk=(x.assets||[]).find(a=>String(a.name||"").toLowerCase().endsWith(".apk"));
+v.textContent=x.name||x.tag_name||"雪粒最新版";
+m.textContent=[date(x.published_at),apk&&bytes(apk.size)].filter(Boolean).join(" · ")||"Android 测试版";
+if(!apk)throw Error("no apk");
+d.href=apk.browser_download_url;d.removeAttribute("aria-disabled");
+}).catch(()=>{v.textContent="雪粒安卓最新版";m.textContent="点击按钮进入最新版本页面";d.href=releasePage;d.removeAttribute("aria-disabled");s.hidden=false;s.textContent="暂时无法自动定位 APK，将打开 GitHub 最新版本页面。"});
+</script>
+</body>
+</html>
