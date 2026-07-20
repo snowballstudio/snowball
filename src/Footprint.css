@@ -1494,3 +1494,28 @@
 /* V1.2｜iOS 足迹底部修复
    fixed + inset:0 已经决定可视高度，不再叠加 100vh。
    这样主页底部地图链接、三个地图页底部操作区都会落在真实可视区域内。 */
+
+
+/* ======================================================
+   V1.1｜足迹主页底部链接微调
+   仅调整足迹主页底部三项文字。
+   ====================================================== */
+@media (max-width: 900px) {
+  .footprintMapTextLinks {
+    bottom: 6px !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border-top: 1px solid var(--fp-home-link-bar-line) !important;
+  }
+
+  .footprintMapTextLinks button {
+    color: var(--fp-gold) !important;
+    text-shadow: none !important;
+  }
+
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .footprintMapTextLinks {
+      bottom: max(6px, calc(env(safe-area-inset-bottom) * 0.18)) !important;
+    }
+  }
+}

@@ -1,0 +1,15 @@
+使用方法
+1. 把 docs 文件夹复制到 snowball 项目根目录。
+2. 在 Windows 项目根目录执行：
+   git add docs
+   git commit -m "Add latest Android download page"
+   git push
+3. GitHub 仓库打开 Settings → Pages。
+4. Source 选 Deploy from a branch。
+5. Branch 选 main，Folder 选 /docs，然后保存。
+
+页面地址：
+https://snowballstudio.github.io/snowball/
+
+以后发布 v1.2、v1.3 时，只需保证最新 GitHub Release 里有 APK。
+下载页会自动读取最新 Release，并自动链接其中的 APK，不需要再次修改页面。

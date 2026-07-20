@@ -1681,3 +1681,21 @@ top: 2px;
     transform: translateZ(0);
   }
 }
+
+
+/* ======================================================
+   V1.1｜Home 底部导航位置微调
+   仅调整主页底部冻结导航。
+   ====================================================== */
+@media (max-width: 900px) {
+  .homeBottomNav {
+    bottom: 0 !important;
+    padding-bottom: 2px !important;
+  }
+
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .homeBottomNav {
+      padding-bottom: max(2px, calc(env(safe-area-inset-bottom) * 0.22)) !important;
+    }
+  }
+}
