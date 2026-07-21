@@ -40,7 +40,7 @@
 
     /* APP使用榜：整体位置与大小 */
     --train-panel-left: 3vw;
-    --train-panel-top: 45vh;
+    --train-panel-top: 43.5vh;
     --train-panel-width: min(400px, 72vw);
     --train-panel-padding: 12px;
     --train-panel-radius: 18px;

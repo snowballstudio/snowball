@@ -9,7 +9,7 @@
    ====================================================== */
 :root {
   /* 总页面 */
-  --fp-page-bg: #f7f7f4;
+  --fp-page-bg: #f1f2f3;
   --fp-text: #2b3136;
   --fp-muted: #69737d;
   --fp-line: rgba(28, 36, 44, 0.14);
@@ -424,7 +424,7 @@
   z-index: 11 !important;
   padding: 0 !important;
   margin: 0 !important;
-  background: transparent !important;
+  background: #f7fbff !important;
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -567,7 +567,7 @@
   gap: var(--fp-home-link-gap) !important;
   padding: 12px 16px 10px !important;
   background: var(--fp-home-link-bar-bg) !important;
-  border-top: 1px solid var(--fp-home-link-bar-line) !important;
+  border-top: 0.5px solid var(--fp-home-link-bar-line) !important;
   box-shadow: 0 -4px 12px rgba(28, 36, 44, 0.05) !important;
   pointer-events: auto !important;
 }
@@ -1129,7 +1129,7 @@
     --fp-history-left: 14px;
     --fp-history-right: 14px;
     --fp-history-top: calc(var(--fp-home-bg-height) + 8px);
-    --fp-history-bottom: 82px;
+    --fp-history-bottom: 52px;
     --fp-home-link-bottom: calc(16px + env(safe-area-inset-bottom));
     --fp-home-link-gap: 26px;
     --fp-home-link-bar-height: 52px;
@@ -1141,8 +1141,8 @@
 
   :root {
     --fp-record-col-thumb: var(--fp-record-thumb-size);
-    --fp-record-col-date: 72px;
-    --fp-record-col-place: minmax(45px, .75fr);
+    --fp-record-col-date: 80px;
+    --fp-record-col-place: 52px;
     --fp-record-col-detail: minmax(0, 1.5fr);
     --fp-record-col-type: 35px;
     --fp-record-row-gap: 6px;
@@ -1502,10 +1502,10 @@
    ====================================================== */
 @media (max-width: 900px) {
   .footprintMapTextLinks {
-    bottom: 6px !important;
-    background: #ffffff !important;
+    bottom: 0 !important;
+    background: hwb(180 92% 3% / 0.87) !important;
     box-shadow: none !important;
-    border-top: 1px solid var(--fp-home-link-bar-line) !important;
+    border-top: 0px solid var(--fp-home-link-bar-line) !important;
   }
 
   .footprintMapTextLinks button {
@@ -1515,7 +1515,8 @@
 
   @supports (padding-bottom: env(safe-area-inset-bottom)) {
     .footprintMapTextLinks {
-      bottom: max(6px, calc(env(safe-area-inset-bottom) * 0.18)) !important;
+      bottom: 0 !important;
+      padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
     }
   }
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import './App.css'
 import Home from './Home.jsx'
+import useSnowballCall from './components/call/useSnowballCall.js'
 import Nutrition from './Nutrition.jsx'
 import Train, { snowballAppNameFor } from './Train.jsx'
 import Footprint from './Footprint.jsx'
@@ -803,8 +804,8 @@ const HEALTHY_TASTE_OPTIONS = TASTE_GROUPS.find(group => group.key === 'normal')
 const HEAVY_TASTE_OPTIONS = TASTE_GROUPS.find(group => group.key === 'heavy')?.options || []
 
 const MOOD_GROUPS = [
-  { key: 'positive', label: '正面', options: ['开心', '愉快', '平静', '还行', '一般', '满意', '不错','幸福','高兴','得意','喜悦','成就','正面'] },
-  { key: 'negative', label: '负面', options: ['疲惫', '焦虑', '难过', '生气','愤怒','害怕', '郁闷','压力', '抑郁', '伤心', '无聊', '孤独', '负面'] },
+  { key: 'positive', label: '正面', options: ['开心', '愉快', '平静', '还行', '满意', '挺好','放松','不错','幸福','高兴','得意','兴奋','喜悦','解脱','庆幸','成就','正面'] },
+  { key: 'negative', label: '负面', options: ['疲惫', '焦虑', '难过', '生气','害怕', '郁闷','紧张', '抑郁', '担忧','低落','伤心', '无聊', '痛苦','孤独', '悲哀', '压抑', '负面'] },
 ]
 
 const MOOD_OPTIONS = MOOD_GROUPS.flatMap(group => group.options)
@@ -1446,9 +1447,9 @@ function nutritionTasteSentence(tasteStats = {}) {
   const heavyPct = Math.round(Number(tasteStats.heavyRatio || 0) * 100)
 
   if (!total) return '还没有记录口味，彩虹暂时不会出现。'
-  if (heavyPct === 0) return '恭喜！你的饮食口味正常，彩虹完整显示。'
+  if (heavyPct === 0) return '你的饮食口味正常，彩虹长度不受影响。'
   if (heavyPct >= 100) return '！你的饮食口味过重，彩虹无法显示。'
-  return `！你的饮食口味偏重，彩虹因此不完整。`
+  return `！你的饮食口味偏重，彩虹长度不完整。`
 }
 
 const SCREEN_SAMPLE_APPS = ['微信', '知乎', '豆包', '淘宝', 'B站', '高德地图', '小红书', 'DeepSeek']
@@ -1948,6 +1949,10 @@ function mergeNativeDailyDays(prev, payload = {}, { force = false, liveToday = f
     const isToday = dateKey(dayDate) === dateKey(todayText())
     const shouldRefreshDate = refreshDateKeys.has(dateKey(dayDate))
     const existing = dailyRecordForDate(records, dayDate) || emptyDailyRecord(dayDate)
+
+    // 手动“重新获取”只允许覆盖用户点选的日期。
+    // 不能因为 force=true 而把步数自动表里的全部历史日期重新灌回日常表。
+    if (force && refreshDateKeys.size > 0 && !shouldRefreshDate) return
     if (!force && existing.stepsManual) return
     if (!force && !isToday && !shouldRefreshDate && existing.stepsAutoImportedAt) return
     const resolvedSteps = stepValueForDate(stepAutoRecords, dayDate)
@@ -2119,7 +2124,6 @@ function App() {
   const homeInteractionAudioRef = useRef(null)
   const homeInteractionRunRef = useRef(0)
   const [rewardFrame, setRewardFrame] = useState(1)
-  const [callActive, setCallActive] = useState(false)
   const [dailyModal, setDailyModal] = useState(null)
   const [nutritionMotionNoticeKey, setNutritionMotionNoticeKey] = useState('')
   const [dailyDateModal, setDailyDateModal] = useState(null)
@@ -2137,17 +2141,26 @@ function App() {
   const [upgradeModal, setUpgradeModal] = useState(null)
   const lastUpgradePromptKeyRef = useRef('')
   const rewardTimerRef = useRef(null)
-  const messagesRef = useRef(null)
-  const chatCardRef = useRef(null)
-  const recognitionRef = useRef(null)
-  const voiceAudioRef = useRef(null)
-  const voiceAudioCacheRef = useRef({})
-  const voiceSubmitTimerRef = useRef(null)
-  const chatStepRef = useRef(data.chatStep || 'idle')
-  const callActiveRef = useRef(false)
-  const speechRestartTimerRef = useRef(null)
-  const [isListening, setIsListening] = useState(false)
-  const speechRecognitionSupported = typeof window !== 'undefined' && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition)
+  const call = useSnowballCall({
+    data,
+    setData,
+    setDailyModal,
+    appendOrUpdateTodayRecord,
+    formatClockForDaily,
+    classifyDailyMood,
+    classifyDailyFood,
+    classifyDailyTaste,
+    dailyMoodInfo,
+    dailyFoodInfo,
+    dailyRecordForDate,
+    todayText,
+    emptyDailyRecord,
+    recordBrainPercent,
+    brainInfo,
+    brainGainFromText,
+    maybeRewardAfterRecord,
+  })
+
 
   useEffect(() => {
     try {
@@ -2156,6 +2169,34 @@ function App() {
       console.warn('雪粒没有成功保存到本机存储。', error)
     }
   }, [data])
+
+
+  useEffect(() => {
+    if (!showDataPanel || dailyMode !== 'edit') return undefined
+
+    const resetDailyEditScroll = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+
+      const overlay = document.querySelector('.dataOverlay.dailyDataOverlay')
+      const panel = document.querySelector('.dailyEditOnlyPage')
+      const editor = document.querySelector('.dailyStructuredEdit')
+
+      if (overlay) overlay.scrollTop = 0
+      if (panel) panel.scrollTop = 0
+      if (editor) editor.scrollTop = 0
+    }
+
+    resetDailyEditScroll()
+    const frame = window.requestAnimationFrame(resetDailyEditScroll)
+    const timer = window.setTimeout(resetDailyEditScroll, 80)
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(timer)
+    }
+  }, [showDataPanel, dailyMode, data.editingDailyRecordId, data.editingDailyRecordDateKey])
 
 
   useEffect(() => {
@@ -2254,9 +2295,17 @@ function App() {
         }
 
         // 二、历史数据：
-        // 首次安装读取最近 7 天；以后每次登录都刷新昨天，
-        // 并补齐从安装日起任何不存在的日期（包括测试时手工删除的日期）。
-        const firstImport = !current.deviceDailyInitialImportDone || !current.deviceScreenInitialImportDone
+        // 1. 每一种“当前设备实际支持”的自动来源，各自只执行一次首次 7 日导入。
+        // 2. 首次导入完成后，昨天的数据每天第一次登录时刷新一次。
+        // 3. 安装日至昨天之间若存在缺失日期，继续补齐；已存在的历史日期不反复获取。
+        const todayKey = dateKey(today)
+        const dailyFirstImport = dailySupported && !current.deviceDailyInitialImportDone
+        const screenFirstImport = screenSupported && !current.deviceScreenInitialImportDone
+        const dailyYesterdayNeeded =
+          dailySupported && current.lastDeviceDailyAutoSyncDate !== todayKey
+        const screenYesterdayNeeded =
+          screenSupported && current.lastDeviceScreenAutoSyncDate !== todayKey
+
         const yesterdayDate = parseLocalDate(yesterday)
         const firstImportStart = new Date(
           yesterdayDate.getFullYear(),
@@ -2266,15 +2315,44 @@ function App() {
         firstImportStart.setDate(firstImportStart.getDate() - (DEVICE_INITIAL_IMPORT_DAYS - 1))
 
         const installStart = parseLocalDate(current.installDate || today)
-        const historyStart = firstImport
+        const normalHistoryStart = formatDateForDaily(
+          installStart > yesterdayDate ? yesterdayDate : installStart
+        )
+
+        const dailyHistoryStart = dailyFirstImport
           ? formatDateForDaily(firstImportStart)
-          : formatDateForDaily(installStart > yesterdayDate ? yesterdayDate : installStart)
+          : normalHistoryStart
+        const screenHistoryStart = screenFirstImport
+          ? formatDateForDaily(firstImportStart)
+          : normalHistoryStart
 
-        const missingDates = missingHistoricalDates(current.records || [], historyStart, yesterday)
-        const refreshDates = [...new Set([yesterday, ...missingDates].map(formatDateForDaily))]
-        if (!refreshDates.length) return
+        const dailyMissingDates = dailySupported
+          ? missingHistoricalDates(current.records || [], dailyHistoryStart, yesterday)
+          : []
+        const screenMissingDates = screenSupported
+          ? missingHistoricalDates(current.records || [], screenHistoryStart, yesterday)
+          : []
 
-        const oldestRefreshDate = refreshDates
+        const dailyRefreshDates = [...new Set([
+          ...(dailyYesterdayNeeded ? [yesterday] : []),
+          ...dailyMissingDates,
+        ].map(formatDateForDaily))]
+
+        const screenRefreshDates = [...new Set([
+          ...(screenYesterdayNeeded ? [yesterday] : []),
+          ...screenMissingDates,
+        ].map(formatDateForDaily))]
+
+        const allRefreshDates = [...new Set([
+          ...dailyRefreshDates,
+          ...screenRefreshDates,
+          ...(dailyFirstImport ? dateListInclusive(firstImportStart, yesterday) : []),
+          ...(screenFirstImport ? dateListInclusive(firstImportStart, yesterday) : []),
+        ].map(formatDateForDaily))]
+
+        if (!allRefreshDates.length) return
+
+        const oldestRefreshDate = allRefreshDates
           .map(parseLocalDate)
           .sort((a, b) => a - b)[0]
         const historyDays = Math.max(
@@ -2291,24 +2369,49 @@ function App() {
 
         setData(prev => {
           let next = { ...prev }
-          if (dailySupported || screenSupported) {
+
+          if (dailySupported && (dailyFirstImport || dailyRefreshDates.length)) {
             next = mergeNativeDailyDays(next, historyResult, {
               force: false,
-              refreshDates,
+              refreshDates: dailyFirstImport
+                ? dateListInclusive(firstImportStart, yesterday)
+                : dailyRefreshDates,
             })
           }
-          if (screenSupported) {
+
+          if (screenSupported && (screenFirstImport || screenRefreshDates.length)) {
+            // 安卓日常表中的屏幕总时长和离机时间仍由 daily merge 写入；
+            // APP 详情表由 screen merge 单独更新。
+            if (!dailySupported) {
+              next = mergeNativeDailyDays(next, historyResult, {
+                force: false,
+                refreshDates: screenFirstImport
+                  ? dateListInclusive(firstImportStart, yesterday)
+                  : screenRefreshDates,
+              })
+            }
             next = mergeNativeScreenDays(next, historyResult, {
               force: false,
-              refreshDates,
+              refreshDates: screenFirstImport
+                ? dateListInclusive(firstImportStart, yesterday)
+                : screenRefreshDates,
             })
           }
+
           return {
             ...next,
-            deviceDailyInitialImportDone: dailySupported ? true : prev.deviceDailyInitialImportDone,
-            deviceScreenInitialImportDone: screenSupported ? true : prev.deviceScreenInitialImportDone,
-            lastDeviceDailyAutoSyncDate: dailySupported ? dateKey(today) : prev.lastDeviceDailyAutoSyncDate,
-            lastDeviceScreenAutoSyncDate: screenSupported ? dateKey(today) : prev.lastDeviceScreenAutoSyncDate,
+            deviceDailyInitialImportDone:
+              dailySupported ? true : prev.deviceDailyInitialImportDone,
+            deviceScreenInitialImportDone:
+              screenSupported ? true : prev.deviceScreenInitialImportDone,
+            lastDeviceDailyAutoSyncDate:
+              dailySupported && (dailyFirstImport || dailyYesterdayNeeded || dailyMissingDates.length)
+                ? todayKey
+                : prev.lastDeviceDailyAutoSyncDate,
+            lastDeviceScreenAutoSyncDate:
+              screenSupported && (screenFirstImport || screenYesterdayNeeded || screenMissingDates.length)
+                ? todayKey
+                : prev.lastDeviceScreenAutoSyncDate,
             lastDeviceAutoSyncAt: Date.now(),
           }
         })
@@ -2367,29 +2470,6 @@ function App() {
   }, [showDataPanel])
 
   useEffect(() => {
-    const box = messagesRef.current
-    if (!box) return
-    box.scrollTop = box.scrollHeight
-  }, [data.messages.length])
-
-  useEffect(() => () => {
-    try {
-      recognitionRef.current?.stop?.()
-    } catch (error) {
-      // 语音识别关闭失败时保持安静。
-    }
-    if (speechRestartTimerRef.current) window.clearTimeout(speechRestartTimerRef.current)
-  }, [])
-
-  useEffect(() => {
-    callActiveRef.current = callActive
-  }, [callActive])
-
-  useEffect(() => {
-    chatStepRef.current = data.chatStep || 'idle'
-  }, [data.chatStep])
-
-  useEffect(() => {
     if (!showReward) return
     const timer = setInterval(() => {
       setRewardFrame(f => (f >= 6 ? 1 : f + 1))
@@ -2404,7 +2484,9 @@ function App() {
   const todayDailyRecord = useMemo(() => dailyRecordForDate(latestRecords, todayText()) || emptyDailyRecord(todayText()), [latestRecords])
   const yesterdayDailyRecord = useMemo(() => dailyRecordForDate(latestRecords, yesterdayText()) || emptyDailyRecord(yesterdayText()), [latestRecords])
 
-  const homeYesterdaySteps = Number(yesterdayDailyRecord.steps || yesterdayDailyRecord.yesterdaySteps || 0)
+  const homeTodaySteps = Number(todayDailyRecord.steps || todayDailyRecord.yesterdaySteps || 0)
+  const homeYesterdayStepsRaw = Number(yesterdayDailyRecord.steps || yesterdayDailyRecord.yesterdaySteps || 0)
+  const homeYesterdaySteps = Math.max(homeTodaySteps, homeYesterdayStepsRaw)
   const homeYesterdaySleep = formatClockForDaily(yesterdayDailyRecord.offscreenTime || yesterdayDailyRecord.yesterdaySleep || '')
   const body = bodyInfo(homeYesterdaySteps)
   const sleepOk = sleepGood(homeYesterdaySleep)
@@ -2426,7 +2508,7 @@ function App() {
     : 'grayscale(0.5) brightness(0.85) contrast(0.9) saturate(0.8)'
 
   const healthyToday = stepsOk && sleepOk && food.good && mood.good
-  const canPlayMotionVideo = callActive && brain.active && motionBodyOk && sleepOk && food.good && mood.good
+  const canPlayMotionVideo = call.callActive && brain.active && motionBodyOk && sleepOk && food.good && mood.good
   const motionVideo = VIDEO_MAP[gen.stage]
 
   const homeInteractionScore = [
@@ -2622,8 +2704,8 @@ function App() {
     if (nutritionMotionNoticeKey === key) return
     setNutritionMotionNoticeKey(key)
     setDailyModal({
-      title: '雪粒动起来了',
-      text: '恭喜，你的饮食种类丰富，保持了低碳水，雪粒动起来了。',
+      title: '动态',
+      text: '你的饮食种类丰富、碳水类较少，雪粒变得活泼。',
     })
   }, [dailyMode, nutritionMotionOn, dailyStatRange, dailyNutritionStats, dailyTasteStats, nutritionMotionNoticeKey])
 
@@ -2826,367 +2908,6 @@ function App() {
   setUpgradeModal({ title: `陪伴第${day}天`, text, key: String(day) })
 }
 
-  const VOICE_TEXT_MAP = {
-    'voice1_hello_askmood.mp4': '你好呀，今天过得怎么样？',
-    'voice2_replygoodmood_askfood.mp4': '哇，你心情好，我的眼睛也发亮了。你今天吃什么呢？什么样的口味呀？',
-    'voice3_replybadmood_askfood.mp4': '嗯，你心情不好，我也难过，我的眼睛成灰色了。你今天吃什么呢？什么样的口味呀？',
-    'voice4_replygoodfood_askidea.mp4': '你吃得很健康哦，我的毛色变得雪白发亮了。你今天有什么想法呢？',
-    'voice5_replybadfood_askidea.mp4': '你吃得不够健康，我的毛色都变灰了，要多注意哦。你今天有什么想法呢？',
-    'voice6_lastreply_listen.mp4': '知道了，我听着呢。',
-    'voice7_close.mp4': '那我先安静待着啦。',
-  }
-
-  const VOICE_DURATION_MS = {
-    'voice1_hello_askmood.mp4': 2600,
-    'voice2_replygoodmood_askfood.mp4': 5600,
-    'voice3_replybadmood_askfood.mp4': 6100,
-    'voice4_replygoodfood_askidea.mp4': 5300,
-    'voice5_replybadfood_askidea.mp4': 5700,
-    'voice6_lastreply_listen.mp4': 2600,
-    'voice7_close.mp4': 2600,
-  }
-
-  function speakTextPromise(text) {
-    return new Promise(resolve => {
-      try {
-        if (!text || !('speechSynthesis' in window)) {
-          resolve()
-          return
-        }
-        window.speechSynthesis.cancel()
-        const utterance = new SpeechSynthesisUtterance(text)
-        utterance.lang = 'zh-CN'
-        utterance.rate = 0.92
-        utterance.pitch = 1.18
-        utterance.volume = 1
-        let done = false
-        const finish = () => {
-          if (done) return
-          done = true
-          resolve()
-        }
-        const voices = window.speechSynthesis.getVoices()
-        const zhVoices = voices.filter(v =>
-          v.lang?.toLowerCase().includes('zh') ||
-          v.name?.toLowerCase().includes('chinese') ||
-          v.name?.includes('中文') ||
-          v.name?.includes('普通话')
-        )
-        const preferred =
-          zhVoices.find(v => v.name?.toLowerCase().includes('tingting')) ||
-          zhVoices.find(v => v.name?.toLowerCase().includes('xiaoxiao')) ||
-          zhVoices[0] ||
-          voices[0]
-        if (preferred) utterance.voice = preferred
-        utterance.onend = finish
-        utterance.onerror = finish
-        window.speechSynthesis.speak(utterance)
-        window.setTimeout(finish, Math.max(2200, Math.min(9000, text.length * 220)))
-      } catch (error) {
-        resolve()
-      }
-    })
-  }
-
-  function getVoiceAudio(name) {
-    if (!voiceAudioCacheRef.current[name]) {
-      const audio = new Audio(`/refine/${name}`)
-      audio.preload = 'auto'
-      audio.playsInline = true
-      voiceAudioCacheRef.current[name] = audio
-    }
-    return voiceAudioCacheRef.current[name]
-  }
-
-  function unlockVoiceAudio() {
-    // iPhone Safari/PWA 对“麦克风 ↔ 音频播放”很敏感。
-    // 在用户点击通话这一刻，把所有音频对象提前创建并轻触一次，后面复用同一批 audio。
-    Object.keys(VOICE_TEXT_MAP).forEach(name => {
-      try {
-        const audio = getVoiceAudio(name)
-        audio.muted = true
-        audio.currentTime = 0
-        const p = audio.play()
-        if (p && typeof p.then === 'function') {
-          p.then(() => {
-            audio.pause()
-            audio.currentTime = 0
-            audio.muted = false
-          }).catch(() => {
-            audio.muted = false
-          })
-        } else {
-          audio.pause()
-          audio.currentTime = 0
-          audio.muted = false
-        }
-      } catch (error) {
-        // 预解锁失败不影响后续正常播放尝试。
-      }
-    })
-  }
-
-  function stopRecognitionBeforeVoice() {
-    try {
-      recognitionRef.current?.stop?.()
-    } catch (error) {
-      // 没有正在识别时忽略。
-    }
-    recognitionRef.current = null
-    setIsListening(false)
-  }
-
-  function playVoice(name) {
-    return new Promise(resolve => {
-      let done = false
-      let fallbackTimer = null
-      const finish = () => {
-        if (done) return
-        done = true
-        if (fallbackTimer) window.clearTimeout(fallbackTimer)
-        resolve()
-      }
-
-      try {
-        // 播放前先确保麦克风会话已经松开。电脑不敏感，iPhone 很敏感。
-        stopRecognitionBeforeVoice()
-
-        if (voiceAudioRef.current && voiceAudioRef.current !== voiceAudioCacheRef.current[name]) {
-          try {
-            voiceAudioRef.current.pause()
-            voiceAudioRef.current.currentTime = 0
-          } catch (error) {}
-        }
-
-        const audio = getVoiceAudio(name)
-        voiceAudioRef.current = audio
-        audio.pause()
-        audio.currentTime = 0
-        audio.muted = false
-
-        audio.onended = finish
-        audio.onerror = finish
-        audio.onpause = null
-
-        fallbackTimer = window.setTimeout(finish, (VOICE_DURATION_MS[name] || 3600) + 1200)
-
-        // 让 iOS 有一点时间完成麦克风到扬声器的音频会话切换。
-        window.setTimeout(() => {
-          if (done) return
-          try {
-            const playPromise = audio.play()
-            if (playPromise && typeof playPromise.catch === 'function') {
-              playPromise.catch(finish)
-            }
-          } catch (error) {
-            finish()
-          }
-        }, 220)
-      } catch (error) {
-        finish()
-      }
-    })
-  }
-
-  function playVoiceThenListen(name, delay = 120) {
-    playVoice(name).then(() => {
-      if (!callActiveRef.current) return
-      // 话音一落就重新开麦，但保留极短缓冲给 iOS 切音频通道。
-      scheduleNextSpeechRecognition(delay)
-    })
-  }
-
-
-  function scheduleNextSpeechRecognition(delay = 450) {
-    if (!callActiveRef.current) return
-    if (speechRestartTimerRef.current) window.clearTimeout(speechRestartTimerRef.current)
-    speechRestartTimerRef.current = window.setTimeout(() => {
-      speechRestartTimerRef.current = null
-      if (callActiveRef.current && chatStepRef.current !== 'idle') {
-        startSpeechRecognition()
-      }
-    }, delay)
-  }
-
-  function startSpeechRecognition() {
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!Recognition) {
-      setDailyModal({
-        title: '暂不支持语音输入',
-        text: '当前浏览器没有开放语音识别。你可以先用输入框，或者在 iPhone Safari 里重新打开测试。',
-      })
-      return
-    }
-
-    try {
-      recognitionRef.current?.stop?.()
-    } catch (error) {
-      // 旧识别会话停止失败时继续创建新会话。
-    }
-
-    if (voiceSubmitTimerRef.current) {
-      window.clearTimeout(voiceSubmitTimerRef.current)
-      voiceSubmitTimerRef.current = null
-    }
-
-    const recognition = new Recognition()
-    recognition.lang = 'zh-CN'
-    recognition.interimResults = true
-    recognition.continuous = false
-    recognition.maxAlternatives = 1
-    let finalBuffer = ''
-    let hasResult = false
-    let submitted = false
-
-    const submitBufferSoon = () => {
-      if (voiceSubmitTimerRef.current) window.clearTimeout(voiceSubmitTimerRef.current)
-      // 给用户多一点说完的时间。iOS 往往很快给 final，不能马上发送。
-      voiceSubmitTimerRef.current = window.setTimeout(() => {
-        voiceSubmitTimerRef.current = null
-        const text = finalBuffer.trim()
-        if (!text || submitted || !callActiveRef.current) return
-        submitted = true
-        try {
-          stopRecognitionBeforeVoice()
-          processUserText(text, chatStepRef.current || 'mood', { autoVoice: true })
-        } catch (error) {
-          console.error('语音对话处理失败：', error)
-          setIsListening(false)
-          setDailyModal({ title: '语音对话中断', text: '刚才识别成功了，但保存聊天数据时出错。请刷新后再试，或者先用文字发送。' })
-        }
-      }, 2100)
-    }
-
-    recognition.onstart = () => setIsListening(true)
-    recognition.onend = () => {
-      setIsListening(false)
-      if (submitted) return
-      // 如果没有识别到内容，但通话仍开着，就自动再开一次，保持“电话”感。
-      if (!hasResult && callActiveRef.current && chatStepRef.current !== 'idle') {
-        scheduleNextSpeechRecognition(700)
-      }
-    }
-    recognition.onerror = () => {
-      setIsListening(false)
-      if (callActiveRef.current && chatStepRef.current !== 'idle') scheduleNextSpeechRecognition(900)
-    }
-    recognition.onresult = event => {
-      let finalText = ''
-      let interimText = ''
-
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        const transcript = event.results[i][0]?.transcript || ''
-        if (event.results[i].isFinal) finalText += transcript
-        else interimText += transcript
-      }
-
-      const cleanFinal = finalText.trim()
-      const cleanInterim = interimText.trim()
-
-      if (cleanInterim) {
-        hasResult = true
-        setData(prev => ({ ...prev, chatInput: cleanInterim }))
-      }
-
-      if (cleanFinal) {
-        hasResult = true
-        finalBuffer = `${finalBuffer} ${cleanFinal}`.trim()
-        setData(prev => ({ ...prev, chatInput: finalBuffer }))
-        submitBufferSoon()
-      }
-    }
-
-    recognitionRef.current = recognition
-    recognition.start()
-  }
-
-  function stopSpeechRecognition() {
-    if (voiceSubmitTimerRef.current) {
-      window.clearTimeout(voiceSubmitTimerRef.current)
-      voiceSubmitTimerRef.current = null
-    }
-    try {
-      recognitionRef.current?.stop?.()
-    } catch (error) {
-      // 没有正在进行的识别时不处理。
-    }
-    setIsListening(false)
-  }
-
-  function toggleSpeechRecognition() {
-    if (isListening) stopSpeechRecognition()
-    else startSpeechRecognition()
-  }
-
-  function startCall() {
-    unlockVoiceAudio()
-    const question = '你好呀，今天心情怎么样？'
-
-    chatStepRef.current = 'mood'
-    setCallActive(true)
-
-    setData(prev => ({
-      ...prev,
-      chatStep: 'mood',
-      chatInput: '',
-      messages: [
-        ...prev.messages,
-        { from: 'cat', text: question },
-      ],
-    }))
-
-    if (speechRecognitionSupported) {
-      playVoiceThenListen('voice1_hello_askmood.mp4', 180)
-    } else {
-      playVoice('voice1_hello_askmood.mp4')
-    }
-  }
-
-  function endCall() {
-    if (speechRestartTimerRef.current) {
-      window.clearTimeout(speechRestartTimerRef.current)
-      speechRestartTimerRef.current = null
-    }
-    stopSpeechRecognition()
-    if (voiceAudioRef.current) {
-      try {
-        voiceAudioRef.current.pause()
-        voiceAudioRef.current.currentTime = 0
-      } catch (error) {}
-      voiceAudioRef.current = null
-    }
-    chatStepRef.current = 'idle'
-    setCallActive(false)
-    playVoice('voice7_close.mp4')
-    window.setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }, 80)
-  }
-
-  function sayGoodNight() {
-    const now = new Date()
-    const time = now.toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
-
-    const reply = `晚安呀～我记下了，你今天 ${time} 和我说晚安。`
-
-    setData(prev => {
-      const next = appendOrUpdateTodayRecord(prev, { offscreenTime: formatClockForDaily(time), yesterdaySleep: formatClockForDaily(time), todaySleep: formatClockForDaily(time) })
-      return {
-        ...next,
-        todaySleepTime: time,
-        messages: [
-          ...prev.messages,
-          { from: 'user', text: '晚安啦' },
-          { from: 'cat', text: reply },
-        ],
-      }
-    })
-  }
-
   function scheduleReward(delay = 120) {
     if (rewardTimerRef.current) window.clearTimeout(rewardTimerRef.current)
     rewardTimerRef.current = window.setTimeout(() => {
@@ -3205,135 +2926,6 @@ function App() {
     }
 
     return nextData.rewardSeenKey
-  }
-
-  function nextBrainPercentFor(prev, text) {
-    const today = dailyRecordForDate(prev.records || [], todayText()) || emptyDailyRecord(todayText())
-    const savedBrain = Math.max(recordBrainPercent(today), recordBrainPercent({ brainPercent: prev.brainPercent }))
-    return Math.min(100, savedBrain + brainGainFromText(text))
-  }
-
-  function clearConversation() {
-    chatStepRef.current = 'idle'
-    setData(prev => {
-      const today = dailyRecordForDate(prev.records || [], todayText()) || emptyDailyRecord(todayText())
-      const currentBrain = Math.max(recordBrainPercent(today), brainInfo(prev.messages || []).score, recordBrainPercent({ brainPercent: prev.brainPercent }))
-      const next = appendOrUpdateTodayRecord(prev, { brainPercent: currentBrain })
-      return {
-        ...next,
-        brainPercent: currentBrain,
-        messages: [],
-        chatStep: 'idle',
-        chatInput: '',
-      }
-    })
-  }
-
-  function processUserText(text, step = data.chatStep, options = {}) {
-    const clean = String(text || '').trim()
-    if (!clean) return
-
-    if (step === 'mood') {
-      const keyword = classifyDailyMood(clean)
-      const m = dailyMoodInfo(keyword)
-      const reply = m.good
-        ? '哇，你心情好，我的眼睛也发亮了。你今天吃什么呢？什么样的口味呀？'
-        : '嗯，你心情不好，我也难过，我的眼睛成灰色了。你今天吃什么呢？什么样的口味呀？'
-
-      chatStepRef.current = 'food'
-
-      setData(prev => {
-        const nextBrain = nextBrainPercentFor(prev, clean)
-        const next = appendOrUpdateTodayRecord(prev, { mood: keyword, brainPercent: nextBrain })
-        return {
-          ...next,
-          brainPercent: nextBrain,
-          moodKeyword: keyword,
-          mood: keyword,
-          chatInput: '',
-          chatStep: 'food',
-          chatCount: prev.chatCount + 1,
-          messages: [
-            ...prev.messages,
-            { from: 'user', text: clean },
-            { from: 'cat', text: reply },
-          ],
-        }
-      })
-
-      const voiceName = m.good ? 'voice2_replygoodmood_askfood.mp4' : 'voice3_replybadmood_askfood.mp4'
-      if (options.autoVoice) playVoiceThenListen(voiceName, 180)
-      else playVoice(voiceName)
-      return
-    }
-
-    if (step === 'food') {
-      const foodKeyword = classifyDailyFood(clean)
-      const tasteKeyword = classifyDailyTaste(clean)
-      const f = dailyFoodInfo(foodKeyword, tasteKeyword)
-      const reply = f.good
-        ? '你吃得很健康哦，我的毛色变得雪白发亮了。你今天有什么想法呢？'
-        : '你吃得不够健康，我的毛色都变灰了，要多注意哦。你今天有什么想法呢？'
-
-      chatStepRef.current = 'thought'
-
-      setData(prev => {
-        const nextBrain = nextBrainPercentFor(prev, clean)
-        const next = appendOrUpdateTodayRecord(prev, { food: foodKeyword, taste: tasteKeyword, brainPercent: nextBrain })
-        const nextData = {
-          ...next,
-          brainPercent: nextBrain,
-          foodText: foodKeyword,
-          foodKeyword,
-          foodTaste: tasteKeyword,
-          chatInput: '',
-          chatStep: 'thought',
-          chatCount: prev.chatCount + 1,
-          messages: [
-            ...prev.messages,
-            { from: 'user', text: clean },
-            { from: 'cat', text: reply },
-          ],
-        }
-        return {
-          ...nextData,
-          rewardSeenKey: maybeRewardAfterRecord(nextData, nextData.records),
-        }
-      })
-
-      const voiceName = f.good ? 'voice4_replygoodfood_askidea.mp4' : 'voice5_replybadfood_askidea.mp4'
-      if (options.autoVoice) playVoiceThenListen(voiceName, 180)
-      else playVoice(voiceName)
-      return
-    }
-
-    const reply = step === 'free' ? '嗯，我听着呢。' : '知道了，我听着呢。'
-    const shouldKeepListening = options.autoVoice && callActiveRef.current
-
-    setData(prev => {
-      const nextBrain = nextBrainPercentFor(prev, clean)
-      const next = appendOrUpdateTodayRecord(prev, { brainPercent: nextBrain })
-      return {
-        ...next,
-        brainPercent: nextBrain,
-        chatInput: '',
-        chatStep: shouldKeepListening ? 'free' : 'idle',
-        chatCount: prev.chatCount + 1,
-        messages: [
-          ...prev.messages,
-          { from: 'user', text: clean },
-          { from: 'cat', text: reply },
-        ],
-      }
-    })
-
-    chatStepRef.current = shouldKeepListening ? 'free' : 'idle'
-    if (options.autoVoice && callActiveRef.current) playVoiceThenListen('voice6_lastreply_listen.mp4', 260)
-    else playVoice('voice6_lastreply_listen.mp4')
-  }
-
-  function sendMessage() {
-    processUserText(data.chatInput, chatStepRef.current || data.chatStep)
   }
 
   function toggleDailyMonth(key) {
@@ -3467,7 +3059,10 @@ function App() {
     try {
       const result = await readNativeDate(targetDate)
       if (!Array.isArray(result?.days) || !result.days.length) throw new Error('手机没有返回这一天的数据。')
-      setData(prev => mergeNativeDailyDays(prev, result, { force: true }))
+      setData(prev => mergeNativeDailyDays(prev, result, {
+        force: true,
+        refreshDates: [targetDate],
+      }))
       setDailyModal({ title: '重新获取完成', text: `${targetDate} 的步数已从雪粒步数自动获取表重新写入；离机时间和屏幕总时长也已用手机数据更新。APP 详情表没有改变。` })
     } catch (error) {
       setDailyModal({ title: '重新获取失败', text: String(error?.message || error || '请检查健康和使用情况权限。') })
@@ -3537,17 +3132,6 @@ function App() {
     setShowDataPanel(true)
   }
 
-  function handleTapAction(event, action) {
-    if (event) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
-    const now = Date.now()
-    if (handleTapAction.lastRun && now - handleTapAction.lastRun < 220) return
-    handleTapAction.lastRun = now
-    action()
-  }
-
   function openDailyDetail(type = 'all') {
     const nextTab = type || 'all'
     setDailyViewTab(nextTab)
@@ -3564,6 +3148,39 @@ function App() {
     const today = formatDateForDaily(todayText())
     const record = dailyRecordForDate(data.records || [], today) || emptyDailyRecord(today)
     beginDailyEdit({ ...record, id: record.id || dailyRecordIdFor(today), date: today }, returnMode || (String(dailyMode || '').startsWith('detail-') ? dailyMode : 'home'))
+  }
+
+  function saveHomeGoodNight({ targetDate, time }) {
+    const recordDate = formatDateForDaily(targetDate || todayText())
+    const savedTime = formatClockForDaily(time)
+
+    setData(prev => {
+      const current = dailyRecordForDate(prev.records || [], recordDate) || emptyDailyRecord(recordDate)
+      const record = {
+        ...current,
+        id: current.id || dailyRecordIdFor(recordDate),
+        date: recordDate,
+        offscreenTime: savedTime,
+        yesterdaySleep: savedTime,
+        todaySleep: savedTime,
+        offscreenManual: true,
+        editReason: '主页今日晚安',
+        manualSavedAt: Date.now(),
+      }
+      record.healthy = dailyRecordHealthy(record)
+
+      const isCalendarToday = dateKey(recordDate) === dateKey(todayText())
+
+      return {
+        ...prev,
+        ...(isCalendarToday ? {
+          yesterdaySleepTime: savedTime,
+          todaySleepTime: savedTime,
+        } : {}),
+        records: mergeDailyRecord(prev.records || [], recordDate, record),
+        lastSavedAt: Date.now(),
+      }
+    })
   }
 
   function beginHomeTodayEdit() {
@@ -4551,22 +4168,13 @@ const homeFloatingFootprintMemory = ''
         food={food}
         mood={mood}
         beginHomeTodayEdit={beginHomeTodayEdit}
+        saveHomeGoodNight={saveHomeGoodNight}
         openTodayStatus={() => setTodayStatusModal(true)}
         homeTraceStats={homeTraceStats}
-        callActive={callActive}
-        chatCardRef={chatCardRef}
-        startCall={startCall}
-        endCall={endCall}
+        call={call}
         brain={brain}
-        clearConversation={clearConversation}
         data={data}
-        messagesRef={messagesRef}
         setData={setData}
-        sendMessage={sendMessage}
-        isListening={isListening}
-        speechRecognitionSupported={speechRecognitionSupported}
-        toggleSpeechRecognition={toggleSpeechRecognition}
-        sayGoodNight={sayGoodNight}
         openNutritionPage={openNutritionPage}
         openTrainPage={openTrainPage}
         openFootprintPage={openFootprintPage}
@@ -4624,8 +4232,8 @@ const homeFloatingFootprintMemory = ''
               ))}
             </div>
             <div className="dailyEditBottomActions">
-              <button type="button" onClick={confirmDailyEdit} onPointerUp={event => handleTapAction(event, confirmDailyEdit)} onTouchEnd={event => handleTapAction(event, confirmDailyEdit)}>确认开始修改</button>
-              <button type="button" onClick={cancelDailyEditReason} onPointerUp={event => handleTapAction(event, cancelDailyEditReason)} onTouchEnd={event => handleTapAction(event, cancelDailyEditReason)}>取消</button>
+              <button type="button" onClick={confirmDailyEdit}>确认开始修改</button>
+              <button type="button" onClick={cancelDailyEditReason}>取消</button>
             </div>
           </div>
         </div>
@@ -4637,8 +4245,8 @@ const homeFloatingFootprintMemory = ''
             <h2>确认删除？</h2>
             <p>将删除 {pendingDailyDelete.date} 的日常数据和该日期的屏幕时间详情。</p>
             <div className="dailyEditBottomActions">
-              <button type="button" onClick={confirmDailyDelete} onPointerUp={event => handleTapAction(event, confirmDailyDelete)} onTouchEnd={event => handleTapAction(event, confirmDailyDelete)}>确认删除</button>
-              <button type="button" onClick={() => setPendingDailyDelete(null)} onPointerUp={event => handleTapAction(event, () => setPendingDailyDelete(null))} onTouchEnd={event => handleTapAction(event, () => setPendingDailyDelete(null))}>取消</button>
+              <button type="button" onClick={confirmDailyDelete}>确认删除</button>
+              <button type="button" onClick={() => setPendingDailyDelete(null)}>取消</button>
             </div>
           </div>
         </div>
@@ -4657,8 +4265,8 @@ const homeFloatingFootprintMemory = ''
               autoFocus
             />
             <div className="dailyEditBottomActions">
-              <button type="button" onClick={confirmAddDailyDate} onPointerUp={event => handleTapAction(event, confirmAddDailyDate)} onTouchEnd={event => handleTapAction(event, confirmAddDailyDate)}>确认新增</button>
-              <button type="button" onClick={() => setDailyDateModal(null)} onPointerUp={event => handleTapAction(event, () => setDailyDateModal(null))} onTouchEnd={event => handleTapAction(event, () => setDailyDateModal(null))}>取消</button>
+              <button type="button" onClick={confirmAddDailyDate}>确认新增</button>
+              <button type="button" onClick={() => setDailyDateModal(null)}>取消</button>
             </div>
           </div>
         </div>
@@ -4667,7 +4275,41 @@ const homeFloatingFootprintMemory = ''
       {dailyModal && <NoticeModal title={dailyModal.title} text={dailyModal.text} onClose={closeDaily} />}
       {upgradeModal && <NoticeModal title={upgradeModal.title} text={upgradeModal.text} onClose={closeUpgrade} />}
       {showDataPanel && (
-        <div className="dataOverlay dailyDataOverlay">
+        <>
+          <style>{`
+            .dailyEditOnlyPage .dailyEditStickyActions {
+              position: sticky !important;
+              top: 0 !important;
+              z-index: 120 !important;
+              display: grid !important;
+              grid-template-columns: repeat(2, minmax(72px, 96px)) !important;
+              justify-content: end !important;
+              gap: 8px !important;
+              margin: -2px 0 10px !important;
+              padding: 6px 0 9px !important;
+              background:
+                linear-gradient(
+                  180deg,
+                  rgba(13, 24, 40, 0.98) 0%,
+                  rgba(13, 24, 40, 0.94) 76%,
+                  rgba(13, 24, 40, 0) 100%
+                ) !important;
+              backdrop-filter: blur(8px);
+              -webkit-backdrop-filter: blur(8px);
+            }
+
+            .dailyEditOnlyPage .dailyEditStickyActions button {
+              width: auto !important;
+              min-width: 72px !important;
+              min-height: 34px !important;
+              height: 34px !important;
+              margin: 0 !important;
+              padding: 6px 14px !important;
+              font-size: 13px !important;
+              line-height: 1 !important;
+            }
+          `}</style>
+          <div className="dataOverlay dailyDataOverlay">
           {dailyMode === 'home' || dailyMode === 'edit' ? (
             <div className="dailyPanelScene">
               <img className="dailyPanelBg" src="/daily_background.png" alt="日常背景" />
@@ -4738,7 +4380,7 @@ const homeFloatingFootprintMemory = ''
                       <input value={row.packageName || ''} onChange={e => updateScreenRecord(index, 'packageName', e.target.value)} placeholder="Package Name" />
                       <input value={formatHoursInputFromMinutes(screenMinutesFromRecord(row))} type="number" min="0" step="0.1" onChange={e => updateScreenRecord(index, 'minutes', e.target.value)} placeholder="小时" />
                       <input value={row.pickups || ''} type="number" min="0" onChange={e => updateScreenRecord(index, 'pickups', e.target.value)} placeholder="次数" />
-                      <button type="button" className="dailyRowDeleteBtn screenRowDeleteBtn" aria-label="删除这条 APP 详情" title="删除" onClick={event => handleTapAction(event, () => deleteScreenRecord(index))} onPointerUp={event => handleTapAction(event, () => deleteScreenRecord(index))} onTouchEnd={event => handleTapAction(event, () => deleteScreenRecord(index))}>×</button>
+                      <button type="button" className="dailyRowDeleteBtn screenRowDeleteBtn" aria-label="删除这条 APP 详情" title="删除" onClick={() => deleteScreenRecord(index)}>×</button>
                     </div>
                   ))}
                     {!(data.screenRecords || []).some(row => dateKey(row.date) === dateKey(selectedScreenDate)) && <p className="screenEmptyTip">这个日期还没有屏幕详情记录。</p>}
@@ -4749,9 +4391,9 @@ const homeFloatingFootprintMemory = ''
                   <span>日常屏时 <strong>{formatDurationFromMinutes(selectedScreenDailyTotal)}</strong></span>
                 </div>
                 <div className="screenDetailActions">
-                  <button type="button" className="dailyAddDateBtn" onClick={event => handleTapAction(event, () => refreshScreenRecordsForDate(selectedScreenDate))} onPointerUp={event => handleTapAction(event, () => refreshScreenRecordsForDate(selectedScreenDate))} onTouchEnd={event => handleTapAction(event, () => refreshScreenRecordsForDate(selectedScreenDate))}>重新获取</button>
-                  <button type="button" className="dailyAddDateBtn" onClick={event => handleTapAction(event, addScreenRecord)} onPointerUp={event => handleTapAction(event, addScreenRecord)} onTouchEnd={event => handleTapAction(event, addScreenRecord)}>新增</button>
-                  <button type="button" className="dailyAddDateBtn" onClick={event => handleTapAction(event, saveScreenDetailAndReturn)} onPointerUp={event => handleTapAction(event, saveScreenDetailAndReturn)} onTouchEnd={event => handleTapAction(event, saveScreenDetailAndReturn)}>保存返回</button>
+                  <button type="button" className="dailyAddDateBtn" onClick={() => refreshScreenRecordsForDate(selectedScreenDate)}>重新获取</button>
+                  <button type="button" className="dailyAddDateBtn" onClick={addScreenRecord}>新增</button>
+                  <button type="button" className="dailyAddDateBtn" onClick={saveScreenDetailAndReturn}>保存返回</button>
                 </div>
               </div>
             </div>
@@ -4808,9 +4450,9 @@ const homeFloatingFootprintMemory = ''
                         {expanded && group.records.map((r, i) => (
                           <div className={`dailyTableRow dailyChildRow dailyTableRowV2 dailyUnifiedRow dailyTab-${dailyViewTab}`} key={`${r.date}-${i}`} style={{ gridTemplateColumns: dailyTableGrid }}>
                             {dailyRecordCellsForView(r)}
-                            <button className="dailyRowEditBtn dailyIconBtn" onClick={event => handleTapAction(event, () => refreshDailyRecordForDate(r))} onPointerUp={event => handleTapAction(event, () => refreshDailyRecordForDate(r))} onTouchEnd={event => handleTapAction(event, () => refreshDailyRecordForDate(r))} title="只重新获取这一天的日常数据">↻</button>
-                            <button className="dailyRowEditBtn dailyIconBtn" onTouchStart={event => handleTapAction(event, () => beginDailyEdit(r))} onPointerDown={event => handleTapAction(event, () => beginDailyEdit(r))} onClick={event => handleTapAction(event, () => beginDailyEdit(r))} onPointerUp={event => handleTapAction(event, () => beginDailyEdit(r))} onTouchEnd={event => handleTapAction(event, () => beginDailyEdit(r))} title="修改">✎</button>
-                            <button className="dailyRowDeleteBtn dailyIconBtn" onTouchStart={event => handleTapAction(event, () => requestDailyDelete(r))} onClick={event => handleTapAction(event, () => requestDailyDelete(r))} onPointerUp={event => handleTapAction(event, () => requestDailyDelete(r))} onTouchEnd={event => handleTapAction(event, () => requestDailyDelete(r))} title="删除">×</button>
+                            <button type="button" className="dailyRowEditBtn dailyIconBtn" onClick={() => refreshDailyRecordForDate(r)} title="只重新获取这一天的日常数据">↻</button>
+                            <button type="button" className="dailyRowEditBtn dailyIconBtn" onClick={() => beginDailyEdit(r)} title="修改">✎</button>
+                            <button type="button" className="dailyRowDeleteBtn dailyIconBtn" onClick={() => requestDailyDelete(r)} title="删除">×</button>
                           </div>
                         ))}
                       </div>
@@ -4818,13 +4460,17 @@ const homeFloatingFootprintMemory = ''
                   })}
                 </div>
                 <div className="dailyTableFooter">
-                  <button type="button" className="dailyAddDateBtn dailyAddDateLink" onClick={event => handleTapAction(event, openAddDailyDateModal)} onPointerUp={event => handleTapAction(event, openAddDailyDateModal)} onTouchEnd={event => handleTapAction(event, openAddDailyDateModal)}>＋ 新增日期</button>
+                  <button type="button" className="dailyAddDateBtn dailyAddDateLink" onClick={openAddDailyDateModal}>＋ 新增日期</button>
                 </div>
               </div>
             </div>
           ) : (
             <div className="dataPanel dataPanelOnScene dailyEditPage dailyEditOnlyPage">
               <div className="dataEdit dailyStructuredEdit">
+                <div className="dailyEditStickyActions" aria-label="每日数据编辑操作">
+                  <button type="button" onClick={saveToday}>保存</button>
+                  <button type="button" onClick={cancelDailyEditAndReturn}>放弃</button>
+                </div>
                 <div className="dailyEditTwoCol dailyEditTopGrid">
                   <label>日期
                     <div className="dailyReadonlyValue">
@@ -4897,11 +4543,6 @@ const homeFloatingFootprintMemory = ''
                   </div>
                 </div>
 
-                <div className="dailyEditBottomActions dailyEditBottomActionsTop">
-                  <button onClick={saveToday}>保存</button>
-                  <button type="button" onClick={cancelDailyEditAndReturn}>放弃</button>
-                </div>
-
                 <div className="dailyEditTwoCol dailyEditMetaRow">
                   <label>当日互动
                     <input value={`${recordBrainPercent({ brainPercent: data.brainPercent ?? brain.score })}%`} disabled />
@@ -4935,7 +4576,8 @@ const homeFloatingFootprintMemory = ''
               </div>
             </div>
           )}
-        </div>
+          </div>
+        </>
       )}
 
 

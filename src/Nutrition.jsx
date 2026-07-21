@@ -77,7 +77,7 @@ export default function Nutrition({
                   <button key={tab.key} className={dailyStatRange === tab.key ? 'active' : ''} onClick={() => setDailyStatRange(tab.key)}>{tab.label}</button>
                 ))}
               </div>
-              <button type="button" className="dailyTextLinkBtn nutritionDetailLink" onClick={() => openDailyDetail('food')}>查看饮食详情</button>
+              <button type="button" className="dailyTextLinkBtn nutritionDetailLink" onClick={() => openDailyDetail('food')}>详情</button>
             </div>
             <div className="dailyMiniTable nutritionMiniTable nutritionMiniTableThreeCol">
               {dailyNutritionStats.map(item => (

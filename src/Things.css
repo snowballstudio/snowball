@@ -323,7 +323,7 @@
 .thingsPanel {
     width: 100vw;
     height: 100vh;
-    border-radius: 0;
+    border-radius: 12px;
     padding: 14px;
   }
 .thingsTopBar {
@@ -1904,7 +1904,7 @@
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  border-radius: 0 !important;
+  border-radius: 12px !important;
 }
 
 .thingCaptionCount {
@@ -2195,7 +2195,7 @@
   background-color: transparent !important;
   background-image: none !important;
   border: 0 !important;
-  border-radius: 0 !important;
+  border-radius: 12px !important;
   box-shadow: none !important;
   outline: none !important;
 }
@@ -2699,7 +2699,7 @@
     padding: 2px 9px !important;
     border: 0 !important;
     border-bottom: 1px solid rgba(68, 82, 96, 0.10) !important;
-    border-radius: 0 !important;
+    border-radius: 12px !important;
     background: transparent !important;
     box-shadow: none !important;
     text-align: left;
@@ -2930,7 +2930,7 @@
     box-sizing: border-box !important;
     margin: 0 !important;
     border: none !important;
-    border-radius: 0 !important;
+    border-radius: 12px !important;
     box-shadow: none !important;
   }
 

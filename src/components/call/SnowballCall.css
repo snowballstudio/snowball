@@ -1,0 +1,6 @@
+/*
+  SnowballCall component stylesheet entry.
+  The current call-panel selectors remain in Home.css and App.css during this
+  no-visual-change extraction, so their existing cascade and phone positioning
+  stay exactly the same.
+*/

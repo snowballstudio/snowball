@@ -1690,7 +1690,7 @@ top: 2px;
 @media (max-width: 900px) {
   .homeBottomNav {
     bottom: 0 !important;
-    padding-bottom: 2px !important;
+    padding-bottom: 1px !important;
   }
 
   @supports (padding-bottom: env(safe-area-inset-bottom)) {

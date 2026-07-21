@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import './Home.css'
+import SnowballCall from './components/call/SnowballCall.jsx'
 
 function formatHomeRestTime(value) {
   const text = String(value || '未记录').trim()
@@ -39,22 +41,13 @@ export default function Home({
   food,
   mood,
   beginHomeTodayEdit,
+  saveHomeGoodNight,
   openTodayStatus,
   homeTraceStats,
-  callActive,
-  chatCardRef,
-  startCall,
-  endCall,
+  call,
   brain,
-  clearConversation,
   data,
-  messagesRef,
   setData,
-  sendMessage,
-  isListening,
-  speechRecognitionSupported,
-  toggleSpeechRecognition,
-  sayGoodNight,
   openNutritionPage,
   openTrainPage,
   openFootprintPage,
@@ -69,6 +62,140 @@ export default function Home({
   const avgScreenNumber = avgScreenMatch ? avgScreenMatch[1] : avgScreenText
   const avgScreenUnit = avgScreenMatch && avgScreenMatch[2] ? avgScreenMatch[2] : ''
   const isHomeVisible = !showDataPanel && !showYearsPanel && !showThingsPanel && !showPeoplePanel
+  const GOOD_NIGHT_DEVICE_KEY = 'snowball-good-night-device-v1'
+  const [goodNightModal, setGoodNightModal] = useState(null)
+  const [rememberGoodNightDevice, setRememberGoodNightDevice] = useState(false)
+
+  function goodNightTimeInfo(now = new Date()) {
+    const hour = now.getHours()
+    const minute = now.getMinutes()
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    if (hour < 5) target.setDate(target.getDate() - 1)
+
+    const storedHour = hour < 5 ? hour + 24 : hour
+    const time = `${String(storedHour).padStart(2, '0')}：${String(minute).padStart(2, '0')}`
+
+    return {
+      hour,
+      time,
+      targetDate: `${target.getFullYear()}/${target.getMonth() + 1}/${target.getDate()}`,
+      isEarlyMorning: hour < 5,
+      isDaytime: hour >= 5 && hour < 18,
+    }
+  }
+
+  function finishGoodNight(info) {
+    saveHomeGoodNight({
+      targetDate: info.targetDate,
+      time: info.time,
+    })
+
+    setGoodNightModal({
+      type: 'saved',
+      title: '晚安已记下',
+      text: info.isEarlyMorning
+        ? `已存入 ${info.time}，作为前一日开始休息时间。`
+        : `已存入 ${info.time}，作为今日开始休息时间。`,
+    })
+  }
+
+  function continueGoodNight() {
+    const info = goodNightTimeInfo()
+
+    if (info.isDaytime) {
+      setGoodNightModal({
+        type: 'confirm',
+        title: '现在是白天',
+        text: `当前时间为 ${info.time}，确认现在开始休息吗？`,
+        info,
+      })
+      return
+    }
+
+    if (info.isEarlyMorning) {
+      setGoodNightModal({
+        type: 'confirm',
+        title: '已进入次日凌晨',
+        text: `雪粒将记录休息时间为 ${info.time}，并计入前一日数据，以方便统计。`,
+        info,
+      })
+      return
+    }
+
+    finishGoodNight(info)
+  }
+
+  function chooseGoodNightDevice(device) {
+    if (rememberGoodNightDevice) {
+      try {
+        localStorage.setItem(GOOD_NIGHT_DEVICE_KEY, device)
+      } catch (error) {
+        // 本机偏好保存失败不影响本次使用。
+      }
+    }
+
+    setRememberGoodNightDevice(false)
+
+    if (device === 'android') {
+      setGoodNightModal(null)
+      return
+    }
+
+    continueGoodNight()
+  }
+
+  function openGoodNight() {
+    let savedDevice = ''
+
+    try {
+      savedDevice = localStorage.getItem(GOOD_NIGHT_DEVICE_KEY) || ''
+    } catch (error) {
+      savedDevice = ''
+    }
+
+    if (savedDevice === 'android') return
+    if (savedDevice === 'iphone') {
+      continueGoodNight()
+      return
+    }
+
+    setRememberGoodNightDevice(false)
+    setGoodNightModal({ type: 'device' })
+  }
+
+  const goodNightOverlayStyle = {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 16000,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '22px',
+    background: 'rgba(0, 0, 0, 0.68)',
+    backdropFilter: 'blur(7px)',
+  }
+
+  const goodNightBoxStyle = {
+    width: 'min(390px, 92vw)',
+    border: '1px solid rgba(226, 231, 235, 0.18)',
+    borderRadius: '22px',
+    padding: '22px 20px 18px',
+    background: 'linear-gradient(180deg, rgba(31, 40, 50, 0.98), rgba(12, 16, 22, 0.99))',
+    color: '#f4f0e6',
+    boxShadow: '0 24px 64px rgba(0, 0, 0, 0.48)',
+  }
+
+  const goodNightButtonStyle = {
+    width: '100%',
+    minHeight: '42px',
+    marginTop: '10px',
+    border: '1px solid rgba(224, 230, 234, 0.18)',
+    borderRadius: '999px',
+    background: 'rgba(151, 169, 181, 0.16)',
+    color: '#f4f0e6',
+    fontSize: '14px',
+  }
 
   return (
     <section className="phoneShell homePage">
@@ -157,58 +284,20 @@ export default function Home({
         </div>
       </section>
 
-      {callActive && (
-      <section className="chatCard" ref={chatCardRef}>
-        <div className="chatTop">
-          <div className="chatActionLine">
-            {!callActive ? (
-              <button className="callBtn callStart" onClick={startCall}>🎙️ 开始通话</button>
-            ) : (
-              <button className="callBtn callEnd" onClick={endCall}>🔴 结束通话</button>
-            )}
-            <div className="brainCallStatus">
-              <span>🧠 脑动 <strong>{brain.label}</strong></span>
-              <span className={brain.active ? 'active' : ''}>🐾 {brain.active ? '它很活跃' : '它很安静'}</span>
-            </div>
-          </div>
-          <button className="textBtn" onClick={clearConversation}>清空</button>
-        </div>
-
-        <div className="messages" ref={messagesRef}>
-          {data.messages.map((m, i) => (
-            <div key={i} className={`messageRow ${m.from}`}>
-              {m.from === 'cat' && <img src={catImg} style={{ filter: imageFilter }} alt="雪粒头像" />}
-              <div className={`bubble ${m.from}`}>{m.text}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="inputLine inputLineVoice">
-          <button className="nightBtn" onClick={sayGoodNight}>道晚安</button>
-          <input
-            value={data.chatInput}
-            onChange={e => setData({ ...data, chatInput: e.target.value })}
-            onKeyDown={e => e.key === 'Enter' && sendMessage()}
-            placeholder={isListening ? '正在听你说话...' : '可以说话，也可以打字...'}
-          />
-          <button
-            className={`voiceBtn ${isListening ? 'listening' : ''}`}
-            onClick={toggleSpeechRecognition}
-            title={speechRecognitionSupported ? '语音输入' : '当前浏览器暂不支持语音输入'}
-            type="button"
-          >
-            {isListening ? '●' : '🎙'}
-          </button>
-          <button className="sendBtn" onClick={sendMessage}>➤</button>
-        </div>
-      </section>
-      )}
+      <SnowballCall
+        call={call}
+        data={data}
+        setData={setData}
+        brain={brain}
+        catImg={catImg}
+        imageFilter={imageFilter}
+      />
 
       <section className="statusCards homeDashboard">
         <div className="homeCausalStatus">
           <button type="button" className="homeCausalRow" onClick={() => openDailyDetail('steps')}>
             <span className="homeCausalIcon">👟</span>
-            <span className="homeCausalLeft">你上次步数 <strong>{homeYesterdaySteps}</strong> </span>
+            <span className="homeCausalLeft">你最新步数 <strong>{homeYesterdaySteps}</strong> </span>
             <span className="homeCausalArrow">→</span>
             <span className="homeCausalRight">它体型 <strong>{body.label}</strong></span>
           </button>
@@ -238,13 +327,13 @@ export default function Home({
         </div>
 
         <div className="homeTodayActionRow">
-          <button type="button" className="homeTodayEditText homeTodayCallText" onClick={callActive ? endCall : startCall}>
+          <button type="button" className="homeTodayEditText homeTodayCallText" onClick={call.callActive ? call.endCall : call.startCall}>
             <span className="homeTodayCallIcon" aria-hidden="true">💬</span>
-            <em>{callActive ? '挂断' : '通话'}</em>
+            <em>{call.callActive ? '挂断' : '通话'}</em>
           </button>
-          <button type="button" className="homeTodayEditText" onClick={beginHomeTodayEdit}>
-            <span className="homeTodayDataIcon" aria-hidden="true">✎</span>
-            <em>今日数据</em>
+          <button type="button" className="homeTodayEditText" onClick={openGoodNight}>
+            <span className="homeTodayDataIcon" aria-hidden="true">&#9998;</span>
+            <em>今日晚安</em>
           </button>
           <button type="button" className="homeTodayEditText homeTodayStatusText" onClick={openTodayStatus}>
             <span className="homeTodayStatusIcon" aria-hidden="true">🗒️</span>
@@ -273,6 +362,66 @@ export default function Home({
           />
         </div>
       </section>
+
+      {goodNightModal && (
+        <div style={goodNightOverlayStyle} role="dialog" aria-modal="true" aria-label="今日晚安">
+          <div style={goodNightBoxStyle}>
+            {goodNightModal.type === 'device' && (
+              <>
+                <h2 style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: 600 }}>今日晚安</h2>
+                <p style={{ margin: 0, lineHeight: 1.75, color: 'rgba(238, 239, 236, 0.84)', fontSize: '14px' }}>
+                  此按钮是为 iPhone 用户设计，在自动获取功能生效之前，点击产生当日离机时间。安卓用户可以忽略此功能。
+                </p>
+                <button type="button" style={goodNightButtonStyle} onClick={() => chooseGoodNightDevice('android')}>
+                  我是安卓用户，忽略
+                </button>
+                <button type="button" style={{ ...goodNightButtonStyle, background: 'rgba(145, 166, 158, 0.28)' }} onClick={() => chooseGoodNightDevice('iphone')}>
+                  我是 iPhone 用户，确认
+                </button>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '9px', marginTop: '15px', color: 'rgba(238, 239, 236, 0.72)', fontSize: '13px' }}>
+                  <input
+                    type="checkbox"
+                    checked={rememberGoodNightDevice}
+                    onChange={event => setRememberGoodNightDevice(event.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: '#8fa99e' }}
+                  />
+                  下次不再问我
+                </label>
+                <button type="button" style={{ ...goodNightButtonStyle, border: 'none', background: 'transparent', color: 'rgba(238, 239, 236, 0.58)' }} onClick={() => setGoodNightModal(null)}>
+                  取消
+                </button>
+              </>
+            )}
+
+            {goodNightModal.type === 'confirm' && (
+              <>
+                <h2 style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: 600 }}>{goodNightModal.title}</h2>
+                <p style={{ margin: 0, lineHeight: 1.75, color: 'rgba(238, 239, 236, 0.84)', fontSize: '14px' }}>
+                  {goodNightModal.text}
+                </p>
+                <button type="button" style={{ ...goodNightButtonStyle, background: 'rgba(145, 166, 158, 0.28)' }} onClick={() => finishGoodNight(goodNightModal.info)}>
+                  确认
+                </button>
+                <button type="button" style={{ ...goodNightButtonStyle, border: 'none', background: 'transparent', color: 'rgba(238, 239, 236, 0.58)' }} onClick={() => setGoodNightModal(null)}>
+                  取消
+                </button>
+              </>
+            )}
+
+            {goodNightModal.type === 'saved' && (
+              <>
+                <h2 style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: 600 }}>{goodNightModal.title}</h2>
+                <p style={{ margin: 0, lineHeight: 1.75, color: 'rgba(238, 239, 236, 0.84)', fontSize: '14px' }}>
+                  {goodNightModal.text}
+                </p>
+                <button type="button" style={{ ...goodNightButtonStyle, background: 'rgba(145, 166, 158, 0.28)' }} onClick={() => setGoodNightModal(null)}>
+                  知道了
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {isHomeVisible && (
       <nav className="homeBottomNav" aria-label="雪粒主页功能">

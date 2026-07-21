@@ -25,7 +25,7 @@
 
     /* 彩虹整体 */
     --nutrition-rainbow-top: 130px;
-    --nutrition-rainbow-left: 48%;
+    --nutrition-rainbow-left: 50%;
     --nutrition-rainbow-scale: 0.58;
     --nutrition-rainbow-radius: 999px;
     --nutrition-rainbow-dim-color: rgba(178, 184, 190, 0.58);
@@ -50,8 +50,8 @@
     --nutrition-arc5-b: 14px;
 
     /* 彩虹左侧标签（已经独立于彩虹缩放，直接按屏幕位置调） */
-    --nutrition-label-left: 25px;
-    --nutrition-label-top: 190px;
+    --nutrition-label-left: 34px;
+    --nutrition-label-top: 208px;
     --nutrition-label-gap: 24px;
     --nutrition-label-size: 10px;
     --nutrition-label-tilt: -8deg;
@@ -76,7 +76,7 @@
     --nutrition-table-top: 450px;
     --nutrition-table-left: 50%;
     --nutrition-table-width: calc(100vw - 56px);
-    --nutrition-table-bg: rgba(72, 76, 79, 0.84);
+    --nutrition-table-bg: rgba(101, 104, 102, 0.664);
     --nutrition-table-radius: 18px;
     --nutrition-table-border: rgba(255,255,255,.12);
     --nutrition-table-line: rgba(255,255,255,.10);
@@ -92,9 +92,9 @@
     --nutrition-col-2: 0.86fr;
     --nutrition-col-3: 1.72fr;
     --nutrition-row-label-size: 12px;
-    --nutrition-row-value-size: 13px;
-    --nutrition-row-food-size: 13px;
-    --nutrition-row-value-color: #fff8d8;
+    --nutrition-row-value-size: 12px;
+    --nutrition-row-food-size: 11px;
+    --nutrition-row-value-color: #e0c369;
     --nutrition-row-food-color: rgba(255,255,255,.84);
 
     /* 猫和动图 */
@@ -117,7 +117,7 @@
     width: 100vw !important;
     height: 100dvh !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding:5px 10px !important;
     overflow: hidden !important;
   }
 
@@ -128,9 +128,9 @@
     min-height: var(--nutrition-card-height) !important;
     border-radius: 0 !important;
     overflow: hidden !important;
-    background: transparent !important;
+    background:transparent !important;
     box-shadow: none !important;
-    border: none !important;
+    border:1px solid transparent !important;
   }
 
   .dailyNutritionPage .nutritionBg,
@@ -377,57 +377,69 @@
   .dailyNutritionPage .nutritionTableNavLine {
     display: flex !important;
     align-items: center !important;
-    justify-content: flex-start !important;
-    gap: var(--nutrition-detail-left-gap) !important;
     width: 100% !important;
-    padding: 0 4px 6px !important;
+    gap: 8px !important;
+    padding: 0 2px 6px !important;
   }
 
+  /* 五个 TAB 的统一透明外框 */
   .dailyNutritionPage .nutritionRangeTabs,
   .dailyNutritionPage .dailyRangeTabs {
-    display: flex !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
     align-items: center !important;
-    justify-content: flex-start !important;
-    gap: var(--nutrition-tab-gap) !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    gap: 2px !important;
     margin: 0 !important;
-    padding: 0 !important;
-    flex: 0 0 auto !important;
+    padding: 3px !important;
+    border: 1px solid rgba(28, 24, 24, 0.16) !important;
+    border-radius: 999px !important;
+    background: rgba(9, 9, 9, 0.08) !important;
   }
 
+  /* 每一个 TAB 都占完整格子 */
   .dailyNutritionPage .nutritionRangeTabs button,
   .dailyNutritionPage .dailyRangeTabs button {
-    border: none !important;
-    background: transparent !important;
-    color: rgba(255,255,255,.92) !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    width: 100% !important;
     min-width: 0 !important;
-    width: auto !important;
+    height: 27px !important;
+    margin: 0 !important;
+    padding: 0 5px !important;
+    border: 1px solid transparent !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    color: rgba(235, 235, 235, 0.92) !important;
+    box-shadow: none !important;
     font-size: var(--nutrition-tab-size) !important;
     font-weight: 800 !important;
     line-height: 1 !important;
     white-space: nowrap !important;
-    box-shadow: none !important;
   }
 
+  /* 选中 TAB：完整按钮，而不是只包住文字 */
   .dailyNutritionPage .nutritionRangeTabs button.active,
   .dailyNutritionPage .dailyRangeTabs button.active {
+    background: rgba(255, 255, 255, 0.18) !important;
+    border-color: rgba(255, 255, 255, 0.24) !important;
     color: #f1dfb1 !important;
-    text-shadow: 0 0 9px rgba(241,223,177,.46), 0 2px 6px rgba(0,0,0,.48) !important;
+    text-shadow: none !important;
   }
 
+  /* 详情独立放在最右 */
   .dailyNutritionPage .nutritionDetailLink {
     flex: 0 0 auto !important;
+    margin: 0 0 0 auto !important;
+    padding: 0 1px !important;
     border: none !important;
     background: transparent !important;
-    color: rgba(241,223,177,.96) !important;
+    color: rgba(241, 223, 177, 0.96) !important;
     font-size: var(--nutrition-tab-size) !important;
     font-weight: 800 !important;
-    padding: 0 !important;
-    margin: 0 !important;
     line-height: 1 !important;
     white-space: nowrap !important;
-    text-shadow: 0 0 8px rgba(241,223,177,.28), 0 2px 6px rgba(0,0,0,.45) !important;
+    text-shadow: 0 0 8px rgba(241,223,177,.28),
+                 0 2px 6px rgba(0,0,0,.45) !important;
   }
 }
 
