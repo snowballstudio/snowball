@@ -13,6 +13,7 @@ import { NoticeModal, StatusPair } from './components/SnowballShared'
 import Onboarding from './components/onboarding/Onboarding.jsx'
 import StepAutoTable from './StepAutoTable.jsx'
 import { ingestStepPayload, stepValueForDate } from './stepDataService.js'
+import { conversationBrainPercent, emptyConversationRecord, readConversationRecord, saveConversationRecord } from './components/call/conversationDataService.js'
 
 const STORAGE_KEY = 'healthy-snowball-v8'
 const TEST_PASSWORD = 'snowball'
@@ -312,31 +313,6 @@ function dataForLocalStorage(source) {
       : { ...DEFAULT.thingDraft },
   }
 }
-
-const GOOD_MOOD_WORDS = [
-  '开心', '不错', '还行', '愉快', '平静', '差不多', '高兴', '好', '很好',
-  '挺好', '宁静', '挺不错', '还好', '喜悦', '兴奋', '成就感', '得意',
-  '好极了', '就那样', '一般', '一般般', '没啥', '满意',
-]
-
-const BAD_MOOD_WORDS = [
-  '不开心', '不好', '不行', '不高兴', '不满意', '不快乐',
-  '累', '烦', '焦虑', '难过', '生气', '压力', '失眠',
-  '孤独', '糟糕', '无聊', '唉', '没劲', '委屈', '担心', '紧张',
-]
-
-const GOOD_FOOD_WORDS = [
-  '奶', '牛奶', '鸡蛋', '蛋', '肉', '猪肉', '牛肉', '牛排', '羊排',
-  '鸡肉', '鸡', '鱼', '虾', '螃蟹', '鸭子', '鹅', '坚果', '水果',
-  '蔬菜', '菠菜', '青菜', '芹菜', '西兰花', '空心菜', '花菜',
-  '洋葱', '青椒', '红椒', '胡萝卜', '扁豆', '甜豆', '荷兰豆',
-  '豆腐', '三文鱼', '羊肉', '萝卜', '鸡翅', '鸡腿',
-]
-
-const BAD_FOOD_WORDS = [
-  '油炸', '油', '肥肉', '肥', '糖', '巧克力', '甜品', '蛋糕',
-  '薯片', '可乐', '炸鸡翅', '肥牛', '肥羊',
-]
 
 const THINKING_WORDS = [
   '为什么', '怎么', '我觉得', '我认为', '我相信', '理解', '应该',
@@ -795,8 +771,8 @@ const FOOD_NUTRITION_MAP = {
 const DAILY_FOOD_OPTIONS = DAILY_FOOD_GROUPS.flatMap(group => group.options)
 
 const TASTE_GROUPS = [
-  { key: 'normal', label: '正常口味', options: ['清淡', '常规', '普通','随意', '家常','平常',  '蒸', '炒', '煮', '炖', '红烧','正常'] },
-  { key: 'heavy', label: '过重口味', options: ['油炸', '油煎','咸','腌制', '高糖', '糖醋', '甜品', '碳酸', '重盐', '辛辣', '烧烤'] },
+  { key: 'normal', label: '正常口味', options: ['清淡', '常规', '正常口味', '寻常', '生吃', '一般口味', '空气炸锅', '烤箱', '普通','家常','新鲜', '凉拌', '淡', '清炒', '素', '少油', '少盐','糖醋','普通','随意', '家常','平常',  '蒸', '炒',  '清炒', '爆炒', '清蒸', '小炒', '煎', '煮', '水煮', '慢炖', '小火炖', '炖', '炸','炖','红烧','正常'] },
+  { key: 'heavy', label: '过重口味', options: ['重油','油炸', '油淋', '红油', '油焖','烟熏', '油泼','烟', '腊肠', '腊',  '熏', '油爆','高糖', '碳酸', '重盐', '咸', '腌制', '老干妈', '辣酱', '榨菜','腌','辛辣', '油辣子', '烤串', '烤肉', '火锅', '麻辣烫', '麻辣','烧烤'] },
 ]
 
 const TASTE_OPTIONS = TASTE_GROUPS.flatMap(group => group.options)
@@ -804,8 +780,8 @@ const HEALTHY_TASTE_OPTIONS = TASTE_GROUPS.find(group => group.key === 'normal')
 const HEAVY_TASTE_OPTIONS = TASTE_GROUPS.find(group => group.key === 'heavy')?.options || []
 
 const MOOD_GROUPS = [
-  { key: 'positive', label: '正面', options: ['开心', '愉快', '平静', '还行', '满意', '挺好','放松','不错','幸福','高兴','得意','兴奋','喜悦','解脱','庆幸','成就','正面'] },
-  { key: 'negative', label: '负面', options: ['疲惫', '焦虑', '难过', '生气','害怕', '郁闷','紧张', '抑郁', '担忧','低落','伤心', '无聊', '痛苦','孤独', '悲哀', '压抑', '负面'] },
+  { key: 'positive', label: '正面', options: ['开心', '愉快', '平静', '还行', '正常','正能量','鼓舞','笑', '乐', '美', '满意',  '好', '挺好','放松','不错','幸福','高兴','得意','兴奋','喜悦','欣慰','宁静','期待','欢','浪漫','幸','喜','欣','解脱','享受','成就','正面'] },
+  { key: 'negative', label: '负面', options: ['疲惫', '焦虑', '难过', '坏','生气','糟糕','怒','害怕', '担心','急','郁闷','紧张', '抑郁', '担忧','低落','不开心', '不好', '内疚','后悔','不高兴', '不满意', '不行', '不甘', '委屈', '烦', '恼', '不咋地', '不得劲', '沉重', '寂寞', '没劲', '无聊', '痛苦','孤独', '悲哀', '压抑', '负面'] },
 ]
 
 const MOOD_OPTIONS = MOOD_GROUPS.flatMap(group => group.options)
@@ -1096,20 +1072,20 @@ function daysFromYesterdayBackTo(records = [], today = new Date()) {
 }
 
 const FOOD_ALIAS = {
-  米饭: ['米饭', '白米饭', '大米', '白米', '炒饭', '蛋炒饭', '盖交饭', '糯米','寿司', '饭团', '粥',  '小米粥', '粽子', '年糕', '糍粑',  '皮蛋瘦肉粥',  '菜饭', '稀饭'],
+  米饭: ['米饭', '白米饭', '大米', '香米','八宝饭','白米', '炒饭', '蛋炒饭', '八宝粥','腊八粥','血糯米','崇明糕','盖交饭', '糯米饭','糯米饼','糯米粥','糯米','米饼','寿司', '饭团', '粥',  '小米粥', '粽子', '年糕', '松糕','米糕','糍粑',  '皮蛋瘦肉粥',  '菜饭', '稀饭'],
   面食: ['面食', '面', '面条', '拉面', '牛肉拉面', '螺蛳粉', '肠粉','河粉','炒河粉','炒面','馒头', '包子', '肉包', '菜包', '馍馍', '小笼包','生煎','米线','饺子', '馄饨', '云吞','抄手','云吞面','小馄饨','意大利面','葱油饼','煎饼','意面', '披萨', '汉堡'],
   面包: ['面包', '吐司', '汉堡包', '切片', '菠萝包','肉松包', '白切面包', '三明治', '烤面包'],
   土豆: ['土豆', '马铃薯', '土豆泥','薯片','薯条'],
   薯类: ['红薯', '烤地瓜','山药','凉薯','芋艿','芋头','烤地瓜','地瓜'],
-  其它主食: ['其它主食', '鸡蛋饼', '饼干', '韭菜盒子', '窝窝头',  '饼', '鸡蛋灌饼','汤饭','菜饭','皮带面','粉丝','宽粉','粉','鸭血粉丝','肉夹馍','手擀面','手撕饼'],
-  蛋: ['鸡蛋', '蛋', '鸭蛋', '鹌鹑蛋', '蒸鸡蛋','炖蛋','鹌鹑蛋','煮鸡蛋', '水煮蛋', '煎蛋', '炒蛋', '番茄炒蛋', '煎鸡蛋', '荷包蛋'],
+  其它主食: ['其它主食', '鸡蛋饼', '饼干', '韭菜盒子', '发糕','窝窝头',  '饼', '鸡蛋灌饼','汤饭','菜饭','皮带面','粉丝','宽粉','粉','鸭血粉丝','肉夹馍','手擀面','手撕饼'],
+  蛋: ['鸡蛋', '蛋', '鸭蛋', '鹌鹑蛋', '蒸鸡蛋','炖蛋','鹌鹑蛋','煮鸡蛋', '水煮蛋', '煎蛋', '炒蛋', '番茄炒蛋', '番茄炒鸡蛋','辣椒炒鸡蛋','煎鸡蛋', '荷包蛋'],
   奶制品: ['牛奶', '奶', '鲜奶', '酸奶', '起司', '奶酪', '椰奶', '芝士', '乳酪', '奶昔'],
   豆制品: ['豆浆', '豆奶', '豆腐', '老豆腐', '冻豆腐', '豆腐皮', '豆腐丝', '嫩豆腐', '麻婆豆腐', '家常豆腐', '油豆腐', '豆皮' ],
   鸡鸭鹅: ['鸡鸭鹅', '鸡', '鸡肉', '炸鸡', '鸡腿', '鸡翅', '鸡块', '鸡排', '鸡爪', '鸡胸脯', '油鸡', '鸡柳','熏鸡',  '烤鸡', '鸭', '烧鸭','烧鹅','鸭肉', '烤鸭'],
-  牛羊肉: ['牛肉', '牛', '煎牛排', '牛排','牛腩','牛腿肉','牛柳','牛腱子','牛肉丝','牛肉丸','烤牛排','和牛','牛肚','百叶','羊排','烤羊排','羊','羊肉','涮羊肉','牛蹄筋','羊蝎子','肥羊'],
-  猪肉: ['猪肉', '猪', '肉', '猪',  '蛋饺', '吃肉', '炖肉','红烧肉','狮子头','红烧狮子头','酱肘子','炒肉丝','辣椒炒肉丝','肉片','炒肉','猪柳', '蹄膀', '猪皮冻', '红烧排骨', '肉汤', '猪脚', '猪耳朵', '夫妻肺片', '猪肚', '大排', '小排', '唐排', '回锅肉', '肉丝','肉糜','炒肉','五花肉', '肉丸'],
+  牛羊肉: ['牛肉', '煎牛排', '牛排','牛腩','牛腿肉','牛柳','牛腱子','牛肉丝','牛肉丸','烤牛排','和牛','牛肚','百叶','羊排','烤羊排','羊','羊肉','涮羊肉','牛蹄筋','羊蝎子','肥羊'],
+  猪肉: ['猪肉','蛋饺', '炒肉', '肉','炖肉','红烧肉','狮子头','红烧狮子头','酱肘子','炒肉丝','辣椒炒肉','青椒炒肉','肉片','猪柳', '蹄膀', '猪皮冻', '红烧排骨', '肉汤', '猪脚', '猪耳朵', '夫妻肺片', '猪肚', '大排', '小排', '唐排', '回锅肉', '肉丝','肉糜','炒肉','五花肉', '肉丸'],
   香肠: ['香肠', '火腿肠', '午餐肉', '腊肠'],
-  鱼虾蟹贝: ['虾蟹', '虾', '老虎虾', '基围虾', '香蕉虾', '蛤蜊', '田螺', '淡菜', '鱿鱼', '墨鱼', '小河虾','明虾', '斑节虾',  '琵琶虾', '桂鱼', '鲈鱼', '生蚝', '扇贝', '泥蟹', '青蟹', '蟹', '鱼', '草鱼', '黑鱼', '鳊鱼', '多宝鱼', '鸦片鱼', '大闸蟹', '海鲜', '鲫鱼', '三文鱼','黄鱼', '带鱼', '鳕鱼', '海鱼', '鲍鱼', '胖头鱼', '河鱼',  '活鱼','鱼片', '鱼丸', '水煮鱼', '烤鱼', '小龙虾',  '金枪鱼', '螃蟹', '龙虾'],
+  鱼虾蟹贝: ['虾蟹', '虾',  '鱼','老虎虾', '基围虾', '香蕉虾', '蛤蜊', '田螺', '淡菜', '鱿鱼', '墨鱼', '小河虾','明虾', '斑节虾',  '琵琶虾', '桂鱼', '鲈鱼', '生蚝', '扇贝', '泥蟹', '青蟹', '蟹', '鱼', '草鱼', '黑鱼', '鳊鱼', '多宝鱼', '鸦片鱼', '大闸蟹', '海鲜', '鲫鱼', '三文鱼','黄鱼', '带鱼', '鳕鱼', '海鱼', '鲍鱼', '胖头鱼', '河鱼',  '活鱼','鱼片', '鱼丸', '水煮鱼', '烤鱼', '小龙虾',  '金枪鱼', '螃蟹', '龙虾'],
   其它蛋白: ['其它蛋白'],
   白菜: ['白菜', '黄牙菜','卷心菜','包心白菜','娃娃菜','大白菜'],
   绿叶菜: ['青菜', '小青菜', '油菜', '上海青', '油麦菜', '菠菜', '米苋', '空心菜', '茼蒿', '芥兰', '芥菜', '西洋菜', '香菜', '生菜', '木耳菜', '秋葵', '蒜苔'],
@@ -1118,16 +1094,16 @@ const FOOD_ALIAS = {
   洋葱: ['洋葱'],
   芹菜: ['芹菜'],
   豆角豆荚: ['豆角', '扁豆', '荷兰豆', '四季豆', '毛豆', '长豆角', '刀豆', '豇豆', '蚕豆', '菜豆', '甜豆'],
-  辣椒茄子: ['辣椒', '青椒', '红椒','尖椒','螺丝椒','杭椒','灯笼椒','黄椒','菜椒','尖辣椒','茄子','番茄','西红柿','柿子'],
+  辣椒茄子: ['辣椒', '青椒', '红椒','尖椒','螺丝椒','番茄炒蛋','杭椒','灯笼椒','黄椒','菜椒','尖辣椒',,'辣椒炒肉','茄子','番茄','西红柿','柿子'],
   苹果: ['苹果', '嘎啦果', '嘎啦', '青苹果', '红富士', '火箭苹果', '黄焦'],
   橙橘柚: ['橙子', '橘子', '柚子', '葡萄柚', '手剥橙', '果粒橙', '沙糖桔', '甜橙', '脐橙', '桔子'],
   香蕉: ['香蕉'],
   葡萄: ['葡萄'],
   草莓: ['草莓', '蓝莓', '红莓', '桑葚', '覆盆子', '黑莓'],
-  瓜类: ['西瓜', '黄瓜', '南瓜', '冬瓜', '苦瓜', '甜瓜','香瓜','葫芦瓜','菜瓜','伊丽莎白','早春红玉','哈密瓜'],
+  瓜类: ['西瓜', '黄瓜', '南瓜', '冬瓜', '苦瓜', '甜瓜','香瓜','丝瓜','葫芦瓜','菜瓜','伊丽莎白','早春红玉','哈密瓜'],
   桃李杏: ['桃子', '李子', '杏子', '布林', '桃', '李', '杏', '油奈', '毛桃', '黄桃', '白桃', '油桃', '蟠桃', '水蜜桃'],
-  其它蔬菜: ['其它蔬菜', '韭菜','笋','冬笋','莴笋','茭白','苦芥菜','香菜','包菜','手撕包菜','素菜'],
-  其它水果: ['其它水果', '菠萝', '牛油果', '车厘子', '热情果', '圣女果','山竹','樱桃','梨', '鸭梨', '杨梅', '香梨', '火龙果', '猕猴桃'],
+  其它蔬菜: ['菜叶', '韭菜','蔬菜','笋','冬笋','莴笋','茭白','苦芥菜','香菜','包菜','手撕包菜','素菜'],
+  其它水果: ['水果', '菠萝', '牛油果', '车厘子', '热情果', '圣女果','山竹','樱桃','梨', '鸭梨', '杨梅', '香梨', '火龙果', '猕猴桃'],
   坚果: ['坚果', '核桃', '瓜子',  '花生',  '杏仁',  '火山果',  '巴达木', '榛子', '开心果',  '松仁',  '芝麻',  '南瓜子',  '西瓜子',  '小核桃', '腰果'],
   海带: ['海带','海苔','海参','海蜇','海蜇皮'],
   紫菜: ['紫菜'],
@@ -1139,21 +1115,23 @@ const FOOD_ALIAS = {
 const FOOD_FUZZY_ALIASES = FOOD_ALIAS
 
 const TASTE_FUZZY_ALIASES = {
-  正常: ['正常口味'],
-  清淡: ['淡'],
+  正常: ['正常口味', '寻常', '新鲜', '凉拌', '糖醋', '生吃'],
+  清淡: ['淡', '清炒', '素', '少油', '少盐'],
   常规: ['正常', '普通', '家常'],
   普通: ['一般口味'],
   蒸: ['清蒸'],
+  炒: ['清炒', '爆炒', '小炒'],
   煮: ['水煮'],
   炖: ['慢炖'],
-  油炸: ['炸', '炸鸡', '炸薯条', '薯条', '炸物'],
-  油煎: ['煎'],
-  咸: ['太咸', '很咸'],
-  高糖: ['糖', '很甜', '甜食', '甜饮料'],
-  甜品: ['蛋糕', '巧克力', '冰淇淋', '奶茶'],
+  煎: ['煎'],
+  炸: ['煎'],
+  重油: ['油炸', '油淋', '红油', '油焖', '油爆'],
+  烟熏: ['烟', '腊肠', '腊', '熏'],
+  高糖: ['糖', '很甜', '甜食', '甜品'],
+  重盐: ['咸', '腌制', '老干妈', '辣酱', '榨菜', '腌'],
   碳酸: ['可乐', '雪碧', '汽水'],
   辛辣: ['辣', '麻辣', '火锅'],
-  烧烤: ['烤串', '烤肉', '烤鸡'],
+  烧烤: ['烤串', '烤肉', '麻辣烫'],
 }
 
 function limitTagsText(text, limit = Infinity) {
@@ -1181,34 +1159,38 @@ function foodAliasEntries() {
     .sort((a, b) => b.alias.length - a.alias.length)
 }
 
-function extractFoodAliases(text, limit = 10) {
+function extractFoodAliases(text) {
   let remaining = String(text || '')
   if (!remaining.trim()) return []
 
   const found = []
   foodAliasEntries().forEach(({ alias }) => {
-    if (found.length >= limit) return
     if (remaining.toLowerCase().includes(alias.toLowerCase())) {
       found.push(alias)
       remaining = remaining.replaceAll(alias, ' ')
     }
   })
 
-  return [...new Set(found)].slice(0, limit)
+  return [...new Set(found)]
 }
 
 function foodPrimaryTagsForTag(tag) {
   const text = String(tag || '').trim()
   if (!text) return []
 
-  const matched = []
-  Object.entries(FOOD_ALIAS).forEach(([primary, aliases]) => {
-    const keys = [primary, ...(aliases || [])].map(item => String(item || '').trim()).filter(Boolean)
-    if (keys.some(key => text === key || text.includes(key))) matched.push(primary)
-  })
+  // 日常表中的每个食物名只归入一个 FOOD_ALIAS 主组。
+  // 必须使用完整名称精确匹配，不能再使用 text.includes(key)：
+  // 例如“鸡蛋”同时包含“鸡”和“蛋”，旧逻辑会错误归入
+  // “鸡鸭鹅”与“蛋”两个主组，导致“牛奶、鸡蛋”被误算成三组。
+  for (const [primary, aliases] of Object.entries(FOOD_ALIAS)) {
+    const keys = [primary, ...(aliases || [])]
+      .map(item => String(item || '').trim())
+      .filter(Boolean)
 
-  if (DAILY_FOOD_OPTIONS.includes(text) && !matched.includes(text)) matched.push(text)
-  return [...new Set(matched)]
+    if (keys.includes(text)) return [primary]
+  }
+
+  return DAILY_FOOD_OPTIONS.includes(text) ? [text] : []
 }
 
 function foodPrimaryTagsFromText(foodText) {
@@ -1216,33 +1198,31 @@ function foodPrimaryTagsFromText(foodText) {
 }
 
 function classifyDailyFood(text) {
-  const aliases = extractFoodAliases(text, 10)
-  return aliases.length ? aliases.join('、') : String(text || '').trim().slice(0, 18)
+  return extractFoodAliases(text).join('、')
 }
 
 function classifyDailyTaste(text) {
-  const tasteTags = fuzzyTagsFromOptions(text, TASTE_OPTIONS, TASTE_FUZZY_ALIASES).slice(0, 4)
+  const tasteTags = fuzzyTagsFromOptions(text, TASTE_OPTIONS, TASTE_FUZZY_ALIASES)
   return uniqueJoin(tasteTags) || '正常'
 }
 
 function classifyDailyMood(text) {
   const source = String(text || '')
-  const tags = []
+  const tags = MOOD_OPTIONS.filter(option => source.includes(option))
+  return uniqueJoin(tags)
+}
 
-  MOOD_OPTIONS.forEach(option => {
-    let index = source.indexOf(option)
-    while (index !== -1) {
-      const before = source.slice(Math.max(0, index - 2), index)
-      const negated = before.includes('不')
-      if (negated && POSITIVE_MOOD_OPTIONS.includes(option)) tags.push('负面')
-      else if (negated && NEGATIVE_MOOD_OPTIONS.includes(option)) tags.push('正面')
-      else tags.push(option)
-      index = source.indexOf(option, index + option.length)
-    }
-  })
+function deriveConversationFields(record = {}) {
+  const foodDescription = String(record.foodDescription || '')
+  const moodDescription = String(record.moodDescription || '')
+  const interactionText = String(record.interactionText || '')
 
-  const limited = [...new Set(tags)].slice(0, 4)
-  return uniqueJoin(limited) || String(text || '').trim().slice(0, 12)
+  return {
+    food: classifyDailyFood(foodDescription),
+    taste: classifyDailyTaste(foodDescription),
+    mood: classifyDailyMood(moodDescription),
+    brainPercent: conversationBrainPercent(record),
+  }
 }
 
 function dailyFoodInfo(foodText, tasteText = '') {
@@ -1250,7 +1230,7 @@ function dailyFoodInfo(foodText, tasteText = '') {
   const normalTaste = splitTags(tasteText).filter(tag => HEALTHY_TASTE_OPTIONS.includes(tag)).length
   const heavyTaste = splitTags(tasteText).filter(tag => HEAVY_TASTE_OPTIONS.includes(tag)).length
   const hasFood = String(foodText || '').trim()
-  const good = foodTags.length >= 2 && normalTaste >= heavyTaste
+  const good = foodTags.length >= 3 && normalTaste >= heavyTaste
   return {
     good,
     label: good ? '雪白' : '暗淡',
@@ -1301,22 +1281,87 @@ function renderDailyTagList(text, isPositiveTag, emptyText = '—') {
   )
 }
 
-function dailyRewardWindow(records = []) {
-  const sorted = [...(records || [])].sort((a, b) => dateKey(b.date).localeCompare(dateKey(a.date)))
-  const last7 = sorted.slice(0, 7)
-  const healthy = last7.length >= 7 && last7.every(record => dailyRecordHealthy(record))
-  const key = healthy
-    ? last7.map(record => [
-        dateKey(record?.date),
-        Number(record?.steps || record?.yesterdaySteps || 0),
-        normalizeTime(record?.offscreenTime || record?.yesterdaySleep || ''),
-        splitTags(record?.food || '').join('、'),
-        splitTags(record?.taste || '').join('、'),
-        splitTags(record?.mood || '').join('、'),
-      ].join('~')).join('|')
+function rewardDateFromSeenKey(value) {
+  const source = String(value || '').trim()
+
+  // 新版直接保存奖励日：2026-07-23。
+  if (/^\d{4}-\d{2}-\d{2}$/.test(source)) return source
+
+  // 兼容旧版由7条记录拼成的 rewardSeenKey：
+  // 第一段就是当时最近一天，也就是上次奖励日。
+  const firstPart = source.split('|')[0] || ''
+  const storedDate = firstPart.split('~')[0] || ''
+  return /^\d{4}-\d{2}-\d{2}$/.test(storedDate) ? storedDate : ''
+}
+
+function nextDateKey(value) {
+  if (!value) return ''
+  const date = parseLocalDate(value)
+  date.setDate(date.getDate() + 1)
+  return dateKey(date)
+}
+
+function dailyRewardWindow(records = [], {
+  rewardSeenKey = '',
+  installDate = '',
+} = {}) {
+  const todayKey = dateKey(todayText())
+  const installedKey = dateKey(installDate || todayText())
+  const previousRewardKey = rewardDateFromSeenKey(rewardSeenKey)
+
+  // 初次奖励从安装日起检查；
+  // 后续奖励只使用上次奖励日之后的新日期，避免连续优秀时每天弹窗。
+  const searchStartKey = previousRewardKey
+    ? nextDateKey(previousRewardKey)
+    : installedKey
+
+  const recordsByDate = new Map(
+    (records || [])
+      .map(normalizeDailyRecord)
+      .filter(record => {
+        const key = dateKey(record?.date)
+        return key && key >= searchStartKey && key <= todayKey
+      })
+      .map(record => [dateKey(record.date), record])
+  )
+
+  let streak = []
+  let latestRewardRecords = []
+
+  // 按日历逐日检查。缺失一天或任一指标不达标，连续天数立即归零。
+  const cursor = parseLocalDate(searchStartKey)
+  const today = parseLocalDate(todayKey)
+
+  while (cursor <= today) {
+    const key = dateKey(cursor)
+    const record = recordsByDate.get(key)
+
+    if (record && dailyRecordHealthy(record)) {
+      streak.push(record)
+
+      if (streak.length >= 7) {
+        // 如果上次奖励后已有超过7天连续优秀，只弹一次，
+        // 并把奖励日推进到距离现在最近的一段7天的最后一天。
+        latestRewardRecords = streak.slice(-7)
+      }
+    } else {
+      streak = []
+    }
+
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
+  const healthy = latestRewardRecords.length === 7
+  const rewardDate = healthy
+    ? dateKey(latestRewardRecords[latestRewardRecords.length - 1]?.date)
     : ''
 
-  return { healthy, key, records: last7 }
+  return {
+    healthy,
+    key: rewardDate,
+    rewardDate,
+    records: latestRewardRecords,
+  }
 }
 
 function appendOrUpdateTodayRecord(prev, patch) {
@@ -2133,6 +2178,7 @@ function App() {
   const screenOpenTimerRef = useRef(null)
   const [todayStatusModal, setTodayStatusModal] = useState(false)
   const [pendingDailyEdit, setPendingDailyEdit] = useState(null)
+  const [conversationEditDraft, setConversationEditDraft] = useState(() => emptyConversationRecord(todayText()))
   const [dailyEditReason, setDailyEditReason] = useState(DAILY_EDIT_REASONS[0])
   const [dailyEditReturnMode, setDailyEditReturnMode] = useState('home')
   const [pendingDailyDelete, setPendingDailyDelete] = useState(null)
@@ -2146,18 +2192,12 @@ function App() {
     setData,
     setDailyModal,
     appendOrUpdateTodayRecord,
-    formatClockForDaily,
-    classifyDailyMood,
-    classifyDailyFood,
-    classifyDailyTaste,
+    deriveConversationFields,
     dailyMoodInfo,
     dailyFoodInfo,
     dailyRecordForDate,
     todayText,
     emptyDailyRecord,
-    recordBrainPercent,
-    brainInfo,
-    brainGainFromText,
     maybeRewardAfterRecord,
   })
 
@@ -2492,7 +2532,7 @@ function App() {
   const sleepOk = sleepGood(homeYesterdaySleep)
   const food = dailyFoodInfo(todayDailyRecord.food || '', todayDailyRecord.taste || '')
   const mood = dailyMoodInfo(todayDailyRecord.mood || '')
-  const currentBrainScore = Math.max(recordBrainPercent(todayDailyRecord), brainInfo(data.messages).score)
+  const currentBrainScore = recordBrainPercent(todayDailyRecord)
   const brain = { score: currentBrainScore, active: currentBrainScore >= 10, label: `${currentBrainScore}%` }
 
   const stepsOk = homeYesterdaySteps >= 5000
@@ -2790,7 +2830,13 @@ function App() {
     }
   }, [data.records, data.footprints, data.things, data.people, data.yesterdaySteps])
 
-  const last3Healthy = useMemo(() => dailyRewardWindow(latestRecords).healthy, [latestRecords])
+  const last3Healthy = useMemo(
+    () => dailyRewardWindow(latestRecords, {
+      rewardSeenKey: data.rewardSeenKey,
+      installDate: data.installDate,
+    }).healthy,
+    [latestRecords, data.rewardSeenKey, data.installDate],
+  )
 
   useEffect(() => {
     const today = todayText()
@@ -2918,9 +2964,15 @@ function App() {
   }
 
   function maybeRewardAfterRecord(nextData, newRecords) {
-    const reward = dailyRewardWindow(newRecords || nextData.records || [])
+    const reward = dailyRewardWindow(
+      newRecords || nextData.records || [],
+      {
+        rewardSeenKey: nextData.rewardSeenKey,
+        installDate: nextData.installDate,
+      },
+    )
 
-    if (reward.healthy && nextData.rewardSeenKey !== reward.key) {
+    if (reward.healthy) {
       scheduleReward(350)
       return reward.key
     }
@@ -2935,7 +2987,7 @@ function App() {
     }))
   }
 
-  function beginDailyEdit(record, returnMode = null) {
+  async function beginDailyEdit(record, returnMode = null) {
     if (!record) return
     const normalized = normalizeDailyRecord(record)
     const normalizedDate = formatDateForDaily(normalized.date || record.date || todayText())
@@ -2971,6 +3023,13 @@ function App() {
     })
     setDailyEditReturnMode(returnMode || (String(dailyMode || '').startsWith('detail-') ? dailyMode : 'home'))
     setDailyEditReason(DAILY_EDIT_REASONS[0])
+
+    try {
+      setConversationEditDraft(await readConversationRecord(normalizedDate))
+    } catch (error) {
+      console.error('读取对话记录失败：', error)
+      setConversationEditDraft(emptyConversationRecord(normalizedDate))
+    }
   }
 
   function cancelDailyEditReason() {
@@ -3001,12 +3060,12 @@ function App() {
       yesterdaySleepTime: record.yesterdaySleep || record.offscreenTime || '',
       todaySleepTime: record.todaySleep || '',
       screenMinutes: formatHoursInputFromMinutes(recordScreenMinutes(record)),
-      foodText: record.food || '',
-      foodKeyword: record.food || '',
-      foodTaste: record.taste || '',
-      moodKeyword: record.mood || '',
-      mood: record.mood || '',
-      brainPercent: recordBrainPercent(record),
+      foodText: deriveConversationFields(conversationEditDraft).food,
+      foodKeyword: deriveConversationFields(conversationEditDraft).food,
+      foodTaste: deriveConversationFields(conversationEditDraft).taste,
+      moodKeyword: deriveConversationFields(conversationEditDraft).mood,
+      mood: deriveConversationFields(conversationEditDraft).mood,
+      brainPercent: deriveConversationFields(conversationEditDraft).brainPercent,
       dailyEditReason,
       editingDailyRecordId: record._id || record.id || dailyRecordIdFor(record.date || todayText()),
       editingDailyRecordDateKey: dateKey(record.date || todayText()),
@@ -3300,76 +3359,25 @@ function App() {
     setPendingDailyDelete(null)
   }
 
-  function toggleDailyFood(tag) {
-    const current = splitTags(data.foodText || data.foodKeyword)
-    if (!current.includes(tag) && current.length >= 10) {
-      setDailyModal({ title: '食物已选满', text: '你已选满10种，请选最主要的食物，点按钮可重选。' })
-      return
-    }
-
-    const next = current.includes(tag) ? current.filter(item => item !== tag) : [...current, tag]
-    setData(prev => ({ ...prev, foodText: next.join('、'), foodKeyword: next.join('、') }))
-  }
-
-  function toggleDailyTaste(tag) {
-    const current = splitTags(data.foodTaste)
-    if (current.includes(tag)) {
-      setData(prev => ({ ...prev, foodTaste: current.filter(item => item !== tag).join('、') }))
-      return
-    }
-
-    const group = HEALTHY_TASTE_OPTIONS.includes(tag) ? 'normal' : HEAVY_TASTE_OPTIONS.includes(tag) ? 'heavy' : 'other'
-    const sameGroupCount = current.filter(item => {
-      if (group === 'normal') return HEALTHY_TASTE_OPTIONS.includes(item)
-      if (group === 'heavy') return HEAVY_TASTE_OPTIONS.includes(item)
-      return !HEALTHY_TASTE_OPTIONS.includes(item) && !HEAVY_TASTE_OPTIONS.includes(item)
-    }).length
-
-    if (sameGroupCount >= 2) {
-      setDailyModal({ title: '口味已选满', text: '你已选满2种，请选最主要的口味，点按钮可重选。' })
-      return
-    }
-
-    setData(prev => ({ ...prev, foodTaste: [...current, tag].join('、') }))
-  }
-
-  
-   function toggleDailyMood(tag) {
-  const current = splitTags(data.moodKeyword || data.mood)
-
-  if (current.includes(tag)) {
-    const next = current.filter(item => item !== tag).join('、')
-    setData(prev => ({ ...prev, moodKeyword: next, mood: next }))
-    return
-  }
-
-  const group = MOOD_GROUPS.find(g => (g.options || []).includes(tag))
-  const sameGroupCount = current.filter(item =>
-    group && (group.options || []).includes(item)
-  ).length
-
-  if (sameGroupCount >= 2) {
-    setDailyModal({
-      title: '心情已选满',
-      text: '你已选满2种，请选最主要的心情，点按钮可重选。',
-    })
-    return
-  }
-
-  const next = [...current, tag].join('、')
-  setData(prev => ({ ...prev, moodKeyword: next, mood: next }))
-}
-
-  function saveToday() {
+  async function saveToday() {
     const source = { ...data }
-    const foodKeyword = source.foodText || source.foodKeyword || ''
-    const moodKeyword = source.moodKeyword || source.mood || ''
+    const conversationDate = formatDateForDaily(source.date || todayText())
+    const conversationRecord = {
+      ...conversationEditDraft,
+      date: conversationDate,
+      dateKey: conversationDate,
+    }
+    const conversationFields = deriveConversationFields(conversationRecord)
+    const foodKeyword = conversationFields.food
+    const moodKeyword = conversationFields.mood
     const baseData = {
       ...source,
-      date: source.date || todayText(),
+      date: conversationDate,
       foodKeyword,
       moodKeyword,
       foodText: foodKeyword,
+      foodTaste: conversationFields.taste,
+      brainPercent: conversationFields.brainPercent,
     }
 
     if (!isValidClockText(baseData.yesterdaySleepTime)) {
@@ -3422,8 +3430,11 @@ function App() {
     const newRecords = [...oldRecords, record]
       .map(item => ({ ...item, healthy: dailyRecordHealthy(item) }))
       .sort((a, b) => dateKey(b.date).localeCompare(dateKey(a.date)))
-    const reward = dailyRewardWindow(newRecords)
-    const shouldShowReward = reward.healthy && baseData.rewardSeenKey !== reward.key
+    const reward = dailyRewardWindow(newRecords, {
+      rewardSeenKey: baseData.rewardSeenKey,
+      installDate: baseData.installDate,
+    })
+    const shouldShowReward = reward.healthy
     const isEditingToday = dateKey(record.date) === dateKey(todayText())
     const nextData = {
       ...baseData,
@@ -3445,6 +3456,14 @@ function App() {
       editingDailyRecordId: '',
       editingDailyRecordDateKey: '',
       lastSavedAt: Date.now(),
+    }
+
+    try {
+      await saveConversationRecord(conversationRecord)
+    } catch (error) {
+      console.error('保存对话记录失败：', error)
+      setDailyModal({ title: '对话记录未保存', text: '日常数据没有改动，请稍后再试。' })
+      return
     }
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(dataForLocalStorage(nextData)))
@@ -4493,59 +4512,44 @@ const homeFloatingFootprintMemory = ''
                   </label>
                 </div>
 
-                <div className="dailyChoiceField">
-                  <span>食物</span>
-                  <small>最多选择10种</small>
-                  <div className="dailyChoiceGroups nutritionChoiceGroups">
-                    {DAILY_FOOD_GROUPS.map(group => (
-                      <div className="dailyChoiceGroup" key={group.key}>
-                        <strong>{group.label}</strong>
-                        <div className="dailyChoiceGrid">
-                          {group.options.map(item => (
-                            <button type="button" key={item} className={splitTags(data.foodText || data.foodKeyword).includes(item) ? 'active' : ''} onClick={() => toggleDailyFood(item)}>{item}</button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <div className="dailyConversationEditFields">
+                  <label>饮食描述
+                    <textarea
+                      value={conversationEditDraft.foodDescription || ''}
+                      onChange={event => setConversationEditDraft(prev => ({ ...prev, foodDescription: event.target.value }))}
+                      placeholder="通话中关于吃了什么、口味如何的回答会保存在这里。"
+                    />
+                    <span className="dailyConversationResult">
+                      食物：{deriveConversationFields(conversationEditDraft).food || '—'}　口味：{deriveConversationFields(conversationEditDraft).taste || '正常'}
+                    </span>
+                  </label>
 
-                <div className="dailyChoiceField">
-                  <span>口味</span>
-                  <small>正常 / 过重各最多选择2种</small>
-                  <div className="dailyChoiceGroups twoRows">
-                    {TASTE_GROUPS.map(group => (
-                      <div className="dailyChoiceGroup" key={group.key}>
-                        <strong>{group.label}</strong>
-                        <div className="dailyChoiceGrid compact">
-                          {group.options.map(item => (
-                            <button type="button" key={item} className={splitTags(data.foodTaste).includes(item) ? 'active' : ''} onClick={() => toggleDailyTaste(item)}>{item}</button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                  <label>心情描述
+                    <textarea
+                      value={conversationEditDraft.moodDescription || ''}
+                      onChange={event => setConversationEditDraft(prev => ({ ...prev, moodDescription: event.target.value }))}
+                      placeholder="通话中关于当天心情的回答会保存在这里。"
+                    />
+                    <span className="dailyConversationResult">
+                      心情：{deriveConversationFields(conversationEditDraft).mood || '—'}
+                    </span>
+                  </label>
 
-                <div className="dailyChoiceField">
-                  <span>心情</span>
-                  <div className="dailyChoiceGroups twoRows">
-                    {MOOD_GROUPS.map(group => (
-                      <div className="dailyChoiceGroup" key={group.key}>
-                        <strong>{group.label}</strong>
-                        <div className="dailyChoiceGrid compact">
-                          {group.options.map(item => (
-                            <button type="button" key={item} className={splitTags(data.moodKeyword || data.mood).includes(item) ? 'active' : ''} onClick={() => toggleDailyMood(item)}>{item}</button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <label>互动文字
+                    <textarea
+                      value={conversationEditDraft.interactionText || ''}
+                      onChange={event => setConversationEditDraft(prev => ({ ...prev, interactionText: event.target.value }))}
+                      placeholder="其它通话内容会不断添加在这里。"
+                    />
+                    <span className="dailyConversationResult">
+                      脑动：{deriveConversationFields(conversationEditDraft).brainPercent}%
+                    </span>
+                  </label>
                 </div>
 
                 <div className="dailyEditTwoCol dailyEditMetaRow">
                   <label>当日互动
-                    <input value={`${recordBrainPercent({ brainPercent: data.brainPercent ?? brain.score })}%`} disabled />
+                    <input value={`${deriveConversationFields(conversationEditDraft).brainPercent}%`} disabled />
                   </label>
 
                   <label className="dailyInstallMuted">安装日期

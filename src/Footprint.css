@@ -115,8 +115,21 @@
   --fp-home-link-size: 11.5px;
   --fp-home-link-gap: 60px;
   --fp-home-link-bar-height: 54px;
-  --fp-home-link-bar-bg: rgba(239, 240, 242, 0.96);
+  --fp-home-link-bar-bg: #f1f2f3;
   --fp-home-link-bar-line: rgba(129, 132, 134, 0.18);
+
+  /* 足迹主页底部三个入口图标 */
+  --fp-home-map-icon-size: 20px;
+  --fp-home-map-icon-y: 0px;
+  --fp-home-map-icon-gap: 10px;
+
+  /* 三个子页面底部“添加足迹 / 设置住址” */
+  --fp-sub-action-text-size: 12px;
+  --fp-sub-action-text-color: #626970;
+  --fp-sub-action-group-gap: 46px;
+  --fp-sub-action-icon-size: 18px;
+  --fp-sub-action-icon-y: 0px;
+  --fp-sub-action-icon-gap: 4px;
 
   /* 地图浏览/编辑页 */
   --fp-full-padding: 0px;
@@ -426,7 +439,7 @@
   margin: 0 !important;
   background: #f7fbff !important;
   border: none !important;
-  border-radius: 0 !important;
+  border-radius: 12px !important;
   box-shadow: none !important;
   color: var(--fp-text) !important;
   pointer-events: auto !important;
@@ -441,7 +454,7 @@
   color: var(--fp-history-title-color) !important;
   font-size: var(--fp-history-title-size) !important;
   font-weight: var(--fp-history-title-weight) !important;
-  border-bottom: 1px solid var(--fp-line) !important;
+  border-bottom: none !important;
 }
 
 .footprintHistoryEmpty {
@@ -1128,7 +1141,7 @@
     --fp-scene-right: 14px;
     --fp-history-left: 14px;
     --fp-history-right: 14px;
-    --fp-history-top: calc(var(--fp-home-bg-height) + 8px);
+    --fp-history-top: calc(var(--fp-home-bg-height) + 14px);
     --fp-history-bottom: 52px;
     --fp-home-link-bottom: calc(16px + env(safe-area-inset-bottom));
     --fp-home-link-gap: 26px;
@@ -1457,6 +1470,7 @@
   background:
     url('/snowball_world_photo_map.png')
     center center / contain no-repeat #ffffff !important;
+    background-size: 100% 100% !important;
 }
 
 .footprintFullPage .simpleMap.fullMap.china {
@@ -1471,6 +1485,7 @@
   background:
     url('/snowball_local_grass_map.png')
     center center / cover no-repeat #ffffff !important;
+    background-size: 100% 100% !important;
 }
 
 /* Footprint.jsx 仍保留 MapArtwork 作为兼容结构；
@@ -1503,7 +1518,7 @@
 @media (max-width: 900px) {
   .footprintMapTextLinks {
     bottom: 0 !important;
-    background: hwb(180 92% 3% / 0.87) !important;
+    background: #f1f2f3 !important;
     box-shadow: none !important;
     border-top: 0px solid var(--fp-home-link-bar-line) !important;
   }
@@ -1515,8 +1530,153 @@
 
   @supports (padding-bottom: env(safe-area-inset-bottom)) {
     .footprintMapTextLinks {
-      bottom: 0 !important;
+      bottom:-10px !important;
       padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
     }
   }
 }
+
+/* ======================================================
+   FOOTPRINT ICON LINKS｜足迹入口图标
+   只调整主页三个入口与三个子页面底部两个操作入口。
+   ====================================================== */
+
+/* 足迹主页：飞机 / 列车 / 汽车 + 原有金色文字 */
+.footprintMapTextLinks .footprintHomeMapLink {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--fp-home-map-icon-gap) !important;
+  white-space: nowrap !important;
+}
+
+.footprintHomeMapIcon {
+  display: block !important;
+  width: var(--fp-home-map-icon-size) !important;
+  height: var(--fp-home-map-icon-size) !important;
+  object-fit: contain !important;
+  flex: 0 0 auto !important;
+  transform: translateY(var(--fp-home-map-icon-y)) !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.footprintMapTextLinks .footprintHomeMapLink span {
+  color: inherit !important;
+  font: inherit !important;
+  line-height: 1 !important;
+}
+
+/* 三个子页面：添加足迹 / 设置住址 */
+.footprintBrowseActions {
+  justify-content: center !important;
+  gap: var(--fp-sub-action-group-gap) !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.footprintBrowseActions .footprintIconTextButton {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--fp-sub-action-icon-gap) !important;
+  color: var(--fp-sub-action-text-color) !important;
+  font-size: var(--fp-sub-action-text-size) !important;
+  white-space: nowrap !important;
+}
+
+.footprintBrowseActions .footprintIconTextButton span {
+  color: inherit !important;
+  font: inherit !important;
+  line-height: 1 !important;
+}
+
+.footprintSubActionIcon {
+  display: block !important;
+  width: var(--fp-sub-action-icon-size) !important;
+  height: var(--fp-sub-action-icon-size) !important;
+  object-fit: contain !important;
+  flex: 0 0 auto !important;
+  transform: translateY(var(--fp-sub-action-icon-y)) !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+@media (max-width: 900px) {
+  .footprintMapTextLinks {
+    justify-content: center !important;
+    gap: var(--fp-home-link-gap) !important;
+  }
+
+  .footprintBrowseActions {
+    width: 100% !important;
+    justify-content: center !important;
+    gap: var(--fp-sub-action-group-gap) !important;
+  }
+}
+
+/* ======================================================
+   同一图钉多次足迹｜低调索引
+   索引与标题同一行，详情框其它格式不变。
+   ====================================================== */
+.mapFootprintPopupHeader {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  min-width: 0 !important;
+  padding-right: 24px !important;
+}
+
+.mapFootprintPopupHeader > strong {
+  min-width: 0 !important;
+  flex: 0 1 auto !important;
+}
+
+.mapFootprintPager {
+  flex: 0 0 auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+ margin-left: 8px !important;
+margin-right: 4px !important;
+  color: rgba(36, 65, 93, 0.58) !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.mapFootprintPager button {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 50% !important;
+  background: rgba(36, 65, 93, 0.055) !important;
+  color: rgba(36, 65, 93, 0.64) !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+}
+
+.mapFootprintPager button:disabled {
+  opacity: 0.25 !important;
+}
+
+.mapFootprintPager span {
+  min-width: 24px !important;
+  text-align: center !important;
+  color: inherit !important;
+  font: inherit !important;
+}
+
+/* 关闭叉轻微向右，让标题右侧索引有更完整的空间。 */
+.mapFootprintPopupClose {
+  right: -14px !important;
+}
+

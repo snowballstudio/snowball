@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-
-const VOICE_TEXT_MAP = {
-  'voice1_hello_askmood.mp4': '你好呀，今天过得怎么样？',
-  'voice2_replygoodmood_askfood.mp4': '哇，你心情好，我的眼睛也发亮了。你今天吃什么呢？什么样的口味呀？',
-  'voice3_replybadmood_askfood.mp4': '嗯，你心情不好，我也难过，我的眼睛成灰色了。你今天吃什么呢？什么样的口味呀？',
-  'voice4_replygoodfood_askidea.mp4': '你吃得很健康哦，我的毛色变得雪白发亮了。你今天有什么想法呢？',
-  'voice5_replybadfood_askidea.mp4': '你吃得不够健康，我的毛色都变灰了，要多注意哦。你今天有什么想法呢？',
-  'voice6_lastreply_listen.mp4': '知道了，我听着呢。',
-  'voice7_close.mp4': '那我先安静待着啦。',
-}
+import { Capacitor } from '@capacitor/core'
+import { SpeechRecognition } from '@capgo/capacitor-speech-recognition'
+import {
+  appendConversationResponse,
+  conversationBrainPercent,
+  readConversationRecord,
+} from './conversationDataService.js'
 
 const VOICE_DURATION_MS = {
   'voice1_hello_askmood.mp4': 2600,
@@ -17,7 +14,27 @@ const VOICE_DURATION_MS = {
   'voice4_replygoodfood_askidea.mp4': 5300,
   'voice5_replybadfood_askidea.mp4': 5700,
   'voice6_lastreply_listen.mp4': 2600,
-  'voice7_close.mp4': 2600,
+}
+
+function messageDateTime(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  return `${year}/${month}/${day} ${hour}:${minute}`
+}
+
+function makeMessage(from, text) {
+  const now = new Date()
+  return {
+    id: `${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`,
+    from,
+    text: String(text || ''),
+    createdAt: now.getTime(),
+    dateTime: messageDateTime(now),
+  }
 }
 
 export default function useSnowballCall({
@@ -25,18 +42,12 @@ export default function useSnowballCall({
   setData,
   setDailyModal,
   appendOrUpdateTodayRecord,
-  formatClockForDaily,
-  classifyDailyMood,
-  classifyDailyFood,
-  classifyDailyTaste,
+  deriveConversationFields,
   dailyMoodInfo,
   dailyFoodInfo,
   dailyRecordForDate,
   todayText,
   emptyDailyRecord,
-  recordBrainPercent,
-  brainInfo,
-  brainGainFromText,
   maybeRewardAfterRecord,
 }) {
   const [callActive, setCallActive] = useState(false)
@@ -47,14 +58,28 @@ export default function useSnowballCall({
   const recognitionRef = useRef(null)
   const voiceAudioRef = useRef(null)
   const voiceAudioCacheRef = useRef({})
-  const voiceSubmitTimerRef = useRef(null)
+  const voicePlayTimerRef = useRef(null)
+  const voiceFallbackTimerRef = useRef(null)
+  const voiceFinishRef = useRef(null)
   const chatStepRef = useRef(data.chatStep || 'idle')
   const callActiveRef = useRef(false)
-  const speechRestartTimerRef = useRef(null)
+  const callSessionRef = useRef(0)
+
+  // 原生录音连续会话：
+  // Android / iOS 的单次语音识别可能因停顿自动结束，
+  // 因此在用户主动发送前自动重启下一轮，并累计前面已识别文字。
+  const keepNativeListeningRef = useRef(false)
+  const nativeCommittedTextRef = useRef('')
+  const nativeCurrentTextRef = useRef('')
+  const nativeRestartTimerRef = useRef(null)
+  const nativeRestartingRef = useRef(false)
+
+  const isNativeSpeechPlatform = Capacitor.isNativePlatform()
 
   const speechRecognitionSupported =
-    typeof window !== 'undefined' &&
-    Boolean(window.SpeechRecognition || window.webkitSpeechRecognition)
+    isNativeSpeechPlatform ||
+    (typeof window !== 'undefined' &&
+      Boolean(window.SpeechRecognition || window.webkitSpeechRecognition))
 
   useEffect(() => {
     const box = messagesRef.current
@@ -63,13 +88,9 @@ export default function useSnowballCall({
   }, [data.messages.length])
 
   useEffect(() => () => {
-    try {
-      recognitionRef.current?.stop?.()
-    } catch (error) {
-      // 语音识别关闭失败时保持安静。
-    }
-    if (speechRestartTimerRef.current) window.clearTimeout(speechRestartTimerRef.current)
-    if (voiceSubmitTimerRef.current) window.clearTimeout(voiceSubmitTimerRef.current)
+    callSessionRef.current += 1
+    stopSpeechRecognition()
+    stopVoiceImmediately()
   }, [])
 
   useEffect(() => {
@@ -91,12 +112,13 @@ export default function useSnowballCall({
   }
 
   function unlockVoiceAudio() {
-    Object.keys(VOICE_TEXT_MAP).forEach(name => {
+    Object.keys(VOICE_DURATION_MS).forEach(name => {
       try {
         const audio = getVoiceAudio(name)
         audio.muted = true
         audio.currentTime = 0
         const promise = audio.play()
+
         if (promise && typeof promise.then === 'function') {
           promise.then(() => {
             audio.pause()
@@ -111,40 +133,74 @@ export default function useSnowballCall({
           audio.muted = false
         }
       } catch (error) {
-        // 预解锁失败不影响后续正常播放尝试。
+        // 预解锁失败不影响后续手动通话。
       }
     })
   }
 
-  function stopRecognitionBeforeVoice() {
-    try {
-      recognitionRef.current?.stop?.()
-    } catch (error) {
-      // 没有正在识别时忽略。
+  function stopVoiceImmediately() {
+    if (voicePlayTimerRef.current) {
+      window.clearTimeout(voicePlayTimerRef.current)
+      voicePlayTimerRef.current = null
     }
-    recognitionRef.current = null
-    setIsListening(false)
+
+    if (voiceFallbackTimerRef.current) {
+      window.clearTimeout(voiceFallbackTimerRef.current)
+      voiceFallbackTimerRef.current = null
+    }
+
+    const audio = voiceAudioRef.current
+    if (audio) {
+      try {
+        audio.onended = null
+        audio.onerror = null
+        audio.pause()
+        audio.currentTime = 0
+      } catch (error) {
+        // 已停止的音频不需要额外处理。
+      }
+    }
+
+    voiceAudioRef.current = null
+
+    const finish = voiceFinishRef.current
+    voiceFinishRef.current = null
+    if (typeof finish === 'function') finish()
   }
 
-  function playVoice(name) {
+  function playVoice(name, sessionId = callSessionRef.current) {
     return new Promise(resolve => {
-      let done = false
-      let fallbackTimer = null
+      let finished = false
+
       const finish = () => {
-        if (done) return
-        done = true
-        if (fallbackTimer) window.clearTimeout(fallbackTimer)
+        if (finished) return
+        finished = true
+
+        if (voiceFinishRef.current === finish) {
+          voiceFinishRef.current = null
+        }
+
+        if (voicePlayTimerRef.current) {
+          window.clearTimeout(voicePlayTimerRef.current)
+          voicePlayTimerRef.current = null
+        }
+
+        if (voiceFallbackTimerRef.current) {
+          window.clearTimeout(voiceFallbackTimerRef.current)
+          voiceFallbackTimerRef.current = null
+        }
+
         resolve()
       }
 
       try {
-        stopRecognitionBeforeVoice()
+        stopSpeechRecognition()
+        stopVoiceImmediately()
+        voiceFinishRef.current = finish
 
-        if (voiceAudioRef.current && voiceAudioRef.current !== voiceAudioCacheRef.current[name]) {
-          try {
-            voiceAudioRef.current.pause()
-            voiceAudioRef.current.currentTime = 0
-          } catch (error) {}
+        if (!callActiveRef.current || sessionId !== callSessionRef.current) {
+          finish()
+          return
         }
 
         const audio = getVoiceAudio(name)
@@ -154,12 +210,24 @@ export default function useSnowballCall({
         audio.muted = false
         audio.onended = finish
         audio.onerror = finish
-        audio.onpause = null
 
-        fallbackTimer = window.setTimeout(finish, (VOICE_DURATION_MS[name] || 3600) + 1200)
+        voiceFallbackTimerRef.current = window.setTimeout(
+          finish,
+          (VOICE_DURATION_MS[name] || 3600) + 1200,
+        )
 
-        window.setTimeout(() => {
-          if (done) return
+        voicePlayTimerRef.current = window.setTimeout(() => {
+          voicePlayTimerRef.current = null
+
+          if (
+            finished ||
+            !callActiveRef.current ||
+            sessionId !== callSessionRef.current
+          ) {
+            finish()
+            return
+          }
+
           try {
             const playPromise = audio.play()
             if (playPromise && typeof playPromise.catch === 'function') {
@@ -168,273 +236,635 @@ export default function useSnowballCall({
           } catch (error) {
             finish()
           }
-        }, 220)
+        }, 120)
       } catch (error) {
         finish()
       }
     })
   }
 
-  function playVoiceThenListen(name, delay = 120) {
-    playVoice(name).then(() => {
-      if (!callActiveRef.current) return
-      scheduleNextSpeechRecognition(delay)
-    })
+  function currentDailyRecordWithPatch(patch = {}) {
+    const date = todayText()
+    const current =
+      dailyRecordForDate(data.records || [], date) ||
+      emptyDailyRecord(date)
+
+    return {
+      ...current,
+      ...patch,
+      date: current.date || date,
+    }
   }
 
-  function scheduleNextSpeechRecognition(delay = 450) {
-    if (!callActiveRef.current) return
-    if (speechRestartTimerRef.current) window.clearTimeout(speechRestartTimerRef.current)
-    speechRestartTimerRef.current = window.setTimeout(() => {
-      speechRestartTimerRef.current = null
-      if (callActiveRef.current && chatStepRef.current !== 'idle') {
-        startSpeechRecognition()
-      }
-    }, delay)
-  }
-
-  function nextBrainPercentFor(prev, text) {
-    const today = dailyRecordForDate(prev.records || [], todayText()) || emptyDailyRecord(todayText())
-    const savedBrain = Math.max(
-      recordBrainPercent(today),
-      recordBrainPercent({ brainPercent: prev.brainPercent }),
-    )
-    return Math.min(100, savedBrain + brainGainFromText(text))
-  }
-
-  function processUserText(text, step = data.chatStep, options = {}) {
+  async function processUserText(text, step = data.chatStep) {
     const clean = String(text || '').trim()
-    if (!clean) return
+    if (!callActiveRef.current) return
 
-    if (step === 'mood') {
-      const keyword = classifyDailyMood(clean)
-      const moodResult = dailyMoodInfo(keyword)
-      const reply = moodResult.good
-        ? '哇，你心情好，我的眼睛也发亮了。你今天吃什么呢？什么样的口味呀？'
-        : '嗯，你心情不好，我也难过，我的眼睛成灰色了。你今天吃什么呢？什么样的口味呀？'
+    const sessionId = callSessionRef.current
 
-      chatStepRef.current = 'food'
+    // 发送键同时承担“发送 / 打断 / 快进”：
+    // 无论有没有文字，都立即停止录音和雪粒当前尚未说完的语音。
+    stopSpeechRecognition()
+    stopVoiceImmediately()
 
-      setData(prev => {
-        const nextBrain = nextBrainPercentFor(prev, clean)
-        const next = appendOrUpdateTodayRecord(prev, { mood: keyword, brainPercent: nextBrain })
-        return {
-          ...next,
-          brainPercent: nextBrain,
-          moodKeyword: keyword,
-          mood: keyword,
-          chatInput: '',
-          chatStep: 'food',
-          chatCount: prev.chatCount + 1,
-          messages: [
-            ...prev.messages,
-            { from: 'user', text: clean },
-            { from: 'cat', text: reply },
-          ],
+    try {
+      if (step === 'mood') {
+        const conversation = clean
+          ? await appendConversationResponse(
+              todayText(),
+              'moodDescription',
+              clean,
+            )
+          : await readConversationRecord(todayText())
+
+        if (!callActiveRef.current || sessionId !== callSessionRef.current) return
+
+        const derivedBase = deriveConversationFields(conversation)
+        const derived = {
+          ...derivedBase,
+          brainPercent: conversationBrainPercent(conversation),
         }
-      })
 
-      const voiceName = moodResult.good
-        ? 'voice2_replygoodmood_askfood.mp4'
-        : 'voice3_replybadmood_askfood.mp4'
-      if (options.autoVoice) playVoiceThenListen(voiceName, 180)
-      else playVoice(voiceName)
-      return
-    }
+        // 有新文字时先使用刚识别出的结果；空白快进时直接读取日常表当前结果。
+        const dailyRecord = clean
+          ? currentDailyRecordWithPatch({
+              mood: derived.mood,
+              brainPercent: derived.brainPercent,
+            })
+          : currentDailyRecordWithPatch()
 
-    if (step === 'food') {
-      const foodKeyword = classifyDailyFood(clean)
-      const tasteKeyword = classifyDailyTaste(clean)
-      const foodResult = dailyFoodInfo(foodKeyword, tasteKeyword)
-      const reply = foodResult.good
-        ? '你吃得很健康哦，我的毛色变得雪白发亮了。你今天有什么想法呢？'
-        : '你吃得不够健康，我的毛色都变灰了，要多注意哦。你今天有什么想法呢？'
+        const moodResult = dailyMoodInfo(dailyRecord.mood)
+        const reply = moodResult.good
+          ? '读了你的心情记录，雪粒的眼睛又圆又亮。你今天吃什么呢？什么样的口味呀？'
+          : '没有读到够多的心情好词，雪粒的眼睛有点无神。你今天吃什么呢？什么样的口味呀？'
+        const voiceName = moodResult.good
+          ? 'voice2_replygoodmood_askfood.mp4'
+          : 'voice3_replybadmood_askfood.mp4'
 
-      chatStepRef.current = 'thought'
+        chatStepRef.current = 'food'
 
-      setData(prev => {
-        const nextBrain = nextBrainPercentFor(prev, clean)
-        const next = appendOrUpdateTodayRecord(prev, {
-          food: foodKeyword,
-          taste: tasteKeyword,
-          brainPercent: nextBrain,
+        setData(prev => {
+          const next = clean
+            ? appendOrUpdateTodayRecord(prev, {
+                mood: derived.mood,
+                brainPercent: derived.brainPercent,
+              })
+            : prev
+
+          return {
+            ...next,
+            ...(clean
+              ? {
+                  brainPercent: derived.brainPercent,
+                  moodKeyword: derived.mood,
+                  mood: derived.mood,
+                }
+              : {}),
+            chatInput: '',
+            chatStep: 'food',
+            chatCount: prev.chatCount + 1,
+            messages: [
+              ...prev.messages,
+              ...(clean ? [makeMessage('user', clean)] : []),
+              makeMessage('cat', reply),
+            ],
+          }
         })
-        const nextData = {
+
+        await playVoice(voiceName, sessionId)
+        return
+      }
+
+      if (step === 'food') {
+        const conversation = clean
+          ? await appendConversationResponse(
+              todayText(),
+              'foodDescription',
+              clean,
+            )
+          : await readConversationRecord(todayText())
+
+        if (!callActiveRef.current || sessionId !== callSessionRef.current) return
+
+        const derivedBase = deriveConversationFields(conversation)
+        const derived = {
+          ...derivedBase,
+          brainPercent: conversationBrainPercent(conversation),
+        }
+
+        // 空白快进不改写任何数据，只依据日常表此刻已经存在的食物与口味判断。
+        const dailyRecord = clean
+          ? currentDailyRecordWithPatch({
+              food: derived.food,
+              taste: derived.taste,
+              brainPercent: derived.brainPercent,
+            })
+          : currentDailyRecordWithPatch()
+
+        const foodResult = dailyFoodInfo(dailyRecord.food, dailyRecord.taste)
+        const reply = foodResult.good
+          ? '你的饮食不错哦，所以雪粒的毛色雪白。你有什么想法，愿意和我说一说吗？'
+          : '你的饮食记录有待改进，所以雪粒的毛色有点暗淡。你有什么想法，愿意和我说一说吗？'
+        const voiceName = foodResult.good
+          ? 'voice4_replygoodfood_askidea.mp4'
+          : 'voice5_replybadfood_askidea.mp4'
+
+        chatStepRef.current = 'thought'
+
+        setData(prev => {
+          const next = clean
+            ? appendOrUpdateTodayRecord(prev, {
+                food: derived.food,
+                taste: derived.taste,
+                brainPercent: derived.brainPercent,
+              })
+            : prev
+
+          const nextData = {
+            ...next,
+            ...(clean
+              ? {
+                  brainPercent: derived.brainPercent,
+                  foodText: derived.food,
+                  foodKeyword: derived.food,
+                  foodTaste: derived.taste,
+                }
+              : {}),
+            chatInput: '',
+            chatStep: 'thought',
+            chatCount: prev.chatCount + 1,
+            messages: [
+              ...prev.messages,
+              ...(clean ? [makeMessage('user', clean)] : []),
+              makeMessage('cat', reply),
+            ],
+          }
+
+          if (!clean) return nextData
+
+          return {
+            ...nextData,
+            rewardSeenKey: maybeRewardAfterRecord(nextData, nextData.records),
+          }
+        })
+
+        await playVoice(voiceName, sessionId)
+        return
+      }
+
+      const conversation = clean
+        ? await appendConversationResponse(
+            todayText(),
+            'interactionText',
+            clean,
+          )
+        : await readConversationRecord(todayText())
+
+      if (!callActiveRef.current || sessionId !== callSessionRef.current) return
+
+      const derivedBase = deriveConversationFields(conversation)
+      const derived = {
+        ...derivedBase,
+        brainPercent: conversationBrainPercent(conversation),
+      }
+      const reply = '知道了，我听着呢。'
+
+      chatStepRef.current = 'free'
+
+      setData(prev => {
+        const next = clean
+          ? appendOrUpdateTodayRecord(prev, {
+              brainPercent: derived.brainPercent,
+            })
+          : prev
+
+        return {
           ...next,
-          brainPercent: nextBrain,
-          foodText: foodKeyword,
-          foodKeyword,
-          foodTaste: tasteKeyword,
+          ...(clean ? { brainPercent: derived.brainPercent } : {}),
           chatInput: '',
-          chatStep: 'thought',
+          chatStep: 'free',
           chatCount: prev.chatCount + 1,
           messages: [
             ...prev.messages,
-            { from: 'user', text: clean },
-            { from: 'cat', text: reply },
+            ...(clean ? [makeMessage('user', clean)] : []),
+            makeMessage('cat', reply),
           ],
-        }
-        return {
-          ...nextData,
-          rewardSeenKey: maybeRewardAfterRecord(nextData, nextData.records),
         }
       })
 
-      const voiceName = foodResult.good
-        ? 'voice4_replygoodfood_askidea.mp4'
-        : 'voice5_replybadfood_askidea.mp4'
-      if (options.autoVoice) playVoiceThenListen(voiceName, 180)
-      else playVoice(voiceName)
+      await playVoice('voice6_lastreply_listen.mp4', sessionId)
+    } catch (error) {
+      console.error('保存对话记录失败：', error)
+      setDailyModal({
+        title: '对话记录未保存',
+        text: '刚才的回答没有写入本机，请再发送一次。',
+      })
+    }
+  }
+
+  function cleanSpeechText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim()
+  }
+
+  function mergeSpeechText(base, addition) {
+    const before = cleanSpeechText(base)
+    const next = cleanSpeechText(addition)
+    if (!before) return next
+    if (!next) return before
+    if (before === next || before.endsWith(next)) return before
+    return `${before} ${next}`.trim()
+  }
+
+  function clearNativeRestartTimer() {
+    if (nativeRestartTimerRef.current) {
+      window.clearTimeout(nativeRestartTimerRef.current)
+      nativeRestartTimerRef.current = null
+    }
+  }
+
+  function commitNativeCurrentText() {
+    const current = cleanSpeechText(nativeCurrentTextRef.current)
+    if (!current) return nativeCommittedTextRef.current
+
+    nativeCommittedTextRef.current = mergeSpeechText(
+      nativeCommittedTextRef.current,
+      current,
+    )
+    nativeCurrentTextRef.current = ''
+
+    setData(prev => ({
+      ...prev,
+      chatInput: nativeCommittedTextRef.current,
+    }))
+
+    return nativeCommittedTextRef.current
+  }
+
+  async function removeNativeSpeechListeners(handles = []) {
+    await Promise.all(
+      handles.map(async handle => {
+        try {
+          await handle?.remove?.()
+        } catch (error) {
+          // 已移除的监听器无需重复处理。
+        }
+      }),
+    )
+  }
+
+  async function startNativeSpeechRecognition({
+    resume = false,
+    skipPermissionCheck = false,
+  } = {}) {
+    if (!callActiveRef.current) return
+
+    stopVoiceImmediately()
+    clearNativeRestartTimer()
+
+    if (!resume) {
+      await stopSpeechRecognition()
+      keepNativeListeningRef.current = true
+      nativeCommittedTextRef.current = cleanSpeechText(data.chatInput)
+      nativeCurrentTextRef.current = ''
+    }
+
+    if (
+      !keepNativeListeningRef.current ||
+      nativeRestartingRef.current
+    ) {
       return
     }
 
-    const reply = step === 'free' ? '嗯，我听着呢。' : '知道了，我听着呢。'
-    const shouldKeepListening = options.autoVoice && callActiveRef.current
+    nativeRestartingRef.current = true
 
-    setData(prev => {
-      const nextBrain = nextBrainPercentFor(prev, clean)
-      const next = appendOrUpdateTodayRecord(prev, { brainPercent: nextBrain })
-      return {
-        ...next,
-        brainPercent: nextBrain,
-        chatInput: '',
-        chatStep: shouldKeepListening ? 'free' : 'idle',
-        chatCount: prev.chatCount + 1,
-        messages: [
-          ...prev.messages,
-          { from: 'user', text: clean },
-          { from: 'cat', text: reply },
-        ],
+    try {
+      if (!skipPermissionCheck) {
+        const permission = await SpeechRecognition.requestPermissions()
+        if (permission?.speechRecognition !== 'granted') {
+          keepNativeListeningRef.current = false
+          setIsListening(false)
+          setDailyModal({
+            title: '没有录音权限',
+            text: '请在手机设置中允许雪粒使用麦克风和语音识别。',
+          })
+          return
+        }
+
+        const availability = await SpeechRecognition.available()
+        if (!availability?.available) {
+          keepNativeListeningRef.current = false
+          setIsListening(false)
+          setDailyModal({
+            title: '当前手机无法使用语音识别',
+            text: '系统没有可用的语音识别服务。你可以先使用文字输入。',
+          })
+          return
+        }
       }
-    })
 
-    chatStepRef.current = shouldKeepListening ? 'free' : 'idle'
-    if (options.autoVoice && callActiveRef.current) {
-      playVoiceThenListen('voice6_lastreply_listen.mp4', 260)
-    } else {
-      playVoice('voice6_lastreply_listen.mp4')
+      const previous = recognitionRef.current
+      if (previous?.type === 'native') {
+        await removeNativeSpeechListeners(previous.listenerHandles || [])
+      }
+
+      const listenerHandles = []
+
+      listenerHandles.push(
+        await SpeechRecognition.addListener('partialResults', event => {
+          const currentText = cleanSpeechText(
+            event?.accumulatedText ||
+            event?.matches?.[0] ||
+            event?.accumulated ||
+            '',
+          )
+
+          if (!currentText) return
+
+          nativeCurrentTextRef.current = currentText
+          const visibleText = mergeSpeechText(
+            nativeCommittedTextRef.current,
+            currentText,
+          )
+
+          setData(prev => ({
+            ...prev,
+            chatInput: visibleText,
+          }))
+        }),
+      )
+
+      listenerHandles.push(
+        await SpeechRecognition.addListener('listeningState', event => {
+          const state = String(event?.state || '').toLowerCase()
+          const started =
+            event?.status === 'started' ||
+            ['started', 'listening', 'active'].includes(state)
+          const stopped =
+            event?.status === 'stopped' ||
+            ['idle', 'stopped', 'ended', 'error'].includes(state)
+
+          if (started) {
+            setIsListening(true)
+            return
+          }
+
+          if (!stopped) return
+
+          commitNativeCurrentText()
+
+          if (
+            !keepNativeListeningRef.current ||
+            !callActiveRef.current
+          ) {
+            setIsListening(false)
+            return
+          }
+
+          // 系统因停顿结束本轮识别时，按钮仍保持录音状态，
+          // 短暂等待后自动开启下一轮。
+          setIsListening(true)
+          clearNativeRestartTimer()
+          nativeRestartTimerRef.current = window.setTimeout(() => {
+            nativeRestartTimerRef.current = null
+            startNativeSpeechRecognition({
+              resume: true,
+              skipPermissionCheck: true,
+            })
+          }, 220)
+        }),
+      )
+
+      listenerHandles.push(
+        await SpeechRecognition.addListener('error', event => {
+          console.error('原生语音识别失败：', event)
+          commitNativeCurrentText()
+
+          if (
+            keepNativeListeningRef.current &&
+            callActiveRef.current
+          ) {
+            clearNativeRestartTimer()
+            nativeRestartTimerRef.current = window.setTimeout(() => {
+              nativeRestartTimerRef.current = null
+              startNativeSpeechRecognition({
+                resume: true,
+                skipPermissionCheck: true,
+              })
+            }, 420)
+          } else {
+            setIsListening(false)
+          }
+        }),
+      )
+
+      recognitionRef.current = {
+        type: 'native',
+        listenerHandles,
+      }
+
+      nativeCurrentTextRef.current = ''
+
+      await SpeechRecognition.start({
+        language: 'zh-CN',
+        maxResults: 1,
+        popup: false,
+        partialResults: true,
+        addPunctuation: false,
+      })
+
+      setIsListening(true)
+    } catch (error) {
+      console.error('启动原生语音识别失败：', error)
+
+      const current = recognitionRef.current
+      recognitionRef.current = null
+      await removeNativeSpeechListeners(current?.listenerHandles || [])
+
+      commitNativeCurrentText()
+
+      if (
+        keepNativeListeningRef.current &&
+        callActiveRef.current &&
+        resume
+      ) {
+        clearNativeRestartTimer()
+        nativeRestartTimerRef.current = window.setTimeout(() => {
+          nativeRestartTimerRef.current = null
+          startNativeSpeechRecognition({
+            resume: true,
+            skipPermissionCheck: true,
+          })
+        }, 520)
+      } else {
+        keepNativeListeningRef.current = false
+        setIsListening(false)
+        setDailyModal({
+          title: '录音没有启动',
+          text: '请确认麦克风与语音识别权限已经开启，然后再点一次录音按钮。',
+        })
+      }
+    } finally {
+      nativeRestartingRef.current = false
+    }
+  }
+
+  function startWebSpeechRecognition() {
+    const Recognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition
+
+    if (!Recognition) {
+      setDailyModal({
+        title: '暂不支持语音输入',
+        text: '当前浏览器没有开放语音识别。你可以先使用文字输入。',
+      })
+      return
+    }
+
+    stopVoiceImmediately()
+    stopSpeechRecognition()
+
+    try {
+      const recognition = new Recognition()
+      recognition.lang = 'zh-CN'
+      recognition.interimResults = true
+      recognition.continuous = true
+      recognition.maxAlternatives = 1
+
+      let accumulatedFinal = ''
+
+      recognition.onstart = () => setIsListening(true)
+
+      recognition.onend = () => {
+        if (recognitionRef.current?.recognition === recognition) {
+          recognitionRef.current = null
+        }
+        setIsListening(false)
+      }
+
+      recognition.onerror = () => {
+        if (recognitionRef.current?.recognition === recognition) {
+          recognitionRef.current = null
+        }
+        setIsListening(false)
+      }
+
+      recognition.onresult = event => {
+        let interimText = ''
+
+        for (
+          let index = event.resultIndex;
+          index < event.results.length;
+          index += 1
+        ) {
+          const transcript = event.results[index][0]?.transcript || ''
+
+          if (event.results[index].isFinal) {
+            accumulatedFinal = `${accumulatedFinal} ${transcript}`.trim()
+          } else {
+            interimText += transcript
+          }
+        }
+
+        const visibleText = `${accumulatedFinal} ${interimText}`.trim()
+        setData(prev => ({
+          ...prev,
+          chatInput: visibleText,
+        }))
+      }
+
+      recognitionRef.current = {
+        type: 'web',
+        recognition,
+      }
+      recognition.start()
+    } catch (error) {
+      console.error('启动网页语音识别失败：', error)
+      recognitionRef.current = null
+      setIsListening(false)
+      setDailyModal({
+        title: '录音没有启动',
+        text: '请稍后再点一次录音按钮，或者先使用文字输入。',
+      })
     }
   }
 
   function startSpeechRecognition() {
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!Recognition) {
-      setDailyModal({
-        title: '暂不支持语音输入',
-        text: '当前浏览器没有开放语音识别。你可以先用输入框，或者在 iPhone Safari 里重新打开测试。',
-      })
+    if (!callActiveRef.current) return
+
+    if (isNativeSpeechPlatform) {
+      startNativeSpeechRecognition()
       return
     }
 
-    try {
-      recognitionRef.current?.stop?.()
-    } catch (error) {
-      // 旧识别会话停止失败时继续创建新会话。
-    }
-
-    if (voiceSubmitTimerRef.current) {
-      window.clearTimeout(voiceSubmitTimerRef.current)
-      voiceSubmitTimerRef.current = null
-    }
-
-    const recognition = new Recognition()
-    recognition.lang = 'zh-CN'
-    recognition.interimResults = true
-    recognition.continuous = false
-    recognition.maxAlternatives = 1
-    let finalBuffer = ''
-    let hasResult = false
-    let submitted = false
-
-    const submitBufferSoon = () => {
-      if (voiceSubmitTimerRef.current) window.clearTimeout(voiceSubmitTimerRef.current)
-      voiceSubmitTimerRef.current = window.setTimeout(() => {
-        voiceSubmitTimerRef.current = null
-        const text = finalBuffer.trim()
-        if (!text || submitted || !callActiveRef.current) return
-        submitted = true
-        try {
-          stopRecognitionBeforeVoice()
-          processUserText(text, chatStepRef.current || 'mood', { autoVoice: true })
-        } catch (error) {
-          console.error('语音对话处理失败：', error)
-          setIsListening(false)
-          setDailyModal({
-            title: '语音对话中断',
-            text: '刚才识别成功了，但保存聊天数据时出错。请刷新后再试，或者先用文字发送。',
-          })
-        }
-      }, 2100)
-    }
-
-    recognition.onstart = () => setIsListening(true)
-    recognition.onend = () => {
-      setIsListening(false)
-      if (submitted) return
-      if (!hasResult && callActiveRef.current && chatStepRef.current !== 'idle') {
-        scheduleNextSpeechRecognition(700)
-      }
-    }
-    recognition.onerror = () => {
-      setIsListening(false)
-      if (callActiveRef.current && chatStepRef.current !== 'idle') {
-        scheduleNextSpeechRecognition(900)
-      }
-    }
-    recognition.onresult = event => {
-      let finalText = ''
-      let interimText = ''
-
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const transcript = event.results[index][0]?.transcript || ''
-        if (event.results[index].isFinal) finalText += transcript
-        else interimText += transcript
-      }
-
-      const cleanFinal = finalText.trim()
-      const cleanInterim = interimText.trim()
-
-      if (cleanInterim) {
-        hasResult = true
-        setData(prev => ({ ...prev, chatInput: cleanInterim }))
-      }
-
-      if (cleanFinal) {
-        hasResult = true
-        finalBuffer = `${finalBuffer} ${cleanFinal}`.trim()
-        setData(prev => ({ ...prev, chatInput: finalBuffer }))
-        submitBufferSoon()
-      }
-    }
-
-    recognitionRef.current = recognition
-    recognition.start()
+    startWebSpeechRecognition()
   }
 
-  function stopSpeechRecognition() {
-    if (voiceSubmitTimerRef.current) {
-      window.clearTimeout(voiceSubmitTimerRef.current)
-      voiceSubmitTimerRef.current = null
+  async function stopSpeechRecognition() {
+    keepNativeListeningRef.current = false
+    clearNativeRestartTimer()
+    commitNativeCurrentText()
+
+    const current = recognitionRef.current
+    recognitionRef.current = null
+
+    if (current?.type === 'native') {
+      try {
+        await SpeechRecognition.forceStop({ timeout: 900 })
+      } catch (error) {
+        try {
+          await SpeechRecognition.stop()
+        } catch (stopError) {
+          // 没有正在录音时无需处理。
+        }
+      }
+
+      await removeNativeSpeechListeners(current.listenerHandles || [])
+    } else if (current?.recognition) {
+      try {
+        current.recognition.stop()
+      } catch (error) {
+        // 没有正在录音时无需处理。
+      }
     }
-    try {
-      recognitionRef.current?.stop?.()
-    } catch (error) {
-      // 没有正在进行的识别时不处理。
-    }
+
+    nativeCurrentTextRef.current = ''
+    nativeRestartingRef.current = false
     setIsListening(false)
   }
 
   function toggleSpeechRecognition() {
+    if (!callActiveRef.current) return
+
+    if (
+      isNativeSpeechPlatform &&
+      keepNativeListeningRef.current
+    ) {
+      stopSpeechRecognition()
+      return
+    }
+
     if (isListening) stopSpeechRecognition()
     else startSpeechRecognition()
   }
 
   function startCall() {
-    unlockVoiceAudio()
-    const question = '你好呀，今天心情怎么样？'
+    callSessionRef.current += 1
+    const sessionId = callSessionRef.current
 
+    keepNativeListeningRef.current = false
+    nativeCommittedTextRef.current = ''
+    nativeCurrentTextRef.current = ''
+    clearNativeRestartTimer()
+    stopSpeechRecognition()
+    stopVoiceImmediately()
+    unlockVoiceAudio()
+
+    callActiveRef.current = true
     chatStepRef.current = 'mood'
     setCallActive(true)
+
+    const question = '你好呀，今天心情怎么样？'
 
     setData(prev => ({
       ...prev,
@@ -442,89 +872,63 @@ export default function useSnowballCall({
       chatInput: '',
       messages: [
         ...prev.messages,
-        { from: 'cat', text: question },
+        makeMessage('cat', question),
       ],
     }))
 
-    if (speechRecognitionSupported) {
-      playVoiceThenListen('voice1_hello_askmood.mp4', 180)
-    } else {
-      playVoice('voice1_hello_askmood.mp4')
-    }
+    playVoice('voice1_hello_askmood.mp4', sessionId)
   }
 
   function endCall() {
-    if (speechRestartTimerRef.current) {
-      window.clearTimeout(speechRestartTimerRef.current)
-      speechRestartTimerRef.current = null
-    }
-    stopSpeechRecognition()
-    if (voiceAudioRef.current) {
-      try {
-        voiceAudioRef.current.pause()
-        voiceAudioRef.current.currentTime = 0
-      } catch (error) {}
-      voiceAudioRef.current = null
-    }
+    callSessionRef.current += 1
+    callActiveRef.current = false
     chatStepRef.current = 'idle'
+
+    keepNativeListeningRef.current = false
+    nativeCommittedTextRef.current = ''
+    nativeCurrentTextRef.current = ''
+    clearNativeRestartTimer()
+    stopSpeechRecognition()
+    stopVoiceImmediately()
     setCallActive(false)
-    playVoice('voice7_close.mp4')
+
+    setData(prev => ({
+      ...prev,
+      chatStep: 'idle',
+      chatInput: '',
+    }))
+
     window.setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }, 80)
   }
 
-  function sayGoodNight() {
-    const now = new Date()
-    const time = now.toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
-
-    const reply = `晚安呀～我记下了，你今天 ${time} 和我说晚安。`
-
-    setData(prev => {
-      const formattedTime = formatClockForDaily(time)
-      const next = appendOrUpdateTodayRecord(prev, {
-        offscreenTime: formattedTime,
-        yesterdaySleep: formattedTime,
-        todaySleep: formattedTime,
-      })
-      return {
-        ...next,
-        todaySleepTime: time,
-        messages: [
-          ...prev.messages,
-          { from: 'user', text: '晚安啦' },
-          { from: 'cat', text: reply },
-        ],
-      }
-    })
-  }
-
   function clearConversation() {
-    chatStepRef.current = 'idle'
-    setData(prev => {
-      const today = dailyRecordForDate(prev.records || [], todayText()) || emptyDailyRecord(todayText())
-      const currentBrain = Math.max(
-        recordBrainPercent(today),
-        brainInfo(prev.messages || []).score,
-        recordBrainPercent({ brainPercent: prev.brainPercent }),
-      )
-      const next = appendOrUpdateTodayRecord(prev, { brainPercent: currentBrain })
-      return {
-        ...next,
-        brainPercent: currentBrain,
-        messages: [],
-        chatStep: 'idle',
-        chatInput: '',
-      }
-    })
+    setData(prev => ({
+      ...prev,
+      messages: [],
+      chatInput: '',
+    }))
   }
 
   function sendMessage() {
-    processUserText(data.chatInput, chatStepRef.current || data.chatStep)
+    if (!callActiveRef.current) return
+
+    const nativeVisibleText = mergeSpeechText(
+      nativeCommittedTextRef.current,
+      nativeCurrentTextRef.current,
+    )
+    const text = String(
+      isNativeSpeechPlatform && nativeVisibleText
+        ? nativeVisibleText
+        : data.chatInput || '',
+    ).trim()
+
+    // 空白发送也有效；同时允许在雪粒语音尚未结束时直接打断并进入下一轮。
+    keepNativeListeningRef.current = false
+    stopSpeechRecognition()
+    stopVoiceImmediately()
+    processUserText(text, chatStepRef.current || data.chatStep || 'mood')
   }
 
   return {
@@ -538,6 +942,5 @@ export default function useSnowballCall({
     clearConversation,
     sendMessage,
     toggleSpeechRecognition,
-    sayGoodNight,
   }
 }

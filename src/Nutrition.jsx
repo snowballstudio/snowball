@@ -22,7 +22,7 @@ export default function Nutrition({
       </div>
 
       <div className="dailyInsightCard nutritionSpectrumCard">
-        <img className="dailyInsightBg nutritionBg" src="/refine/nutritiion_default_background.png" alt="营养光谱背景" />
+        <img className="dailyInsightBg nutritionBg" src="/refine/nutrition_default_background.png" alt="营养光谱背景" />
 
         {nutritionMotionOn ? (
           <PngSequence

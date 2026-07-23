@@ -2086,7 +2086,7 @@
 
 .thingsNameList.thingsOverviewTableWrap,
 .thingsOverviewTable {
-  border-radius: 3px !important;
+  border-radius: 10px !important;
 }
 
 .thingsPanel-overview .thingsNameList.thingsOverviewTableWrap {
@@ -3006,3 +3006,173 @@
     overflow: auto !important;
   }
 }
+
+/* ======================================================
+   物馆主页清单｜单层固定表头与固定列宽
+   只调整总览页数据表，不影响三个子页面。
+   ====================================================== */
+.thingsPanel-overview .thingsNameList.thingsOverviewTableWrap {
+  position: relative !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(46, 132, 204, 0.14) !important;
+  background: rgba(255, 255, 255, 0.58) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-y !important;
+  scrollbar-gutter: stable;
+}
+
+.thingsPanel-overview .thingsOverviewTable {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 20fr) minmax(0, 6fr) minmax(0, 3fr) minmax(0, 8fr) !important;
+  align-items: stretch !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+.thingsPanel-overview .thingsTableHead {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 8 !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  border-top: 0 !important;
+  background: rgba(238, 244, 249, 0.98) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  box-shadow: 0 1px 0 rgba(46, 132, 204, 0.12) !important;
+}
+
+.thingsPanel-overview .thingsTableHead:first-child {
+  border-left: 0 !important;
+}
+
+.thingsPanel-overview .thingsTableHead:nth-child(4) {
+  border-right: 0 !important;
+}
+
+.thingsPanel-overview .thingsTableCell {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  font-size: clamp(9px, 1.7vw, 12px) !important;
+  letter-spacing: -0.08px !important;
+}
+
+.thingsPanel-overview .thingsTableName {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.thingsPanel-overview .thingsTableName > span:last-child {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+
+.thingsPanel-overview .thingsTableRowGroup .thingsTableCell:first-child {
+  border-left: 0 !important;
+}
+
+.thingsPanel-overview .thingsTableRowGroup .thingsTableCell:nth-child(4) {
+  border-right: 0 !important;
+}
+
+/* 表格外框就是唯一外框，因此不再显示内部最左、最右竖线。 */
+.thingsPanel-overview .thingsTableHead:first-child,
+.thingsPanel-overview .thingsTableRowGroup .thingsTableCell:first-child {
+  border-left: none !important;
+}
+
+.thingsPanel-overview .thingsTableHead:nth-child(4),
+.thingsPanel-overview .thingsTableRowGroup .thingsTableCell:nth-child(4) {
+  border-right: none !important;
+}
+
+/* 爪印整体缩为原来的约70%。 */
+:root {
+  --thing-paw-size: 9px;
+  --thing-visit-paw-size: 10.5px;
+  --thing-compact-paw-size: 12px;
+}
+
+.catPawStack {
+  width: var(--thing-paw-size) !important;
+  height: var(--thing-paw-size) !important;
+}
+
+.catPawStack img {
+  width: var(--thing-paw-size) !important;
+  height: var(--thing-paw-size) !important;
+}
+
+.thingVisitPaws .catPawStack {
+  width: var(--thing-visit-paw-size) !important;
+  height: var(--thing-visit-paw-size) !important;
+}
+
+.thingVisitPaws .catPawStack img {
+  width: var(--thing-visit-paw-size) !important;
+  height: var(--thing-visit-paw-size) !important;
+}
+
+.catPawStackCompact {
+  width: var(--thing-compact-paw-size) !important;
+  height: var(--thing-compact-paw-size) !important;
+}
+
+.catPawStackCompact img {
+  width: var(--thing-compact-paw-size) !important;
+  height: var(--thing-compact-paw-size) !important;
+}
+
+.thingRowPaws {
+  gap: 1px !important;
+  margin-left: 4px !important;
+  line-height: 1 !important;
+}
+
+@media (max-width: 900px) {
+  .thingsPanel-overview .thingsNameList.thingsOverviewTableWrap {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    touch-action: pan-y !important;
+  }
+
+  .thingsPanel-overview .thingsOverviewTable {
+    min-width: 0 !important;
+    width: 100% !important;
+    grid-template-columns: minmax(0, 21fr) minmax(0, 7fr) minmax(0, 4fr) minmax(0, 6fr) !important;
+  }
+
+  .thingsPanel-overview .thingsTableHead,
+  .thingsPanel-overview .thingsTableCell {
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+
+  .thingsPanel-overview .thingsTableCell {
+    font-size: clamp(8.5px, 2.55vw, 11px) !important;
+  }
+}
+

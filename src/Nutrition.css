@@ -20,8 +20,8 @@
     /* 页面背景 */
     --nutrition-page-inset-x: 18px;
     --nutrition-card-height: 100dvh;
-    --nutrition-bg-brightness: 0.92;
-    --nutrition-bg-saturate: 0.93;
+    --nutrition-bg-brightness: 1.05;
+    --nutrition-bg-saturate: 0.95;
 
     /* 彩虹整体 */
     --nutrition-rainbow-top: 130px;
@@ -409,10 +409,10 @@
     border: 1px solid transparent !important;
     border-radius: 999px !important;
     background: transparent !important;
-    color: rgba(235, 235, 235, 0.92) !important;
+    color: rgba(61, 129, 61, 0.92) !important;
     box-shadow: none !important;
     font-size: var(--nutrition-tab-size) !important;
-    font-weight: 800 !important;
+    font-weight: 600 !important;
     line-height: 1 !important;
     white-space: nowrap !important;
   }
@@ -594,4 +594,16 @@
 .dailyNutritionPage .nutritionInsightContent,
 .dailyNutritionPage .dailyInsightContent{
   overflow:hidden !important;
+}
+@media (max-width: 900px) {
+  .dailyNutritionPage .nutritionBg,
+  .dailyNutritionPage .dailyInsightBg {
+    opacity: 1 !important;
+    filter: brightness(0.9) saturate(0.8) contrast(1.05) !important;
+  }
+
+  .dailyNutritionPage .nutritionInsightContent,
+  .dailyNutritionPage .dailyInsightContent {
+    background: transparent !important;
+  }
 }

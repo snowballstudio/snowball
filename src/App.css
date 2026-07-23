@@ -206,110 +206,6 @@ body {
   margin: 2px 0 6px;
 }
 
-.chatCard {
-  margin: 0 18px 20px;
-  padding: 16px;
-  background: rgba(12, 25, 42, 0.88);
-  border: 1px solid rgba(230, 235, 240, 0.13);
-  border-radius: 22px;
-  box-shadow: 0 16px 45px rgba(0,0,0,0.28);
-}
-
-.chatTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.textBtn {
-  border: none;
-  background: transparent;
-  color: rgba(255,255,255,0.9);
-  padding: 4px 0;
-  font-size: 14px;
-}
-
-.messages {
-  min-height: 260px;
-  padding: 4px 0 10px;
-}
-
-.messageRow {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 14px 0;
-}
-
-.messageRow img {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: rgba(255,255,255,0.08);
-}
-
-.messageRow.user {
-  justify-content: flex-end;
-}
-
-.bubble {
-  max-width: 72%;
-  padding: 13px 16px;
-  border-radius: 16px;
-  line-height: 1.55;
-  white-space: pre-line;
-  font-size: 15px;
-}
-
-.bubble.cat {
-  background: #d9ecd8;
-  color: #172318;
-}
-
-.bubble.user {
-  background: rgba(82, 140, 94, 0.72);
-  color: #f3f8f3;
-}
-
-.inputLine {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 48px 86px;
-  gap: 8px;
-  align-items: center;
-}
-
-.inputLine input {
-  width: 100%;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.07);
-  color: white;
-  padding: 14px 16px;
-  font-size: 14px;
-  outline: none;
-}
-
-.sendBtn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: none;
-  background: #8ea1b8;
-  color: white;
-  font-size: 20px;
-}
-
-.nightBtn {
-  height: 48px;
-  border: none;
-  border-radius: 999px;
-  background: #9cafc8;
-  color: white;
-  font-size: 14px;
-  padding: 0 16px;
-}
 
 .dataOverlay {
   position: fixed;
@@ -476,9 +372,6 @@ body {
   height: 34px;
 }
 
-.inputLine {
-  grid-template-columns: 86px minmax(0, 1fr) 48px;
-}
 .noticeOverlay {
   position: fixed;
   inset: 0;
@@ -524,44 +417,6 @@ body {
   padding: 13px;
   font-size: 15px;
 }
-
-/* 通话按钮：绿色表示可以开始，红色表示正在通话可挂断 */
-.callBtn {
-  border: none;
-  border-radius: 999px;
-  padding: 8px 15px;
-  font-size: 14px;
-  color: white;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.22);
-}
-
-.callStart {
-  background: rgba(66, 160, 105, 0.95);
-}
-
-.callEnd {
-  background: rgba(190, 72, 72, 0.95);
-}
-
-/* 显示全部聊天记录，并允许上下滚动回看 */
-.messages {
-  min-height: 220px;
-  max-height: 360px;
-  overflow-y: auto;
-  padding-right: 6px;
-  scroll-behavior: smooth;
-}
-
-.messages::-webkit-scrollbar {
-  width: 6px;
-}
-
-.messages::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.18);
-  border-radius: 999px;
-}
-
-
 
 
 /* 首页双按钮：日常 / 岁月 */
@@ -618,8 +473,6 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
-
-
 
 
 /* 2026-06 岁月/日常版式调整 */
@@ -734,11 +587,6 @@ body {
 }
 
 
-
-
-
-
-
 /* 2026-06-26 修正版：日常输入页 + 岁月地图合并 */
 .dailyEditOnlyPage {
   width: min(520px, 94vw);
@@ -770,100 +618,10 @@ body {
 }
 
 
-
-
-
-
-
-
-
-
-
 /* 2026-06 东西草稿页 */
 .homeNavButtonsThree {
   grid-template-columns: repeat(3, 1fr);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 .deleteThingBtn {
@@ -879,58 +637,6 @@ body {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @keyframes yearsCatDrift {
   0%, 100% { transform: translateX(0) translateY(0); }
   45% { transform: translateX(18px) translateY(-2px); }
@@ -938,16 +644,7 @@ body {
 }
 
 
-
-
-
-
 /* 使用6个清楚的动作帧：跳过第4、第8格，避免右侧被裁切的猫脸闪出来 */
-
-
-
-
-
 
 
 .rewardOverlay {
@@ -955,42 +652,7 @@ body {
 }
 
 
-
-
 /* 2026-06-28 物馆：愿单/在手/舍离与雪球盖章 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /* 2026-06-29 PNG序列动图：足迹与通话统一读取 /motion/xxx01-N.png，最大36帧 */
@@ -1021,312 +683,34 @@ body {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* 表格行分组：每件物品一行，四列对齐 */
-
-
-
 
 
 /* 2026-06-29 物馆细节完善：银灰绿色、猫眼章、等宽按钮、透明总览、行内爪印 */
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* 2026-06-29 物馆：编辑/删除/猫爪 PNG 细节 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /* 2026-06-29 物馆小修：详情爪印单枚叠加、总览深色文字 */
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* 2026-06-30 物馆进度箱、馆长猫、爪印颜色测试版 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /* 2026-06-30 物馆微调：压缩总览、按钮信息、馆长猫位置 */
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* 总览馆长猫：落在“舍离”按钮顶部靠右 */
-
-
 
 
 /* 子页面馆长猫：落在详情图片方框顶部靠右 */
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* 2026-06-30 物馆最终微调：分类卡信息、馆长猫上移、子页去返回按钮 */
 
 
-
-
-
-
-
-
-
-
 /* 馆长猫整体上移，避免挡住按钮和内容 */
-
-
-
-
-
-
-
-
-
-
-
 
 
 /* =========================================================
@@ -1375,35 +759,7 @@ body {
 /* ===== 物馆总览三个分类按钮：最终覆盖区 ===== */
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ===== 物馆馆长猫位置：最终覆盖区 ===== */
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /* =========================================================
@@ -1607,12 +963,6 @@ body {
   --home-tune-nav-font-weight: 400;
 
   /* 通话区：脑动与雪球活跃度 */
-  --home-tune-chat-meta-size: 13px;
-  --home-tune-chat-meta-value-size: 13px;
-  --home-tune-chat-meta-weight: 700;
-  --home-tune-brain-value-color: #fffaf0;
-  --home-tune-brain-status-color: #f1dfb1;
-  --home-tune-brain-status-weight: 600;
 
   /* 雪地小猫与脚印 */
   --home-tune-cat-width: min(155px, 18vw);
@@ -1625,16 +975,6 @@ body {
   /* 足迹页静态猫 */
   --footprint-still-cat-bottom: 4.5%;
 
-  /* 对话框 */
-  --chat-tune-card-bg: rgba(17, 32, 51, 0.94);
-  --chat-tune-card-border: rgba(18, 29, 45, 0.96);
-  --chat-tune-card-inner-shadow: inset 0 0 0 1px rgba(255,255,255,0.035);
-  --chat-tune-font-size: 13px;
-  --chat-tune-line-height: 1.55;
-  --chat-tune-cat-bg: #d9ecd8;
-  --chat-tune-cat-color: #172318;
-  --chat-tune-user-bg: rgba(82, 140, 94, 0.72);
-  --chat-tune-user-color: #f3f8f3;
 }
 
 /* 上方背景虚化 */
@@ -1758,35 +1098,6 @@ body {
   padding: 10px 14px !important;
 }
 
-/* 通话区脑动/活跃度 */
-.chatActionLine {
-  display: flex !important;
-  align-items: center !important;
-  gap: 18px !important;
-  min-width: 0 !important;
-}
-
-.brainCallStatus {
-  display: flex !important;
-  align-items: center !important;
-  gap: 18px !important;
-  color: #dfe7f4 !important;
-  font-size: var(--home-tune-chat-meta-size) !important;
-  white-space: nowrap !important;
-}
-
-.brainCallStatus strong {
-  color: var(--home-tune-brain-value-color) !important;
-  font-size: var(--home-tune-chat-meta-value-size) !important;
-  font-weight: var(--home-tune-chat-meta-weight) !important;
-}
-
-.brainCallStatus span:nth-child(2),
-.brainCallStatus .active {
-  color: var(--home-tune-brain-status-color) !important;
-  font-weight: var(--home-tune-brain-status-weight) !important;
-  font-size: var(--home-tune-chat-meta-value-size) !important;
-}
 
 /* 雪地小猫与脚印 */
 .homeSnowCat {
@@ -1810,40 +1121,6 @@ body {
 .homeSnowFootprints span:nth-child(3) { animation: homePawAppear var(--home-tune-cat-walk-seconds) linear infinite 11.9s !important; }
 .homeSnowFootprints span:nth-child(4) { animation: homePawAppear var(--home-tune-cat-walk-seconds) linear infinite 15.6s !important; }
 .homeSnowFootprints span:nth-child(5) { animation: homePawAppear var(--home-tune-cat-walk-seconds) linear infinite 19.3s !important; }
-
-/* 对话框 */
-.chatCard {
-  background: var(--chat-tune-card-bg) !important;
-  border-color: var(--chat-tune-card-border) !important;
-  box-shadow:
-    var(--chat-tune-card-inner-shadow),
-    0 16px 45px rgba(0,0,0,0.28) !important;
-}
-
-.bubble,
-.bubble.cat,
-.bubble.user {
-  font-size: var(--chat-tune-font-size) !important;
-  line-height: var(--chat-tune-line-height) !important;
-}
-
-.bubble.cat {
-  background: var(--chat-tune-cat-bg) !important;
-  color: var(--chat-tune-cat-color) !important;
-}
-
-.bubble.user {
-  background: var(--chat-tune-user-bg) !important;
-  color: var(--chat-tune-user-color) !important;
-}
-
-.messageRow.user {
-  justify-content: flex-end !important;
-  align-items: flex-start !important;
-}
-
-
-
 
 
 /* =========================================================
@@ -1912,23 +1189,6 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: var(--fp-map-label-flash-opacity); }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /* =========================================================
@@ -2043,10 +1303,6 @@ body {
 }
 
 
-
-
-
-
 /* 同风格弹窗层级保证在足迹页上方 */
 .noticeOverlay { z-index: 13000 !important; }
 
@@ -2111,15 +1367,10 @@ body {
 }
 
 
-
-
-
 @keyframes fpPlaceBlink {
   0%, 100% { opacity: 0.48; transform: translate(-50%, -50%) scale(1); }
   50% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
 }
-
-
 
 
 /* =========================================================
@@ -2183,16 +1434,10 @@ body {
 }
 
 
-
-
-
-
 @keyframes fpPlaceBlinkChecked {
   0%,100% { opacity: 0.42; }
   50% { opacity: 1; }
 }
-
-
 
 
 /* =========================================================
@@ -2225,17 +1470,6 @@ body {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
 /* =========================================================
    FOOTPRINT MAIN MOTION PATCH 2026-07-01
    基于 App(71)/App(55)：自定背景防黑屏、地图完整适配、足迹主页 RUN 猫、浏览页白点移动
@@ -2266,8 +1500,6 @@ body {
 
 /* 自定按钮黑屏兜底：弹窗层与背景层始终正确 */
 .noticeOverlay { z-index: 99999 !important; }
-
-
 
 
 /* =========================================================
@@ -2335,8 +1567,6 @@ body {
     opacity: 0;
   }
 }
-
-
 
 
 /* 2026-07-01 日常页面结构调整：返回主页右上角，逐条修改 */
@@ -2408,9 +1638,6 @@ body {
   0%, 100% { opacity: 0.38; filter: drop-shadow(0 0 0 rgba(255,255,255,0)); }
   50% { opacity: 1; filter: drop-shadow(0 0 11px rgba(255,255,255,0.96)); }
 }
-
-
-
 
 
 .imagePreviewOverlay {
@@ -2631,9 +1858,6 @@ body {
 }
 
 
-
-
-
 /* 信息列车样式已迁移到 Train.css */
 
 
@@ -2713,46 +1937,6 @@ body {
   color: rgba(255,255,255,0.78);
 }
 
-.dailyChoiceField {
-  margin: 14px 0;
-  color: #dfe7f4;
-}
-
-.dailyChoiceField > span {
-  display: inline-block;
-  margin-bottom: 8px;
-}
-
-.dailyChoiceField small {
-  margin-left: 8px;
-  color: rgba(255,255,255,0.62);
-}
-
-.dailyChoiceGrid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.dailyChoiceGrid button {
-  width: auto !important;
-  margin: 0 !important;
-  padding: 8px 12px !important;
-  border-radius: 999px !important;
-  border: 1px solid rgba(255,255,255,0.16) !important;
-  background: rgba(255,255,255,0.08) !important;
-  color: rgba(255,255,255,0.88) !important;
-  font-size: 13px !important;
-}
-
-.dailyChoiceGrid button.active {
-  background: rgba(241, 223, 177, 0.92) !important;
-  color: #162033 !important;
-}
-
-.dailyChoiceGrid.compact button {
-  padding: 7px 11px !important;
-}
 
 .dailyEditBottomActions {
   display: grid;
@@ -2901,32 +2085,6 @@ body {
   margin: 0 !important;
 }
 
-.dailyChoiceGroups {
-  display: grid !important;
-  gap: 10px !important;
-}
-
-.dailyChoiceGroup {
-  display: grid !important;
-  grid-template-columns: 82px minmax(0, 1fr) !important;
-  gap: 8px !important;
-  align-items: start !important;
-}
-
-.dailyChoiceGroup strong {
-  color: rgba(255,255,255,0.82) !important;
-  font-size: 12px !important;
-  line-height: 32px !important;
-  white-space: nowrap !important;
-}
-
-.dailyChoiceGroups.twoRows .dailyChoiceGroup {
-  grid-template-columns: 92px minmax(0, 1fr) !important;
-}
-
-.dailyChoiceGrid button {
-  margin: 0 !important;
-}
 
 .dailyScreenRawPage .dailySubTop,
 .dailyScreenRawPage .dailyPlainTitle {
@@ -3333,10 +2491,6 @@ body {
 }
 
 
-
-
-
-
 /* 信息列车样式已迁移到 Train.css */
 
 
@@ -3534,50 +2688,11 @@ body {
 }
 
 
-
-
-/* V1_v78：通话默认隐藏；通话打开后支持语音输入按钮 */
-.inputLineVoice {
-  grid-template-columns: 86px minmax(0, 1fr) 44px 48px;
-}
-
-.voiceBtn {
-  width: 44px;
-  height: 44px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(241, 223, 177, 0.88);
-  color: #162033;
-  font-size: 18px;
-  display: grid;
-  place-items: center;
-}
-
-.voiceBtn.listening {
-  background: rgba(190, 72, 72, 0.92);
-  color: white;
-  animation: voicePulse 1s ease-in-out infinite;
-}
-
-@keyframes voicePulse {
-  0%, 100% { transform: scale(1); opacity: 0.78; }
-  50% { transform: scale(1.08); opacity: 1; }
-}
-
 .dailyMetricRow .dailyIconBtn {
   touch-action: manipulation;
   position: relative;
   z-index: 2;
 }
-
-
-
-
-/* V1_v79：通话展开后自动定位，结束后首页恢复顶部 */
-.chatCard {
-  scroll-margin-top: 10px;
-}
-
 
 
 /* V1_v82：详情页日期显示与点击区域修正 */
@@ -3630,8 +2745,6 @@ button,
   position: relative;
   z-index: 12;
 }
-
-
 
 
 /* V1_v87：使用说明与手机版数据按钮稳定 */
@@ -3689,8 +2802,6 @@ button,
 }
 
 
-
-
 /* V1_v89：手机端今天记录编辑兜底入口 */
 .dailyTodayEditBtn {
   border: none;
@@ -3739,8 +2850,6 @@ button,
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-
-
 
 
 /* V1_v92：今天行编辑和离机屏时链接最终修正 */
@@ -3837,9 +2946,6 @@ button,
 
 
 /* V96：手机版主页第一轮 UI 调整（只改视觉，不改数据逻辑） */
-
-
-
 
 
 /* ======================================================
@@ -4113,8 +3219,6 @@ button,
 }
 
 
-
-
 /* ======================================================
    V104｜主页入口分流 + 日常表条件格式
    ====================================================== */
@@ -4321,8 +3425,6 @@ button,
 .todayStatusClose {
   display: none !important;
 }
-
-
 
 
 /* Nutrition page styles have been moved to Nutrition.css. */
@@ -4906,3 +4008,62 @@ body,
     pointer-events: none;
   }
 }
+
+/* 对话记录编辑：三段原文与实时只读识别结果 */
+.dailyConversationEditFields {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0;
+}
+
+.dailyConversationEditFields label {
+  display: grid;
+  gap: 7px;
+}
+
+.dailyConversationEditFields textarea {
+  width: 100%;
+  min-height: 92px;
+  resize: vertical;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.08);
+  color: white;
+  padding: 12px 14px;
+  font: inherit;
+  line-height: 1.55;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.dailyConversationEditFields textarea:focus {
+  border-color: rgba(174, 198, 223, 0.56);
+  background: rgba(255,255,255,0.105);
+}
+
+.dailyConversationResult {
+  display: block;
+  color: rgba(221, 228, 236, 0.66);
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+/* 食物、口味、心情关键词不再限制数量；单元格最多显示三行，内部可滚动。 */
+.dailyTagList {
+  max-height: 4.05em !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  align-content: flex-start !important;
+  scrollbar-width: thin;
+}
+
+.dailyTagList::-webkit-scrollbar {
+  width: 3px;
+}
+
+.dailyTagList::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+

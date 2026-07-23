@@ -57,6 +57,7 @@ export default function Footprint({
   footprintImagePreview,
 }) {
   const [openYears, setOpenYears] = useState({})
+  const [popupVisitIndex, setPopupVisitIndex] = useState(0)
 
   const footprintTypeLabel = type => FOOTPRINT_TYPES[type] || type || '足迹'
 
@@ -129,12 +130,18 @@ export default function Footprint({
     return group.items.length <= 5
   }
 
-  function toggleYear(year) {
-    setOpenYears(prev => {
-      const currentlyOpen = shouldCollapseYears ? Boolean(prev[year]) : prev[year] !== false
-      return { ...prev, [year]: !currentlyOpen }
-    })
-  }
+ function toggleYear(year) {
+  setOpenYears(prev => {
+    const currentlyOpen = Object.prototype.hasOwnProperty.call(prev, year)
+      ? Boolean(prev[year])
+      : isYearOpen(year)
+
+    return {
+      ...prev,
+      [year]: !currentlyOpen,
+    }
+  })
+}
 
   function openFootprintRecord(item) {
     setFootprintView(item.type || 'local')
@@ -167,6 +174,75 @@ export default function Footprint({
     }
     const pos = FOOTPRINT_POSITIONS[type]?.[place] || fallbackFootprintPosition(type, place)
     return { ...pos, manual: false }
+  }
+
+  function popupRecordSort(a, b) {
+    const ay = Number(a?.year || 0)
+    const by = Number(b?.year || 0)
+    if (by !== ay) return by - ay
+
+    const am = Number(a?.month || 0)
+    const bm = Number(b?.month || 0)
+    if (bm !== am) return bm - am
+
+    return String(b?.id || '').localeCompare(String(a?.id || ''))
+  }
+
+  function popupDistance(a, b) {
+    const dx = Number(a?.x || 0) - Number(b?.x || 0)
+    const dy = Number(a?.y || 0) - Number(b?.y || 0)
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  const selectedMarkerGroup = useMemo(() => {
+    if (!selectedFootprintId) return null
+
+    return (footprintMarkerGroups || []).find(group => {
+      if (group.item?.id === selectedFootprintId) return true
+      const selected = (footprints || []).find(item => item.id === selectedFootprintId)
+      if (!selected) return false
+      return popupDistance(group.pos, footprintPosition(selected)) <= 5
+    }) || null
+  }, [selectedFootprintId, footprintMarkerGroups, footprints])
+
+  const selectedMarkerVisits = useMemo(() => {
+    if (!selectedMarkerGroup) {
+      return selectedFootprint ? [selectedFootprint] : []
+    }
+
+    return (footprints || [])
+      .filter(item => item.type === footprintView)
+      .filter(item => popupDistance(footprintPosition(item), selectedMarkerGroup.pos) <= 5)
+      .sort(popupRecordSort)
+  }, [selectedMarkerGroup, selectedFootprint, footprints, footprintView])
+
+  const popupVisitSafeIndex = selectedMarkerVisits.length
+    ? Math.min(popupVisitIndex, selectedMarkerVisits.length - 1)
+    : 0
+
+  const popupFootprint = selectedMarkerVisits[popupVisitSafeIndex] || selectedFootprint || null
+
+  function openMarkerGroup(group) {
+    const visits = (footprints || [])
+      .filter(item => item.type === footprintView)
+      .filter(item => popupDistance(footprintPosition(item), group.pos) <= 5)
+      .sort(popupRecordSort)
+
+    setPopupVisitIndex(0)
+    setSelectedFootprintId(visits[0]?.id || group.item.id)
+  }
+
+  function closeFootprintPopup() {
+    setPopupVisitIndex(0)
+    setSelectedFootprintId(null)
+  }
+
+  function showPreviousVisit() {
+    setPopupVisitIndex(index => Math.max(0, index - 1))
+  }
+
+  function showNextVisit() {
+    setPopupVisitIndex(index => Math.min(selectedMarkerVisits.length - 1, index + 1))
   }
 
   return (
@@ -257,7 +333,7 @@ export default function Footprint({
                       className={`footprintPin footprintPin-${pinLevel} ${selectedFootprintId === group.item.id ? 'active' : ''}`}
                       style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                       title={`${group.item.place} · ${group.count}次`}
-                      onClick={() => setSelectedFootprintId(group.item.id)}
+                      onClick={() => openMarkerGroup(group)}
                       aria-label={`${group.item.place}，去过${group.count}次`}
                     />
                   )
@@ -277,17 +353,45 @@ export default function Footprint({
                     onError={e => { e.currentTarget.src = '/snowball2.png' }}
                   />
                 )}
-                {yearsMode === 'browseFull' && selectedFootprint && (() => {
-                  const pos = footprintPosition(selectedFootprint)
+                {yearsMode === 'browseFull' && popupFootprint && (() => {
+                  const pos = footprintPosition(popupFootprint)
+                  const hasMultipleVisits = selectedMarkerVisits.length > 1
+
                   return (
                     <div className="mapFootprintPopup">
-                      <button className="mapFootprintPopupClose" onClick={() => setSelectedFootprintId(null)} aria-label="关闭足迹详情">×</button>
-                      <strong><span>{selectedFootprint.year || '待记录'}年{selectedFootprint.month || '待记录'}月 · {selectedFootprint.place || '待记录'}</span></strong>
-                      <p>具体地点：{selectedFootprint.detail || '待记录'}</p>
-                      <p>最难忘的：{selectedFootprint.note || '待记录'}</p>
-                      {Array.isArray(selectedFootprint.photos) && selectedFootprint.photos.length > 0 ? (
+                      <button className="mapFootprintPopupClose" onClick={closeFootprintPopup} aria-label="关闭足迹详情">×</button>
+
+                      <div className="mapFootprintPopupHeader">
+                        <strong><span>{popupFootprint.year || '待记录'}年{popupFootprint.month || '待记录'}月 · {popupFootprint.place || '待记录'}</span></strong>
+
+                        {hasMultipleVisits && (
+                          <div className="mapFootprintPager" aria-label="切换同一图钉的足迹记录">
+                            <button
+                              type="button"
+                              onClick={showPreviousVisit}
+                              disabled={popupVisitSafeIndex === 0}
+                              aria-label="查看更新的一次足迹"
+                            >
+                              ‹
+                            </button>
+                            <span>{popupVisitSafeIndex + 1}/{selectedMarkerVisits.length}</span>
+                            <button
+                              type="button"
+                              onClick={showNextVisit}
+                              disabled={popupVisitSafeIndex >= selectedMarkerVisits.length - 1}
+                              aria-label="查看更早的一次足迹"
+                            >
+                              ›
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <p>具体地点：{popupFootprint.detail || '待记录'}</p>
+                      <p>最难忘的：{popupFootprint.note || '待记录'}</p>
+                      {Array.isArray(popupFootprint.photos) && popupFootprint.photos.length > 0 ? (
                         <div className="mapFootprintPhotos">
-                          {selectedFootprint.photos.slice(0, 3).map((src, index) => (
+                          {popupFootprint.photos.slice(0, 3).map((src, index) => (
                             <button type="button" className="mapFootprintPhotoButton" key={index} onClick={() => setFootprintImagePreview(src)} aria-label={`放大查看足迹照片${index + 1}`}>
                               <img src={src} alt={`足迹照片${index + 1}`} />
                             </button>
@@ -297,13 +401,13 @@ export default function Footprint({
                         <small className="mapFootprintNoPhoto">图片：待记录</small>
                       )}
                       <div className="mapFootprintPopupActions">
-                        <button type="button" onClick={() => startEditFootprint(selectedFootprint)}>编辑</button>
-                        <button type="button" className="danger" onClick={() => requestDeleteFootprint(selectedFootprint)}>删除</button>
+                        <button type="button" onClick={() => startEditFootprint(popupFootprint)}>编辑</button>
+                        <button type="button" className="danger" onClick={() => requestDeleteFootprint(popupFootprint)}>删除</button>
                       </div>
                     </div>
                   )
                 })()}
-                <span className="mapLabel">{FOOTPRINT_TYPES[footprintView]}</span>
+                
               </div>
       
               {yearsMode === 'setHome' ? (
@@ -405,7 +509,7 @@ export default function Footprint({
                     {footprints.filter(item => item.type === footprintView).map(item => {
                       const thumb = Array.isArray(item.photos) && item.photos.length > 0 ? item.photos[0] : ''
                       return (
-                        <button className={selectedFootprintId === item.id ? 'footprintListButton active footprintListRecord' : 'footprintListButton footprintListRecord'} key={item.id} onClick={() => setSelectedFootprintId(item.id)}>
+                        <button className={selectedFootprintId === item.id ? 'footprintListButton active footprintListRecord' : 'footprintListButton footprintListRecord'} key={item.id} onClick={() => { setPopupVisitIndex(0); setSelectedFootprintId(item.id) }}>
                           <span className="footprintListThumb">{thumb ? <img src={thumb} alt="" /> : <span>图</span>}</span>
                           <span className="footprintListText"><strong>{item.year}年{item.month}月 · {item.place}</strong>{item.detail ? <small>{item.detail}</small> : null}</span>
                         </button>
@@ -413,8 +517,14 @@ export default function Footprint({
                     })}
                   </div>
                   <div className="footprintBrowseActions">
-                    <button className="saveFootprintBtn footprintAddFromListBtn" onClick={() => startAddFootprint(footprintView)}>＋ 添加足迹</button>
-                    <button className="saveFootprintBtn footprintSetHomeBtn" onClick={() => startSetHomePosition(footprintView)}>🏠 设置住址</button>
+                    <button className="saveFootprintBtn footprintAddFromListBtn footprintIconTextButton" onClick={() => startAddFootprint(footprintView)}>
+                      <img className="footprintSubActionIcon footprintSubActionEditIcon" src="/refine/footprint_icon_edit.png" alt="" aria-hidden="true" />
+                      <span>添加足迹</span>
+                    </button>
+                    <button className="saveFootprintBtn footprintSetHomeBtn footprintIconTextButton" onClick={() => startSetHomePosition(footprintView)}>
+                      <img className="footprintSubActionIcon footprintSubActionHomeIcon" src="/refine/footprint_icon_home.png" alt="" aria-hidden="true" />
+                      <span>设置住址</span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -490,7 +600,7 @@ export default function Footprint({
               )}
 
               <div className="footprintHistoryPanel">
-                <h3>足迹历史</h3>
+                <h3></h3>
                 {footprintsByYear.length === 0 ? (
                   <p className="footprintHistoryEmpty">还没有足迹。可以先进入地图，添加第一条记录。</p>
                 ) : (
@@ -528,9 +638,18 @@ export default function Footprint({
               </div>
 
               <div className="footprintMapTextLinks">
-                <button type="button" onClick={() => openFootprintMap('world')}>世界足迹</button>
-                <button type="button" onClick={() => openFootprintMap('china')}>中国足迹</button>
-                <button type="button" onClick={() => openFootprintMap('local')}>身边足迹</button>
+                <button type="button" className="footprintHomeMapLink" onClick={() => openFootprintMap('world')}>
+                  <img className="footprintHomeMapIcon footprintHomeWorldIcon" src="/refine/footprint_icon_world.png" alt="" aria-hidden="true" />
+                  <span>世界足迹</span>
+                </button>
+                <button type="button" className="footprintHomeMapLink" onClick={() => openFootprintMap('china')}>
+                  <img className="footprintHomeMapIcon footprintHomeChinaIcon" src="/refine/footprint_icon_china.png" alt="" aria-hidden="true" />
+                  <span>中国足迹</span>
+                </button>
+                <button type="button" className="footprintHomeMapLink" onClick={() => openFootprintMap('local')}>
+                  <img className="footprintHomeMapIcon footprintHomeLocalIcon" src="/refine/footprint_icon_local.png" alt="" aria-hidden="true" />
+                  <span>身边足迹</span>
+                </button>
               </div>
             </div>
           </div>

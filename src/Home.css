@@ -1689,7 +1689,7 @@ top: 2px;
    ====================================================== */
 @media (max-width: 900px) {
   .homeBottomNav {
-    bottom: 0 !important;
+    bottom: -7px !important;
     padding-bottom: 1px !important;
   }
 
@@ -1699,3 +1699,77 @@ top: 2px;
     }
   }
 }
+
+/* ======================================================
+   主页心情玫瑰：只读取当日日常数据表 mood 关键词
+   ====================================================== */
+.homeMoodFlowerShell {
+  overflow: visible;
+}
+
+.homeMoodFlower {
+  display: block;
+  width: 130%;
+  height: 130%;
+  object-fit: contain;
+  transform-origin: center center;
+  pointer-events: none;
+  user-select: none;
+}
+
+.homeMoodFlower-best {
+  animation: homeMoodRoseBest 2.4s ease-in-out infinite;
+}
+
+.homeMoodFlower-good {
+  animation: homeMoodRoseGood 3.2s ease-in-out infinite;
+}
+
+.homeMoodFlower-blank,
+.homeMoodFlower-bad,
+.homeMoodFlower-worst {
+  animation: none;
+}
+
+@keyframes homeMoodRoseBest {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 0 0 rgba(255, 75, 91, 0));
+  }
+
+  50% {
+    transform: translateY(-1px) scale(1.075);
+    filter: drop-shadow(0 0 5px rgba(255, 75, 91, 0.34));
+  }
+}
+
+@keyframes homeMoodRoseGood {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-0.5px) scale(1.035);
+  }
+}
+
+
+:root {
+  --home-mood-flower-size: 130%;
+  --home-status-arrow-y: 5px;
+}
+
+:root {
+  --home-mood-flower-y: 4px;
+}
+
+/* 主页状态栏小箭头上下微调：
+   正数向下，负数向上。 */
+.homeCausalArrow {
+  transform: translateY(var(--home-status-arrow-y));
+}
+
+.homeMoodFlowerShell {
+  transform: translateY(var(--home-mood-flower-y));
+}
+

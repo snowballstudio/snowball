@@ -2,6 +2,62 @@ import { useState } from 'react'
 import './Home.css'
 import SnowballCall from './components/call/SnowballCall.jsx'
 
+const HOME_MOOD_ICON_MAP = {
+  blank: '/refine/moodicon_blank.png',
+  best: '/refine/moodicon_best.png',
+  good: '/refine/moodicon_good.png',
+  bad: '/refine/moodicon_bad.png',
+  worst: '/refine/moodicon_worst.png',
+}
+
+function homeMoodFlowerState(moodInfo = {}) {
+  // moodInfo 由 App.jsx 的 dailyMoodInfo() 根据 Master Data 心情组计算。
+  // Home 只使用正面/负面计数决定玫瑰，不再保存或识别任何具体词语。
+  const positiveCount = Math.max(0, Number(moodInfo?.positive || 0))
+  const negativeCount = Math.max(0, Number(moodInfo?.negative || 0))
+  const countedTotal = positiveCount + negativeCount
+
+  if (countedTotal === 0) {
+    return {
+      level: 'blank',
+      src: HOME_MOOD_ICON_MAP.blank,
+      alt: '今日心情尚未记录',
+    }
+  }
+
+  const positiveRate = positiveCount / countedTotal
+
+  if (positiveRate === 1) {
+    return {
+      level: 'best',
+      src: HOME_MOOD_ICON_MAP.best,
+      alt: '今日心情全部正面',
+    }
+  }
+
+  if (positiveRate >= 0.5) {
+    return {
+      level: 'good',
+      src: HOME_MOOD_ICON_MAP.good,
+      alt: '今日心情整体正面',
+    }
+  }
+
+  if (positiveRate > 0) {
+    return {
+      level: 'bad',
+      src: HOME_MOOD_ICON_MAP.bad,
+      alt: '今日心情整体负面',
+    }
+  }
+
+  return {
+    level: 'worst',
+    src: HOME_MOOD_ICON_MAP.worst,
+    alt: '今日心情全部负面',
+  }
+}
+
 function formatHomeRestTime(value) {
   const text = String(value || '未记录').trim()
   const match = text.match(/^(\d{1,2})\s*[:：]\s*(\d{2})$/)
@@ -65,6 +121,7 @@ export default function Home({
   const GOOD_NIGHT_DEVICE_KEY = 'snowball-good-night-device-v1'
   const [goodNightModal, setGoodNightModal] = useState(null)
   const [rememberGoodNightDevice, setRememberGoodNightDevice] = useState(false)
+  const moodFlower = homeMoodFlowerState(mood)
 
   function goodNightTimeInfo(now = new Date()) {
     const hour = now.getHours()
@@ -319,7 +376,13 @@ export default function Home({
           </div>
 
           <button type="button" className="homeCausalRow" onClick={() => openDailyDetail('mood')}>
-            <span className="homeCausalIcon">🙂</span>
+            <span className="homeCausalIcon homeMoodFlowerShell">
+              <img
+                className={`homeMoodFlower homeMoodFlower-${moodFlower.level}`}
+                src={moodFlower.src}
+                alt={moodFlower.alt}
+              />
+            </span>
             <span className="homeCausalLeft">你今日心情 <strong>{mood.statusLabel}</strong></span>
             <span className="homeCausalArrow">→</span>
             <span className="homeCausalRight">它眼睛 <strong>{mood.eyes}</strong></span>
