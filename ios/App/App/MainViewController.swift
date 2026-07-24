@@ -6,11 +6,16 @@ public final class MainViewController: CAPBridgeViewController {
     public override func capacitorDidLoad() {
         super.capacitorDidLoad()
 
-        // 注册雪粒的 iOS 原生数据插件。
+        // 雪粒现有 iOS 原生数据插件：HealthKit 步数。
         bridge?.registerPluginInstance(DeviceDataPlugin())
 
-        // iOS 原生层背景。用于覆盖网页内容之外的状态栏、
-        // Home Indicator 安全区及 WebView 加载瞬间可能出现的白色区域。
+        // 苹果屏幕时间：授权状态与打开 DeviceActivityReport。
+        bridge?.registerPluginInstance(IOSScreenTimePlugin())
+
+        // iPhone 录音结束后恢复媒体播放通道。
+        bridge?.registerPluginInstance(IOSAudioSessionPlugin())
+
+        // 覆盖状态栏、安全区和 WebView 加载时可能出现的白色区域。
         let snowballBackground = UIColor.black
 
         view.backgroundColor = snowballBackground
