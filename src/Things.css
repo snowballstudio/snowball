@@ -3176,3 +3176,64 @@
   }
 }
 
+/* ======================================================
+   物馆主页清单｜表头与单元格对齐微调
+   ====================================================== */
+
+/* 表头高度约为原来的两倍，所有文字垂直居中。 */
+.thingsPanel-overview .thingsTableHead {
+  min-height: 72px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  line-height: 1.2 !important;
+}
+
+/* “物品名称描述”与下面真实物名的文字起点对齐。 */
+.thingsPanel-overview .thingsTableHead:first-child {
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding-left: 44px !important;
+}
+
+/* 其余三个表头水平居中。 */
+.thingsPanel-overview .thingsTableHead:nth-child(2),
+.thingsPanel-overview .thingsTableHead:nth-child(3),
+.thingsPanel-overview .thingsTableHead:nth-child(4) {
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+/* 数据行高度保持现状，只统一垂直居中。 */
+.thingsPanel-overview .thingsTableCell {
+  align-items: center !important;
+  line-height: 1.2 !important;
+}
+
+/* 首列保持左对齐。 */
+.thingsPanel-overview .thingsTableName {
+  display: flex !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+}
+
+/* 起始、状态、估值三列全部水平及垂直居中。 */
+.thingsPanel-overview .thingsTableRowGroup .thingsTableCell:nth-child(2),
+.thingsPanel-overview .thingsTableRowGroup .thingsTableCell:nth-child(3),
+.thingsPanel-overview .thingsTableRowGroup .thingsTableCell:nth-child(4) {
+  display: flex !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+@media (max-width: 900px) {
+  .thingsPanel-overview .thingsTableHead {
+    min-height: 40px !important;
+  }
+
+  .thingsPanel-overview .thingsTableHead:first-child {
+    padding-left: 35px !important;
+  }
+}
+

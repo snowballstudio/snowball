@@ -37,6 +37,12 @@ function makeMessage(from, text) {
   }
 }
 
+function wait(milliseconds) {
+  return new Promise(resolve => {
+    window.setTimeout(resolve, milliseconds)
+  })
+}
+
 export default function useSnowballCall({
   data,
   setData,
@@ -168,7 +174,14 @@ export default function useSnowballCall({
     if (typeof finish === 'function') finish()
   }
 
-  function playVoice(name, sessionId = callSessionRef.current) {
+  async function playVoice(name, sessionId = callSessionRef.current) {
+    await stopSpeechRecognition()
+
+    // iOS 从语音识别切回媒体播放时需要极短时间释放录音音频会话。
+    if (Capacitor.getPlatform() === 'ios') {
+      await wait(220)
+    }
+
     return new Promise(resolve => {
       let finished = false
 
@@ -194,7 +207,6 @@ export default function useSnowballCall({
       }
 
       try {
-        stopSpeechRecognition()
         stopVoiceImmediately()
         voiceFinishRef.current = finish
 
@@ -263,9 +275,10 @@ export default function useSnowballCall({
     const sessionId = callSessionRef.current
 
     // 发送键同时承担“发送 / 打断 / 快进”：
-    // 无论有没有文字，都立即停止录音和雪粒当前尚未说完的语音。
-    stopSpeechRecognition()
+    // 无论有没有文字，都立即停止雪粒当前尚未说完的语音，
+    // 并等待原生录音真正释放后再继续，避免 iOS 有文字却无声音。
     stopVoiceImmediately()
+    await stopSpeechRecognition()
 
     try {
       if (step === 'mood') {
@@ -911,7 +924,7 @@ export default function useSnowballCall({
     }))
   }
 
-  function sendMessage() {
+  async function sendMessage() {
     if (!callActiveRef.current) return
 
     const nativeVisibleText = mergeSpeechText(
@@ -926,9 +939,13 @@ export default function useSnowballCall({
 
     // 空白发送也有效；同时允许在雪粒语音尚未结束时直接打断并进入下一轮。
     keepNativeListeningRef.current = false
-    stopSpeechRecognition()
     stopVoiceImmediately()
-    processUserText(text, chatStepRef.current || data.chatStep || 'mood')
+    await stopSpeechRecognition()
+
+    await processUserText(
+      text,
+      chatStepRef.current || data.chatStep || 'mood',
+    )
   }
 
   return {

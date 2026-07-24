@@ -196,14 +196,16 @@
   }
 
   .heroCard .sceneBg {
-    object-fit: contain !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: fill !important;
     object-position: center center !important;
     filter:
       blur(var(--m-home-hero-blur))
       brightness(var(--m-home-hero-brightness))
       saturate(var(--m-home-hero-saturate)) !important;
-    transform: scale(var(--m-home-hero-scale)) !important;
-    background: #000 !important;
+    transform: none !important;
+    background: transparent !important;
   }
 
   .heroCard::after {

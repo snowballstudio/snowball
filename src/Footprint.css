@@ -1680,3 +1680,155 @@ margin-right: 4px !important;
   right: -14px !important;
 }
 
+/* ======================================================
+   足迹三个子页面｜记录行与底部功能栏微调
+   世界 / 中国 / 身边共用
+   ====================================================== */
+
+/* 记录行高度压缩到原来的约80%。 */
+.footprintFullPage .footprintListRecord {
+  padding-top: 0px !important;
+  padding-bottom: 4px !important;
+  min-height: 0 !important;
+  gap: 7px !important;
+}
+
+/* 子页面记录文字统一为常规字重与常规颜色。 */
+.footprintFullPage .footprintListText,
+.footprintFullPage .footprintListRecord strong,
+.footprintFullPage .footprintListRecord span,
+.footprintFullPage .footprintListRecord small {
+  font-weight: 400 !important;
+  color: var(--fp-text) !important;
+}
+
+/* 每条记录之间的灰线稍微变细、变淡。 */
+.footprintFullPage .footprintListRecord {
+  border-bottom: 0.8px solid rgba(28, 36, 44, 0.065) !important;
+}
+
+/* 底部功能栏使用与足迹主页底部完全相同的浅灰色，
+   并一直覆盖到屏幕最底端，不再留下底部短灰边。 */
+.footprintFullPage .footprintBrowseActions {
+  position: sticky !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 20 !important;
+  width: calc(100% + 32px) !important;
+  min-height: 58px !important;
+  margin: 8px -16px -14px !important;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom)) !important;
+  box-sizing: border-box !important;
+  background: var(--fp-home-link-bar-bg) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 操作按钮本身保持扁平，无额外层次。 */
+.footprintFullPage .footprintBrowseActions .footprintIconTextButton {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 列表卡片底部不再额外露出白色或灰色边。 */
+.footprintFullPage .footprintBrowseListCard {
+  padding-bottom: 0 !important;
+  background: #fff !important;
+  overflow: hidden !important;
+}
+
+.footprintFullPage .compactFootprintList {
+  padding-bottom: 4px !important;
+}
+
+@media (max-width: 900px) {
+  .footprintFullPage .footprintBrowseActions {
+    width: calc(100% + 32px) !important;
+    margin-left: -16px !important;
+    margin-right: -16px !important;
+    margin-bottom: -14px !important;
+    padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+  }
+}
+
+
+
+
+/* ===== V1.2 子页面顶部/底栏补丁 ===== */
+
+/* 顶部标签栏改为与底栏相同浅灰，并左右撑满 */
+.footprintFullPage .footprintFullTop,
+.footprintFullPage .footprintTopBar{
+  background: var(--fp-home-link-bar-bg) !important;
+  width:100vw !important;
+  margin:0 !important;
+  padding:0 12px !important;
+  border-bottom:0.5px solid var(--fp-home-link-bar-line) !important;
+  box-shadow:none !important;
+}
+
+/* 地图布局无左右白边 */
+.footprintFullPage,
+.footprintFullPage .footprintMapLayout{
+  background:var(--fp-home-link-bar-bg) !important;
+}
+
+/* 底部操作栏彻底覆盖左侧白边及安全区 */
+.footprintFullPage .footprintBrowseActions{
+  width:100vw !important;
+  margin-left:calc(50% - 50vw) !important;
+  margin-right:calc(50% - 50vw) !important;
+  margin-bottom:calc(-1 * env(safe-area-inset-bottom) - 18px) !important;
+  padding-left:0 !important;
+  padding-right:0 !important;
+  padding-bottom:calc(14px + env(safe-area-inset-bottom)) !important;
+  background:var(--fp-home-link-bar-bg) !important;
+  box-shadow:none !important;
+  border:none !important;
+}
+
+/* ======================================================
+   子页面底栏左侧白边｜谨慎最终修复
+   只扩展背景，不改变按钮栏本身的宽度、位置与两组按钮分布。
+   ====================================================== */
+.footprintFullPage .footprintBrowseActions {
+  position: sticky !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: 0 !important;
+
+  /* 恢复原来以列表内容区为基准的尺寸，避免按钮跟着100vw重新均分。 */
+  width: calc(100% + 32px) !important;
+  margin-left: -16px !important;
+  margin-right: -16px !important;
+
+  background: transparent !important;
+  isolation: isolate !important;
+  overflow: visible !important;
+  transform: translateY(20px) !important;
+}
+
+/* 只让浅灰背景向左右无限延伸。
+   伪元素不参与布局，因此图标和文字位置完全保持原样。 */
+.footprintFullPage .footprintBrowseActions::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: -100vw !important;
+  right: -100vw !important;
+  background: var(--fp-home-link-bar-bg) !important;
+  border: none !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+/* 确保两个按钮仍位于背景之上，点击和间距不受影响。 */
+.footprintFullPage .footprintBrowseActions .footprintIconTextButton {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
