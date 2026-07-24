@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
+import { restoreIOSPlaybackAudioSession } from '../audio/iosAudioSessionService.js'
 import { SpeechRecognition } from '@capgo/capacitor-speech-recognition'
 import {
   appendConversationResponse,
@@ -194,10 +195,16 @@ export default function useSnowballCall({
   async function playVoice(name, sessionId = callSessionRef.current) {
     await stopSpeechRecognition()
 
-    // iOS 从语音识别切回媒体播放时需要极短时间释放录音音频会话。
+    // iOS 语音识别结束后，必须由原生层明确把 AVAudioSession
+    // 从录音模式切回 playback；单纯延迟无法稳定恢复所有声音。
     if (Capacitor.getPlatform() === 'ios') {
       await waitForNativeSpeechToStop()
-      await wait(420)
+      try {
+        await restoreIOSPlaybackAudioSession()
+      } catch (error) {
+        console.error('恢复 iPhone 播放通道失败：', error)
+      }
+      await wait(120)
     }
 
     return new Promise(resolve => {
@@ -879,7 +886,14 @@ export default function useSnowballCall({
         }
 
         await waitForNativeSpeechToStop()
-        await wait(180)
+
+        try {
+          await restoreIOSPlaybackAudioSession()
+        } catch (error) {
+          console.error('停止录音后恢复 iPhone 播放通道失败：', error)
+        }
+
+        await wait(80)
       } else {
         try {
           await SpeechRecognition.forceStop({ timeout: 900 })

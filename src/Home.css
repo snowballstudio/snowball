@@ -1775,3 +1775,62 @@ top: 2px;
   transform: translateY(var(--home-mood-flower-y));
 }
 
+/* ======================================================
+   iPhone 通话模式冻结
+   顶部品牌与背景图固定在当前视口，只让对话消息区滚动。
+   ====================================================== */
+@media (max-width: 900px) {
+  .homePage.callMode {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  .homePage.callMode .homeFixedTopBar,
+  .homePage.callMode .heroCard {
+    flex: 0 0 auto !important;
+  }
+
+  .homePage.callMode .heroCard {
+    position: relative !important;
+    top: auto !important;
+    z-index: 1 !important;
+  }
+
+  .homePage.callMode > .chatCard {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    scroll-margin-top: 0 !important;
+  }
+
+  .homePage.callMode > .chatCard .chatTop,
+  .homePage.callMode > .chatCard .inputLineVoice {
+    flex: 0 0 auto !important;
+  }
+
+  .homePage.callMode > .chatCard .messages {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* 通话期间视口只展示背景和对话框，下面原有主页区不参与滚动。 */
+  .homePage.callMode > .statusCards,
+  .homePage.callMode > .homeSnowTrace,
+  .homePage.callMode > .homeBottomNav {
+    display: none !important;
+  }
+}
+

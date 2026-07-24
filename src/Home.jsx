@@ -255,7 +255,7 @@ export default function Home({
   }
 
   return (
-    <section className="phoneShell homePage">
+    <section className={`phoneShell homePage ${call.callActive ? 'callMode' : ''}`}>
       {isHomeVisible && (
         <div className="homeFixedTopBar">
           <div className="homeFixedBrand">

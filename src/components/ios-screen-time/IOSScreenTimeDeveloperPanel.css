@@ -1,0 +1,102 @@
+.iosScreenTimeDeveloperPanel {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(90, 105, 120, 0.18);
+  border-radius: 16px;
+  background: rgba(245, 247, 249, 0.94);
+  color: #39424c;
+}
+
+.iosScreenTimeDeveloperHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.iosScreenTimeDeveloperHead h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #28323d;
+}
+
+.iosScreenTimeDeveloperHead p,
+.iosScreenTimeDeveloperNote,
+.iosScreenTimeDeveloperMessage {
+  margin: 0;
+  line-height: 1.55;
+  color: #68727d;
+}
+
+.iosScreenTimeDeveloperHead button,
+.iosScreenTimeDeveloperActions button {
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 12px;
+  background: #e2e6e9;
+  color: #39424c;
+  font-size: 13px;
+}
+
+.iosScreenTimeDeveloperActions button:first-child {
+  background: #d6e7f5;
+}
+
+.iosScreenTimeDeveloperHead button:disabled,
+.iosScreenTimeDeveloperActions button:disabled {
+  opacity: 0.5;
+}
+
+.iosScreenTimeStatusGrid {
+  display: grid;
+  grid-template-columns: minmax(88px, auto) 1fr;
+  gap: 8px 14px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(90, 105, 120, 0.12);
+  border-bottom: 1px solid rgba(90, 105, 120, 0.12);
+  font-size: 13px;
+}
+
+.iosScreenTimeStatusGrid span {
+  color: #7b858f;
+}
+
+.iosScreenTimeStatusGrid strong {
+  font-weight: 500;
+  color: #313b45;
+  overflow-wrap: anywhere;
+}
+
+.iosScreenTimeDeveloperActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.iosScreenTimeDeveloperActions button {
+  flex: 1;
+}
+
+.iosScreenTimeDeveloperMessage {
+  margin-top: 12px;
+  color: #9a4c4c;
+}
+
+.iosScreenTimeDeveloperNote {
+  margin-top: 12px;
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .iosScreenTimeDeveloperHead,
+  .iosScreenTimeDeveloperActions {
+    flex-direction: column;
+  }
+
+  .iosScreenTimeDeveloperHead button,
+  .iosScreenTimeDeveloperActions button {
+    width: 100%;
+  }
+}

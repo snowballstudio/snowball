@@ -12,6 +12,8 @@ import Things from './Things.jsx'
 import { NoticeModal, StatusPair } from './components/SnowballShared'
 import Onboarding from './components/onboarding/Onboarding.jsx'
 import StepAutoTable from './StepAutoTable.jsx'
+import IOSScreenTimeDeveloperPanel from './components/ios-screen-time/IOSScreenTimeDeveloperPanel.jsx'
+import { restoreIOSPlaybackAudioSession } from './components/audio/iosAudioSessionService.js'
 import { ingestStepPayload, stepValueForDate } from './stepDataService.js'
 import { conversationBrainPercent, emptyConversationRecord, readConversationRecord, saveConversationRecord } from './components/call/conversationDataService.js'
 
@@ -2568,14 +2570,29 @@ function App() {
 
     let audio = null
     try {
+      // 用户使用过 iPhone 录音后，互动音效也必须先恢复原生播放通道。
+      if (Capacitor.getPlatform() === 'ios') {
+        try {
+          await restoreIOSPlaybackAudioSession()
+        } catch (error) {
+          console.error('互动前恢复 iPhone 播放通道失败：', error)
+        }
+      }
+
       if (homeInteractionAudioRef.current) {
         homeInteractionAudioRef.current.pause()
         homeInteractionAudioRef.current.currentTime = 0
       }
       audio = new Audio(voice)
       audio.loop = true
+      audio.preload = 'auto'
+      audio.playsInline = true
+      audio.muted = false
+      audio.volume = 1
       homeInteractionAudioRef.current = audio
-      audio.play().catch(() => {})
+      audio.play().catch(error => {
+        console.error('互动声音播放失败：', error)
+      })
     } catch (error) {
       audio = null
     }
@@ -4409,6 +4426,9 @@ const homeFloatingFootprintMemory = ''
                   <button type="button" className="dailyAddDateBtn" onClick={addScreenRecord}>新增</button>
                   <button type="button" className="dailyAddDateBtn" onClick={saveScreenDetailAndReturn}>保存返回</button>
                 </div>
+                {data.developerMode && Capacitor.getPlatform() === 'ios' && (
+                  <IOSScreenTimeDeveloperPanel date={selectedScreenDate} />
+                )}
               </div>
             </div>
           ) : dailyMode === 'home' ? (

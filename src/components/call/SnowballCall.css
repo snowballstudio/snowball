@@ -344,3 +344,20 @@
   }
 }
 
+/* 通话卡片内部滚动边界：HEADER 和输入栏不滚动。 */
+.chatCard {
+  min-width: 0;
+}
+
+.chatCard .chatTop,
+.chatCard .inputLineVoice {
+  position: relative;
+  z-index: 2;
+}
+
+.chatCard .messages {
+  min-width: 0;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
