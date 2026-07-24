@@ -7,6 +7,7 @@
 
 import DeviceActivity
 import ExtensionKit
+import Foundation
 import ManagedSettings
 import SwiftUI
 
@@ -32,25 +33,28 @@ struct TotalActivityReport: DeviceActivityReportScene {
     func makeConfiguration(
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> TotalActivityConfiguration {
-        let activitySegments = await data.flatMap { $0.activitySegments }
-
-        let totalDuration = activitySegments.reduce(0) {
-            $0 + $1.totalActivityDuration
-        }
-
-        let categoryActivities = await activitySegments.flatMap {
-            $0.categories
-        }
-
+        var totalDuration: TimeInterval = 0
         var categoryDurations: [String: TimeInterval] = [:]
 
-        for categoryActivity in categoryActivities {
-            let rawName = categoryActivity.category.localizedDisplayName?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            let name = (rawName?.isEmpty == false) ? rawName! : "其它"
+        // DeviceActivityResults、activitySegments 和 categories 都是异步序列。
+        // 直接逐层 for await，避免把 AsyncFlatMapSequence 当普通数组使用。
+        for await deviceData in data {
+            for await segment in deviceData.activitySegments {
+                totalDuration += segment.totalActivityDuration
 
-            categoryDurations[name, default: 0] +=
-                categoryActivity.totalActivityDuration
+                for await categoryActivity in segment.categories {
+                    let displayName =
+                        categoryActivity.category.localizedDisplayName
+
+                    let name =
+                        displayName?.isEmpty == false
+                        ? displayName!
+                        : "其它"
+
+                    categoryDurations[name, default: 0] +=
+                        categoryActivity.totalActivityDuration
+                }
+            }
         }
 
         let categories = categoryDurations
@@ -63,8 +67,10 @@ struct TotalActivityReport: DeviceActivityReportScene {
             }
             .sorted {
                 if $0.duration == $1.duration {
-                    return $0.name.localizedCompare($1.name) == .orderedAscending
+                    return $0.name.localizedCompare($1.name)
+                        == .orderedAscending
                 }
+
                 return $0.duration > $1.duration
             }
 
