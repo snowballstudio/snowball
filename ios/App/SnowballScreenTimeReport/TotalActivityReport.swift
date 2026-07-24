@@ -7,33 +7,70 @@
 
 import DeviceActivity
 import ExtensionKit
+import ManagedSettings
 import SwiftUI
 
 extension DeviceActivityReport.Context {
-    // If your app initializes a DeviceActivityReport with this context, then the system will use
-    // your extension's corresponding DeviceActivityReportScene to render the contents of the
-    // report.
     static let totalActivity = Self("Total Activity")
 }
 
+struct ScreenTimeCategoryRow: Identifiable, Hashable, Sendable {
+    let id: String
+    let name: String
+    let duration: TimeInterval
+}
+
+struct TotalActivityConfiguration: Sendable {
+    let totalDuration: TimeInterval
+    let categories: [ScreenTimeCategoryRow]
+}
+
 struct TotalActivityReport: DeviceActivityReportScene {
-    // Define which context your scene will represent.
     let context: DeviceActivityReport.Context = .totalActivity
-    
-    // Define the custom configuration and the resulting view for this report.
-    let content: (String) -> TotalActivityView
-    
-    func makeConfiguration(representing data: DeviceActivityResults<DeviceActivityData>) async -> String {
-        // Reformat the data into a configuration that can be used to create
-        // the report's view.
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = [.day, .hour, .minute, .second]
-        formatter.unitsStyle = .abbreviated
-        formatter.zeroFormattingBehavior = .dropAll
-        
-        let totalActivityDuration = await data.flatMap { $0.activitySegments }.reduce(0, {
+    let content: (TotalActivityConfiguration) -> TotalActivityView
+
+    func makeConfiguration(
+        representing data: DeviceActivityResults<DeviceActivityData>
+    ) async -> TotalActivityConfiguration {
+        let activitySegments = await data.flatMap { $0.activitySegments }
+
+        let totalDuration = activitySegments.reduce(0) {
             $0 + $1.totalActivityDuration
-        })
-        return formatter.string(from: totalActivityDuration) ?? "No activity data"
+        }
+
+        let categoryActivities = await activitySegments.flatMap {
+            $0.categories
+        }
+
+        var categoryDurations: [String: TimeInterval] = [:]
+
+        for categoryActivity in categoryActivities {
+            let rawName = categoryActivity.category.localizedDisplayName?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let name = (rawName?.isEmpty == false) ? rawName! : "其它"
+
+            categoryDurations[name, default: 0] +=
+                categoryActivity.totalActivityDuration
+        }
+
+        let categories = categoryDurations
+            .map {
+                ScreenTimeCategoryRow(
+                    id: $0.key,
+                    name: $0.key,
+                    duration: $0.value
+                )
+            }
+            .sorted {
+                if $0.duration == $1.duration {
+                    return $0.name.localizedCompare($1.name) == .orderedAscending
+                }
+                return $0.duration > $1.duration
+            }
+
+        return TotalActivityConfiguration(
+            totalDuration: totalDuration,
+            categories: categories
+        )
     }
 }
