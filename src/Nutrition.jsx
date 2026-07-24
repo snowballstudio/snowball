@@ -46,13 +46,18 @@ export default function Nutrition({
                 style={{ '--rainbow-visible': `${safePercent}%` }}
               >
                 <div className="rainbowArcLayer" aria-hidden="true">
-                  {dailyNutritionStats.map((item, index) => (
-                    <div
-                      key={item.key}
-                      className={`rainbowArc rainbowArc${index + 1} ${item.level}`}
-                      style={{ '--arc-score': `${Math.max(18, item.score)}%` }}
-                    />
-                  ))}
+                  {dailyNutritionStats.map((item, index) => {
+                    // 数量为0时完全不渲染这一道弯。
+                    if (item.level === 'empty') return null
+
+                    return (
+                      <div
+                        key={item.key}
+                        className={`rainbowArc rainbowArc${index + 1} ${item.level}`}
+                        style={{ '--arc-score': `${Math.max(18, item.score)}%` }}
+                      />
+                    )
+                  })}
                 </div>
               </div>
               <div className="rainbowLabelStack" aria-hidden="true">

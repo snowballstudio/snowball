@@ -772,7 +772,7 @@ const DAILY_FOOD_OPTIONS = DAILY_FOOD_GROUPS.flatMap(group => group.options)
 
 const TASTE_GROUPS = [
   { key: 'normal', label: '正常口味', options: ['清淡', '常规', '正常口味', '寻常', '生吃', '一般口味', '空气炸锅', '烤箱', '普通','家常','新鲜', '凉拌', '淡', '清炒', '素', '少油', '少盐','糖醋','普通','随意', '家常','平常',  '蒸', '炒',  '清炒', '爆炒', '清蒸', '小炒', '煎', '煮', '水煮', '慢炖', '小火炖', '炖', '炸','炖','红烧','正常'] },
-  { key: 'heavy', label: '过重口味', options: ['重油','油炸', '油淋', '红油', '油焖','烟熏', '油泼','烟', '腊肠', '腊',  '熏', '油爆','高糖', '碳酸', '重盐', '咸', '腌制', '老干妈', '辣酱', '榨菜','腌','辛辣', '油辣子', '烤串', '烤肉', '火锅', '麻辣烫', '麻辣','烧烤'] },
+  { key: 'heavy', label: '过重口味', options: ['重油','油炸', '油淋', '红油', '油焖','烟熏', '油泼','烟', '腊肠', '腊肉',  '腊牛肉', '熏', '油爆','高糖', '蛋糕','巧克力','奶糖','碳酸','咖啡', '可乐', '红牛', '雪碧', '七喜', '泡椒',  '泡菜', '咸鱼', '咸肉', '炭烧', '重辣','培根','咸鸡', '重盐', '盐水', '腌制', '老干妈', '辣酱', '榨菜','腌','辛辣', '油辣子', '烤串', '烤肉', '火锅', '麻辣烫', '麻辣','烧烤'] },
 ]
 
 const TASTE_OPTIONS = TASTE_GROUPS.flatMap(group => group.options)
@@ -1109,30 +1109,11 @@ const FOOD_ALIAS = {
   紫菜: ['紫菜'],
   菌类: ['菌类', '蘑菇', '香菇', '杏鲍菇', '鸡腿菇', '木耳', '野山菌', '牛肝菌', '银耳','草菇', '金针菇'],
   粗粮杂粮: ['其它杂粮', '燕麦', '小米', '黑豆', '红豆', '绿豆', '赤豆', '薏米', '莲子', '荞麦', '黑米', '云豆', '西米'],
-  VC: ['VC', '维C'], VD: ['VD', '维D'], VE: ['VE', '维E'], 其它维生素: ['其它维生素'], 鱼油: ['鱼油'], 钙片: ['钙片'], 铁片: ['铁片'], 其它微量元素: ['其它微量元素'],
+  VC: ['VC', '维C'], VD: ['VD', '维D'], VE: ['VE', '维E'], 
+  其它维生素: ['其它维生素'], 鱼油: ['鱼油'], 钙片: ['钙片'], 铁片: ['铁片'], 其它微量元素: ['其它微量元素'],
 }
 
 const FOOD_FUZZY_ALIASES = FOOD_ALIAS
-
-const TASTE_FUZZY_ALIASES = {
-  正常: ['正常口味', '寻常', '新鲜', '凉拌', '糖醋', '生吃'],
-  清淡: ['淡', '清炒', '素', '少油', '少盐'],
-  常规: ['正常', '普通', '家常'],
-  普通: ['一般口味'],
-  蒸: ['清蒸'],
-  炒: ['清炒', '爆炒', '小炒'],
-  煮: ['水煮'],
-  炖: ['慢炖'],
-  煎: ['煎'],
-  炸: ['煎'],
-  重油: ['油炸', '油淋', '红油', '油焖', '油爆'],
-  烟熏: ['烟', '腊肠', '腊', '熏'],
-  高糖: ['糖', '很甜', '甜食', '甜品'],
-  重盐: ['咸', '腌制', '老干妈', '辣酱', '榨菜', '腌'],
-  碳酸: ['可乐', '雪碧', '汽水'],
-  辛辣: ['辣', '麻辣', '火锅'],
-  烧烤: ['烤串', '烤肉', '麻辣烫'],
-}
 
 function limitTagsText(text, limit = Infinity) {
   return splitTags(text).slice(0, limit).join('、')
@@ -1202,7 +1183,9 @@ function classifyDailyFood(text) {
 }
 
 function classifyDailyTaste(text) {
-  const tasteTags = fuzzyTagsFromOptions(text, TASTE_OPTIONS, TASTE_FUZZY_ALIASES)
+  // 口味只读取 TASTE_GROUPS 中的实际词语，不再经过任何别名映射。
+  // findWordsNoOverlap 会优先识别较长词语，例如“清炒”不会再重复识别为“炒”。
+  const tasteTags = findWordsNoOverlap(text, TASTE_OPTIONS)
   return uniqueJoin(tasteTags) || '正常'
 }
 
@@ -1456,9 +1439,11 @@ function nutritionStatsFromRecords(records = [], range = 'today') {
     }, 0)
 
     const value = range === 'today' || range === 'yesterday' ? total : total / divisor
+    // 彩虹带仅保留三种明确状态：
+    // >= 2种：彩色；> 0且< 2种：灰色；= 0：不显示。
     let level = 'empty'
     if (value >= 2) level = 'filled'
-    else if (value >= 1) level = 'dim'
+    else if (value > 0) level = 'dim'
 
     const topFoods = Object.entries(foodCounts)
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh-CN'))
@@ -1479,12 +1464,22 @@ function nutritionStatsFromRecords(records = [], range = 'today') {
 }
 
 function nutritionMotionReady(stats = [], tasteStats = {}) {
-  const carb = stats.find(item => item.key === 'carbs')?.value || 0
-  const othersOk = stats
+  const carb = Number(stats.find(item => item.key === 'carbs')?.value || 0)
+
+  // 除碳水外，其余四类都必须达到彩色标准（每类>=2种）。
+  const othersColorful = stats
     .filter(item => item.key !== 'carbs')
     .every(item => Number(item.value || 0) >= 2)
 
-  return carb < 1.5 && othersOk && Number(tasteStats?.total || 0) > 0 && Number(tasteStats?.heavy || 0) === 0
+  // 碳水平均种类数必须位于0.5到1之间（含边界）。
+  const carbsBalanced = carb >= 0.5 && carb <= 1
+
+  // 必须有口味记录，并且完全没有偏重口味。
+  const tasteCompletelyNormal =
+    Number(tasteStats?.total || 0) > 0 &&
+    Number(tasteStats?.heavy || 0) === 0
+
+  return othersColorful && carbsBalanced && tasteCompletelyNormal
 }
 
 function nutritionTasteSentence(tasteStats = {}) {

@@ -43,6 +43,23 @@ function wait(milliseconds) {
   })
 }
 
+async function waitForNativeSpeechToStop(timeoutMs = 1600) {
+  const startedAt = Date.now()
+
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      const result = await SpeechRecognition.isListening()
+      if (!result?.listening) return true
+    } catch (error) {
+      return true
+    }
+
+    await wait(80)
+  }
+
+  return false
+}
+
 export default function useSnowballCall({
   data,
   setData,
@@ -179,7 +196,8 @@ export default function useSnowballCall({
 
     // iOS 从语音识别切回媒体播放时需要极短时间释放录音音频会话。
     if (Capacitor.getPlatform() === 'ios') {
-      await wait(220)
+      await waitForNativeSpeechToStop()
+      await wait(420)
     }
 
     return new Promise(resolve => {
@@ -220,6 +238,7 @@ export default function useSnowballCall({
         audio.pause()
         audio.currentTime = 0
         audio.muted = false
+        audio.volume = 1
         audio.onended = finish
         audio.onerror = finish
 
@@ -240,14 +259,35 @@ export default function useSnowballCall({
             return
           }
 
-          try {
-            const playPromise = audio.play()
-            if (playPromise && typeof playPromise.catch === 'function') {
-              playPromise.catch(finish)
+          const attemptPlay = async (retry = false) => {
+            try {
+              audio.muted = false
+              audio.volume = 1
+              const playPromise = audio.play()
+
+              if (playPromise && typeof playPromise.catch === 'function') {
+                await playPromise
+              }
+            } catch (error) {
+              if (
+                !retry &&
+                Capacitor.getPlatform() === 'ios' &&
+                !finished &&
+                callActiveRef.current &&
+                sessionId === callSessionRef.current
+              ) {
+                await wait(360)
+                audio.pause()
+                audio.currentTime = 0
+                await attemptPlay(true)
+                return
+              }
+
+              finish()
             }
-          } catch (error) {
-            finish()
           }
+
+          attemptPlay()
         }, 120)
       } catch (error) {
         finish()
@@ -822,13 +862,33 @@ export default function useSnowballCall({
     recognitionRef.current = null
 
     if (current?.type === 'native') {
-      try {
-        await SpeechRecognition.forceStop({ timeout: 900 })
-      } catch (error) {
+      const platform = Capacitor.getPlatform()
+
+      if (platform === 'ios') {
+        // iOS 必须优先使用 stop()，它会完整拆除识别器与录音资源。
+        // forceStop() 只立即终止当前会话，可能留下录音音频通道，
+        // 造成随后 HTMLAudioElement 有播放动作却没有声音。
         try {
           await SpeechRecognition.stop()
-        } catch (stopError) {
-          // 没有正在录音时无需处理。
+        } catch (error) {
+          try {
+            await SpeechRecognition.forceStop()
+          } catch (forceError) {
+            // 已经停止时无需处理。
+          }
+        }
+
+        await waitForNativeSpeechToStop()
+        await wait(180)
+      } else {
+        try {
+          await SpeechRecognition.forceStop({ timeout: 900 })
+        } catch (error) {
+          try {
+            await SpeechRecognition.stop()
+          } catch (stopError) {
+            // 没有正在录音时无需处理。
+          }
         }
       }
 
