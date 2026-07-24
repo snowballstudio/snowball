@@ -42,6 +42,15 @@ struct TotalActivityView: View {
         return clockFormatter.string(from: date)
     }
 
+    private func applications(
+        for segment: ScreenTimeSegmentRow
+    ) -> [ScreenTimeApplicationRow] {
+        configuration.applications.filter { app in
+            app.segmentStart == segment.start &&
+            app.segmentEnd == segment.end
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
@@ -59,32 +68,27 @@ struct TotalActivityView: View {
                 Text("设备原始信息")
                     .font(.headline)
 
-                if configuration.devices.isEmpty {
-                    Text("没有设备数据")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(configuration.devices) { device in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(device.name)
-                                .font(.body.weight(.medium))
+                ForEach(configuration.devices) { device in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(device.name)
+                            .font(.body.weight(.medium))
 
-                            Text("型号：\(device.model)")
+                        Text("型号：\(device.model)")
 
-                            Text(
-                                "系统最后更新：" +
-                                dateTimeFormatter.string(
-                                    from: device.lastUpdatedDate
-                                )
+                        Text(
+                            "系统最后更新：" +
+                            dateTimeFormatter.string(
+                                from: device.lastUpdatedDate
                             )
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        )
                     }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
 
                 Divider()
 
-                Text("Activity Segments 原始时间")
+                Text("小时分段与具体 App")
                     .font(.headline)
 
                 if configuration.segments.isEmpty {
@@ -92,7 +96,9 @@ struct TotalActivityView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(configuration.segments) { segment in
-                        VStack(alignment: .leading, spacing: 5) {
+                        let segmentApps = applications(for: segment)
+
+                        VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Text(
                                     clockFormatter.string(
@@ -103,24 +109,13 @@ struct TotalActivityView: View {
                                         from: segment.end
                                     )
                                 )
-                                .font(.body.weight(.medium))
+                                .font(.body.weight(.semibold))
 
                                 Spacer()
 
                                 Text(durationText(segment.duration))
-                                    .font(.body.weight(.medium))
+                                    .font(.body.weight(.semibold))
                             }
-
-                            Text(
-                                "完整日期：" +
-                                dateTimeFormatter.string(
-                                    from: segment.start
-                                ) +
-                                " → " +
-                                dateTimeFormatter.string(
-                                    from: segment.end
-                                )
-                            )
 
                             Text(
                                 "首次拿起：" +
@@ -140,10 +135,62 @@ struct TotalActivityView: View {
                                     segment.pickupsWithoutApplication
                                 )
                             )
+
+                            if segmentApps.isEmpty {
+                                Text("这个小时没有返回具体 App")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.top, 4)
+                            } else {
+                                ForEach(segmentApps) { app in
+                                    VStack(
+                                        alignment: .leading,
+                                        spacing: 4
+                                    ) {
+                                        HStack(
+                                            alignment: .firstTextBaseline
+                                        ) {
+                                            Text(app.displayName)
+                                                .font(
+                                                    .subheadline
+                                                        .weight(.medium)
+                                                )
+
+                                            Spacer()
+
+                                            Text(
+                                                durationText(app.duration)
+                                            )
+                                            .font(.subheadline)
+                                        }
+
+                                        Text(
+                                            "类别：\(app.categoryName)"
+                                        )
+
+                                        if app.displayName
+                                            != app.bundleIdentifier {
+                                            Text(
+                                                "Bundle ID：" +
+                                                app.bundleIdentifier
+                                            )
+                                        }
+
+                                        Text(
+                                            "打开次数 " +
+                                            String(app.pickups) +
+                                            " · 通知 " +
+                                            String(app.notifications)
+                                        )
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.leading, 12)
+                                    .padding(.vertical, 5)
+                                }
+                            }
                         }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 5)
+                        .padding(.vertical, 6)
 
                         Divider()
                     }
