@@ -47,9 +47,29 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
         let date = parseSnowballDate(call.getString("date")) ?? Date()
         let calendar = Calendar.autoupdatingCurrent
-        let start = calendar.startOfDay(for: date)
-        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else {
-            call.reject("无法计算报告日期。")
+        let dayStart = calendar.startOfDay(for: date)
+
+        // 非整点窗口实验：
+        // 请求当天 00:15 到次日 00:15，并继续使用 hourly。
+        // 报告页会显示 Apple 实际返回的 Segment 起止时间。
+        guard
+            let start = calendar.date(
+                byAdding: .minute,
+                value: 15,
+                to: dayStart
+            ),
+            let nextDayStart = calendar.date(
+                byAdding: .day,
+                value: 1,
+                to: dayStart
+            ),
+            let end = calendar.date(
+                byAdding: .minute,
+                value: 15,
+                to: nextDayStart
+            )
+        else {
+            call.reject("无法计算非整点报告区间。")
             return
         }
 
@@ -70,7 +90,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             let reportView = IOSScreenTimeReportContainer(
                 context: context,
                 filter: filter,
-                dateText: self.formatSnowballDate(start),
+                dateText: self.formatSnowballDate(dayStart) + "（请求00:15–次日00:15）",
                 onClose: {
                     presenter.dismiss(animated: true)
                 }
@@ -81,7 +101,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             presenter.present(host, animated: true) {
                 call.resolve([
                     "opened": true,
-                    "date": self.formatSnowballDate(start)
+                    "date": self.formatSnowballDate(dayStart)
                 ])
             }
         }
