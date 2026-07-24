@@ -55,7 +55,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
         let interval = DateInterval(start: start, end: end)
         let filter = DeviceActivityFilter(
-            segment: .daily(during: interval),
+            segment: .hourly(during: interval),
             users: .all,
             devices: .all
         )
