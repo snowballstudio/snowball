@@ -90,32 +90,35 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     private func statusPayload() -> [String: Any] {
         let status = AuthorizationCenter.shared.authorizationStatus
 
-        switch status {
-        case .approved:
+        if status == .approved {
             return [
                 "available": true,
                 "status": "approved",
                 "statusLabel": "已授权"
             ]
-        case .denied:
+        }
+
+        if status == .denied {
             return [
                 "available": true,
                 "status": "denied",
                 "statusLabel": "已拒绝"
             ]
-        case .notDetermined:
+        }
+
+        if status == .notDetermined {
             return [
                 "available": true,
                 "status": "notDetermined",
                 "statusLabel": "未询问"
             ]
-        @unknown default:
-            return [
-                "available": true,
-                "status": "unknown",
-                "statusLabel": "未知状态"
-            ]
         }
+
+        return [
+            "available": true,
+            "status": "unknown",
+            "statusLabel": "未知状态"
+        ]
     }
 
     private func parseSnowballDate(_ value: String?) -> Date? {
