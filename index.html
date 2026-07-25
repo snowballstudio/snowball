@@ -1,16 +1,26 @@
 <!doctype html>
-<html lang="en">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="雪球">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
+
+    <!--
+      只保留一个 viewport：
+      1. viewport-fit=cover 允许页面背景延伸到刘海和底部手势区；
+      2. maximum-scale/user-scalable 防止 iOS WKWebView 聚焦 14px textarea 时自动放大页面。
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="雪粒" />
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>snowball</title>
+    <title>雪粒</title>
   </head>
+
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>

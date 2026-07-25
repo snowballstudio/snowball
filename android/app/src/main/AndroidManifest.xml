@@ -28,11 +28,10 @@
         <activity
             android:name=".HealthPermissionActivity"
             android:exported="false"
-            android:theme="@style/AppTheme.NoActionBar" />
+            android:theme="@style/AppTheme.NoActionBar"
+        />
 
-        <activity
-            android:name=".PermissionsRationaleActivity"
-            android:exported="true">
+        <activity android:name=".PermissionsRationaleActivity" android:exported="true">
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
@@ -57,5 +56,4 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
     </application>
-
 </manifest>

@@ -364,3 +364,32 @@
   }
 }
 
+/* ======================================================
+   iOS 键盘期间：通话组件内部职责
+   HEADER 与输入区保持网格固定行，只有消息区滚动。
+   页面可见高度由 Home.css 统一管理。
+   ====================================================== */
+@media (max-width: 900px) {
+  html.snowballCallKeyboardOpen .snowballCallCard {
+    min-height: 0 !important;
+    overflow: hidden !important;
+    overflow-anchor: none !important;
+  }
+
+  html.snowballCallKeyboardOpen .snowballCallCard > .messages {
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    overflow-anchor: none !important;
+  }
+
+  html.snowballCallKeyboardOpen .snowballCallCard > .inputLineVoice {
+    flex: 0 0 auto !important;
+  }
+
+  html.snowballCallKeyboardOpen .snowballCallCard textarea {
+    font-size: 14px !important;
+    scroll-margin: 0 !important;
+  }
+}
+

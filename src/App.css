@@ -4080,13 +4080,19 @@ body,
   .dailyGlassScreen.dailyUnifiedTableCard {
     position: relative !important;
     top: -12px !important;
-    margin-bottom: -12px !important;
+    margin-bottom: -14px !important;
   }
+   /* 返回箭头和 TAB 整体一起上移。 */
+.dailyTableNavLine {
+  position: relative !important;
+  top: -19px !important;
+  margin-bottom: -6px !important;
+}
 
   /* 原底栏约 70px，压缩到 42px 左右。 */
   .dailyTableFooter {
-    height: 42px !important;
-    min-height: 42px !important;
+    height: 38px !important;
+    min-height: 38px !important;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
     align-items: center !important;

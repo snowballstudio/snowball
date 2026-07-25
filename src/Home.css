@@ -1776,60 +1776,79 @@ top: 2px;
 }
 
 /* ======================================================
-   通话模式最终控制区
-   保持主页顶部栏与猫背景原位不动；
-   对话框稳定放在背景图正下方；
-   只隐藏背景以下的普通主页内容。
+   V1.2｜通话模式唯一布局控制区
+   维护原则：
+   1. 顶部背景固定为原高度；
+   2. 通话卡片占据剩余可见高度；
+   3. HEADER 和输入区由 SnowballCall.css 固定；
+   4. 只有消息区滚动；
+   5. iOS 键盘打开时，只缩短 homePage 的可见高度，
+      不移动 html、body、phoneShell 或背景图；
+   6. Android 保持 100dvh，不进入 iOS 键盘状态。
    ====================================================== */
 @media (max-width: 900px) {
+  .phoneShell:has(.homePage.callMode) {
+    overflow: hidden !important;
+    padding-bottom: 0 !important;
+    overscroll-behavior: none !important;
+    scroll-behavior: auto !important;
+  }
+
   .homePage.callMode {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
     height: 100dvh !important;
     min-height: 0 !important;
     max-height: 100dvh !important;
+    margin: 0 !important;
     padding-bottom: 0 !important;
+
     display: flex !important;
     flex-direction: column !important;
+
     overflow: hidden !important;
     overscroll-behavior: none !important;
+    overflow-anchor: none !important;
+    transform: none !important;
   }
 
-  /* 不改变原有 top bar 的位置、尺寸和显示逻辑。 */
+  /* iPhone 键盘出现后，页面顶部不动，只把可见高度缩到键盘上方。 */
+  html.snowballCallKeyboardOpen .homePage.callMode {
+    height: var(--snowball-call-visual-height, 100dvh) !important;
+    max-height: var(--snowball-call-visual-height, 100dvh) !important;
+  }
+
   .homePage.callMode > .homeFixedTopBar {
     flex: 0 0 auto !important;
   }
 
-  /* 猫背景保持主页原有高度和原有位置，不做 top/translate 调整。 */
   .homePage.callMode > .heroCard {
     flex: 0 0 var(--m-home-hero-height) !important;
+    width: 100% !important;
     height: var(--m-home-hero-height) !important;
     min-height: var(--m-home-hero-height) !important;
     position: relative !important;
     top: auto !important;
     transform: none !important;
     overflow: hidden !important;
+    overflow-anchor: none !important;
   }
 
-  /* 通话框只占用背景图以下的剩余空间。 */
   .homePage.callMode > .snowballCallCard {
-    flex: 1 1 auto !important;
+    flex: 1 1 0 !important;
+    width: calc(100% - 24px) !important;
+    height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
     overflow: hidden !important;
-    scroll-margin-top: 0 !important;
+    overflow-anchor: none !important;
+    scroll-margin: 0 !important;
   }
 
-  /* 通话期间不显示背景下方的状态、雪地和底栏。 */
   .homePage.callMode > .statusCards,
   .homePage.callMode > .homeSnowTrace,
   .homePage.callMode > .homeBottomNav {
     display: none !important;
   }
-
-  /* 只在通话时关闭 phoneShell 外层滚动，避免键盘把背景整体推走。 */
-  .phoneShell:has(.homePage.callMode) {
-    overflow: hidden !important;
-    padding-bottom: 0 !important;
-    overscroll-behavior: none !important;
-  }
 }
-

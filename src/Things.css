@@ -3238,25 +3238,39 @@
 }
 
 /* ======================================================
-   2026-07-25｜物馆主页全屏背景试验
-   只作用于手机端“物馆主页/总览页”：
-   - 去掉顶部与底部黑边；
-   - 背景从屏幕最上方铺到最下方；
-   - 不再使用第二层圆角面板；
-   - 由手机硬件自然裁出圆角；
-   - 不影响主页 Home，也不影响物馆三个子页。
+   2026-07-26｜物馆主页全屏背景修正版
+   原因：App.css 已把手机端 WebView 锁定在可用视口内；
+   此处再次使用 env(safe-area-inset-*) 会把安全区重复加到内容内，
+   因而标题、进度箱、猫和三张分类卡整体下移。
+
+   本修正版只做两件事：
+   1. 物馆总览背景铺满当前 WebView；
+   2. 内容恢复原来的上下位置，不重复添加安全区。
+
+   注意：iPhone 最上方状态栏和最下方 Home Indicator 黑区属于原生层。
+   是否让网页背景进入这两个区域，需要 Capacitor/iOS 的原生
+   StatusBar overlay 配置，不能单靠 CSS 真正消除。
    ====================================================== */
 @media (max-width: 900px) {
-  /* 整个物馆覆盖层真正占满屏幕，不再留外层 padding。 */
+  /* 当前物馆页打开时，根节点底色同步成物馆背景色，避免边缘闪黑。 */
+  html:has(.thingsOverlay .thingsPanel-overview),
+  body:has(.thingsOverlay .thingsPanel-overview),
+  #root:has(.thingsOverlay .thingsPanel-overview),
+  .app:has(.thingsOverlay .thingsPanel-overview) {
+    background-color: #eaf4fa !important;
+  }
+
+  /* 覆盖层铺满 App.css 已经锁定好的可用视口。 */
   .thingsOverlay:has(.thingsPanel-overview) {
+    position: fixed !important;
     inset: 0 !important;
-    width: 100vw !important;
-    height: 100dvh !important;
-    min-height: 100dvh !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
     margin: 0 !important;
     padding: 0 !important;
-    align-items: stretch !important;
-    justify-content: stretch !important;
+    display: block !important;
     overflow: hidden !important;
     background:
       linear-gradient(
@@ -3266,21 +3280,20 @@
       ),
       url('/refine/things_background.png') center/cover no-repeat !important;
     backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 
-  /* 总览面板本身成为整张屏幕，不再是居中的圆角卡片。 */
+  /* 面板本身铺满覆盖层；不再重复添加 safe-area。 */
   .thingsOverlay:has(.thingsPanel-overview) > .thingsPanel-overview {
-    width: 100vw !important;
-    height: 100dvh !important;
-    min-height: 100dvh !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
     max-width: none !important;
     max-height: none !important;
     margin: 0 !important;
-    padding:
-      max(12px, env(safe-area-inset-top))
-      12px
-      max(10px, env(safe-area-inset-bottom))
-      !important;
+    padding: 12px 12px 10px !important;
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
@@ -3295,19 +3308,115 @@
       url('/refine/things_background.png') center/cover no-repeat !important;
   }
 
-  /* 避免任何旧样式重新制造顶/底空隙。 */
+  /* 清除旧规则制造的额外顶部距离。 */
   .thingsOverlay:has(.thingsPanel-overview) .thingsTopBar,
   .thingsOverlay:has(.thingsPanel-overview) .thingsOverview {
     margin-top: 0 !important;
   }
 
-  /* 底部导航由安全区自然抬起，不再另画黑色底栏。 */
-  .thingsOverlay:has(.thingsPanel-overview)
-    .thingsOverviewBottomNav,
-  .thingsOverlay:has(.thingsPanel-overview)
-    .thingsBottomNav {
-    padding-bottom: env(safe-area-inset-bottom) !important;
+  /* 底部导航保持透明，不再重复叠加安全区高度。 */
+  .thingsOverlay:has(.thingsPanel-overview) .thingsOverviewBottomNav,
+  .thingsOverlay:has(.thingsPanel-overview) .thingsBottomNav {
+    padding-bottom: 0 !important;
     background: transparent !important;
+  }
+}
+
+/* ======================================================
+   2026-07-26｜物馆普通动作提示弹窗
+   仅缩小：
+   - 新增记录成功
+   - 修改记录成功
+   - 愿单移到在手成功
+   - 其它普通提示
+
+   明确不影响：
+   - 删除确认弹窗 .thingDeleteConfirmBox
+   - 在手移到舍离的确认弹窗 .thingConfirmBox
+   - 舍离完成后的“确认舍离”提示
+   ====================================================== */
+
+.noticeBox.thingQuietModal.thingActionNotice {
+  position: relative !important;
+  box-sizing: border-box !important;
+
+  width: min(520px, 84vw) !important;
+  height: 168px !important;
+  min-height: 168px !important;
+  max-height: 168px !important;
+
+  margin: auto !important;
+  padding: 30px 42px 24px !important;
+  overflow: hidden !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+
+  text-align: center !important;
+}
+
+.noticeBox.thingQuietModal.thingActionNotice h2,
+.noticeBox.thingQuietModal.thingActionNotice h3,
+.noticeBox.thingQuietModal.thingActionNotice p {
+  width: 100% !important;
+  margin: 0 !important;
+  text-align: center !important;
+}
+
+.noticeBox.thingQuietModal.thingActionNotice .thingModalClose {
+  position: absolute !important;
+  top: 8px !important;
+  right: 10px !important;
+  left: auto !important;
+  bottom: auto !important;
+
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  display: grid !important;
+  place-items: center !important;
+
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #657080 !important;
+  font-size: 22px !important;
+  line-height: 1 !important;
+  z-index: 3 !important;
+}
+
+@media (max-width: 900px) {
+  .noticeBox.thingQuietModal.thingActionNotice {
+    width: 82vw !important;
+    height: 100px !important;
+    min-height: 100px !important;
+    max-height: 100px !important;
+    padding: 20px 28px 12px !important;
+    border-radius: 22px !important;
+    gap: 8px !important;
+  }
+
+  .noticeBox.thingQuietModal.thingActionNotice h2 {
+    font-size: 20px !important;
+    line-height: 1.2 !important;
+  }
+
+  .noticeBox.thingQuietModal.thingActionNotice p {
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+
+  .noticeBox.thingQuietModal.thingActionNotice .thingModalClose {
+    top: 6px !important;
+    right: 8px !important;
   }
 }
 
