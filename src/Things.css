@@ -3237,3 +3237,77 @@
   }
 }
 
+/* ======================================================
+   2026-07-25｜物馆主页全屏背景试验
+   只作用于手机端“物馆主页/总览页”：
+   - 去掉顶部与底部黑边；
+   - 背景从屏幕最上方铺到最下方；
+   - 不再使用第二层圆角面板；
+   - 由手机硬件自然裁出圆角；
+   - 不影响主页 Home，也不影响物馆三个子页。
+   ====================================================== */
+@media (max-width: 900px) {
+  /* 整个物馆覆盖层真正占满屏幕，不再留外层 padding。 */
+  .thingsOverlay:has(.thingsPanel-overview) {
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    overflow: hidden !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(232, 235, 238, 0.68),
+        rgba(202, 207, 213, 0.58)
+      ),
+      url('/refine/things_background.png') center/cover no-repeat !important;
+    backdrop-filter: none !important;
+  }
+
+  /* 总览面板本身成为整张屏幕，不再是居中的圆角卡片。 */
+  .thingsOverlay:has(.thingsPanel-overview) > .thingsPanel-overview {
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding:
+      max(12px, env(safe-area-inset-top))
+      12px
+      max(10px, env(safe-area-inset-bottom))
+      !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(232, 235, 238, 0.68),
+        rgba(202, 207, 213, 0.58)
+      ),
+      url('/refine/things_background.png') center/cover no-repeat !important;
+  }
+
+  /* 避免任何旧样式重新制造顶/底空隙。 */
+  .thingsOverlay:has(.thingsPanel-overview) .thingsTopBar,
+  .thingsOverlay:has(.thingsPanel-overview) .thingsOverview {
+    margin-top: 0 !important;
+  }
+
+  /* 底部导航由安全区自然抬起，不再另画黑色底栏。 */
+  .thingsOverlay:has(.thingsPanel-overview)
+    .thingsOverviewBottomNav,
+  .thingsOverlay:has(.thingsPanel-overview)
+    .thingsBottomNav {
+    padding-bottom: env(safe-area-inset-bottom) !important;
+    background: transparent !important;
+  }
+}
+

@@ -301,63 +301,66 @@
 }
 
 /* ======================================================
-   通话框冻结层
-   键盘弹出或手动输入时，通话框背景、顶部 HEADER 与底部输入区保持不动；
-   只有中间消息区上下滚动。
+   通话卡片最终布局
+   HEADER 和输入区是网格固定行，只有消息区滚动。
+   本文件不再控制整个页面和浏览器视口。
    ====================================================== */
-.chatCard {
+.snowballCallCard {
   display: grid !important;
   grid-template-rows: auto minmax(0, 1fr) auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   max-height: min(68dvh, 620px) !important;
   overflow: hidden !important;
   position: relative !important;
   overscroll-behavior: contain !important;
 }
 
-.chatTop {
+.snowballCallCard > .chatTop {
+  grid-row: 1 !important;
   position: relative !important;
-  z-index: 4 !important;
+  z-index: 3 !important;
+  min-height: 0 !important;
   margin-bottom: 0 !important;
   padding-bottom: 8px !important;
   background: var(--chat-tune-card-bg) !important;
 }
 
-.messages {
+.snowballCallCard > .messages {
+  grid-row: 2 !important;
+  min-width: 0 !important;
   min-height: 0 !important;
   max-height: none !important;
+  overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  scroll-behavior: smooth !important;
 }
 
-.inputLine,
-.inputLineVoice {
+.snowballCallCard > .inputLineVoice {
+  grid-row: 3 !important;
   position: relative !important;
-  z-index: 4 !important;
+  z-index: 3 !important;
+  min-height: 0 !important;
   padding-top: 8px !important;
   background: var(--chat-tune-card-bg) !important;
 }
 
-@media (max-width: 560px) {
-  .chatCard {
-    max-height: min(64dvh, 540px) !important;
+@media (max-width: 900px) {
+  .snowballCallCard {
+    width: calc(100% - 24px) !important;
+    height: 100% !important;
+    max-height: none !important;
+    margin: 0 12px !important;
+    padding: 13px 14px max(10px, env(safe-area-inset-bottom)) !important;
+    border-radius: 18px 18px 0 0 !important;
+    box-sizing: border-box !important;
   }
-}
 
-/* 通话卡片内部滚动边界：HEADER 和输入栏不滚动。 */
-.chatCard {
-  min-width: 0;
-}
-
-.chatCard .chatTop,
-.chatCard .inputLineVoice {
-  position: relative;
-  z-index: 2;
-}
-
-.chatCard .messages {
-  min-width: 0;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+  .snowballCallCard textarea {
+    font-size: 14px !important;
+  }
 }
 

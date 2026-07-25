@@ -1776,61 +1776,60 @@ top: 2px;
 }
 
 /* ======================================================
-   iPhone 通话模式冻结
-   顶部品牌与背景图固定在当前视口，只让对话消息区滚动。
+   通话模式最终控制区
+   保持主页顶部栏与猫背景原位不动；
+   对话框稳定放在背景图正下方；
+   只隐藏背景以下的普通主页内容。
    ====================================================== */
 @media (max-width: 900px) {
   .homePage.callMode {
     height: 100dvh !important;
-    min-height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    padding-bottom: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
     overscroll-behavior: none !important;
   }
 
-  .homePage.callMode .homeFixedTopBar,
-  .homePage.callMode .heroCard {
+  /* 不改变原有 top bar 的位置、尺寸和显示逻辑。 */
+  .homePage.callMode > .homeFixedTopBar {
     flex: 0 0 auto !important;
   }
 
-  .homePage.callMode .heroCard {
+  /* 猫背景保持主页原有高度和原有位置，不做 top/translate 调整。 */
+  .homePage.callMode > .heroCard {
+    flex: 0 0 var(--m-home-hero-height) !important;
+    height: var(--m-home-hero-height) !important;
+    min-height: var(--m-home-hero-height) !important;
     position: relative !important;
     top: auto !important;
-    z-index: 1 !important;
+    transform: none !important;
+    overflow: hidden !important;
   }
 
-  .homePage.callMode > .chatCard {
+  /* 通话框只占用背景图以下的剩余空间。 */
+  .homePage.callMode > .snowballCallCard {
     flex: 1 1 auto !important;
     min-height: 0 !important;
     max-height: none !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
     overflow: hidden !important;
     scroll-margin-top: 0 !important;
   }
 
-  .homePage.callMode > .chatCard .chatTop,
-  .homePage.callMode > .chatCard .inputLineVoice {
-    flex: 0 0 auto !important;
-  }
-
-  .homePage.callMode > .chatCard .messages {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow-y: auto !important;
-    overscroll-behavior: contain !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-
-  /* 通话期间视口只展示背景和对话框，下面原有主页区不参与滚动。 */
+  /* 通话期间不显示背景下方的状态、雪地和底栏。 */
   .homePage.callMode > .statusCards,
   .homePage.callMode > .homeSnowTrace,
   .homePage.callMode > .homeBottomNav {
     display: none !important;
+  }
+
+  /* 只在通话时关闭 phoneShell 外层滚动，避免键盘把背景整体推走。 */
+  .phoneShell:has(.homePage.callMode) {
+    overflow: hidden !important;
+    padding-bottom: 0 !important;
+    overscroll-behavior: none !important;
   }
 }
 

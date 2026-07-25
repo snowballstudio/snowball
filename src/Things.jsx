@@ -260,21 +260,21 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
       return
     }
     if (!reasonStrongEnough(reason)) { showThingMessage('粒没有盖章', `描述至少需要4个汉字，或8个字母（含空格）。再写清楚一点：为什么它值得${thingTypeVerb(type)}？`); return }
-    const line = `我理解了，此物值得${thingTypeVerb(type)}。`
+    const line = `理解了，此物值得${thingTypeVerb(type)}。`
     if (editingThingId) {
       const savedId = editingThingId
       setData(prev => ({ ...prev, things: (prev.things || []).map(item => item.id === savedId ? { ...item, type, year, month, name, reason, valueType, value, photo: draft.photo || '', pawText: line, updatedAt: Date.now() } : item), thingDraft: { ...EMPTY_THING_DRAFT, type }, thingsSavedAt: Date.now(), lastSavedAt: Date.now() }))
-      setEditingThingId(null); setSelectedThingId(savedId); setThingsMode(type); setShowAddForm(false); showThingMessage('雪粒已更新', '我理解了，记录已经改好。'); return
+      setEditingThingId(null); setSelectedThingId(savedId); setThingsMode(type); setShowAddForm(false); showThingMessage('已更新', '理解了，记录已经改好。'); return
     }
     const item = { id: Date.now(), type, year, month, name, reason, valueType, value, photo: draft.photo || '', pawText: line, pawCount: 1, createdAt: Date.now() }
     setData(prev => ({ ...prev, things: [item, ...(prev.things || [])], thingDraft: { ...EMPTY_THING_DRAFT, type }, thingsSavedAt: Date.now(), lastSavedAt: Date.now() }))
-    setSelectedThingId(item.id); setShowAddForm(false); showThingMessage('雪粒已盖章', line)
+    setSelectedThingId(item.id); setShowAddForm(false); showThingMessage('已盖章', line)
   }
   function applyThingMove(id, nextType) {
     const current = things.find(item => item.id === id); if (!current) return
-    const line = nextType === 'treasure' ? `恭喜你得到「${current.name}」。` : `雪粒明白了。「${current.name}」进入舍离区，留下记录，也腾出空间。`
+    const line = nextType === 'treasure' ? `恭喜你得到「${current.name}」。` : `明白了。「${current.name}」进入舍离区，留下记录，也腾出空间。`
     setData(prev => ({ ...prev, things: (prev.things || []).map(item => item.id === id ? { ...item, type: nextType, pawText: line, pawCount: Number(item.pawCount || 0) + 1 } : item), thingsSavedAt: Date.now(), lastSavedAt: Date.now() }))
-    setThingsMode(nextType); setSelectedThingId(id); showThingMessage(nextType === 'treasure' ? '雪粒祝贺你' : '雪粒确认舍离', line)
+    setThingsMode(nextType); setSelectedThingId(id); showThingMessage(nextType === 'treasure' ? '祝贺你' : '确认舍离', line)
   }
   function moveThing(id, nextType) {
     const current = things.find(item => item.id === id); if (!current) return

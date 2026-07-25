@@ -4067,3 +4067,107 @@ body,
   border-radius: 999px;
 }
 
+/* ======================================================
+   2026-07-25｜日常数据表手机端小修
+   1. 整张表上移 12px；
+   2. “新增日期”底栏缩短约 40%；
+   3. 饮食/心情 TAB 隐藏“重新获取”，并同步回收该列；
+   4. 饮食列加宽 30%，最多显示三行，超出省略；
+   5. 食物字体缩小一号、取消加粗，条件颜色保持不变。
+   ====================================================== */
+@media (max-width: 900px) {
+  /* 只移动表格卡片，不移动上方 TAB。 */
+  .dailyGlassScreen.dailyUnifiedTableCard {
+    position: relative !important;
+    top: -12px !important;
+    margin-bottom: -12px !important;
+  }
+
+  /* 原底栏约 70px，压缩到 42px 左右。 */
+  .dailyTableFooter {
+    height: 42px !important;
+    min-height: 42px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    align-items: center !important;
+  }
+
+  .dailyAddDateLink,
+  .dailyGlassScreen > .dailyAddDateLink {
+    height: 42px !important;
+    min-height: 42px !important;
+    padding: 0 4px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    line-height: 1 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 饮食 / 心情：隐藏每行第一个操作按钮，也就是“重新获取”。 */
+  .dailyUnifiedRow.dailyTab-food > .dailyIconBtn:first-of-type,
+  .dailyUnifiedRow.dailyTab-mood > .dailyIconBtn:first-of-type {
+    display: none !important;
+  }
+
+  /* 表头同步隐藏“重新获取”占位列。 */
+  .dailyUnifiedHeader.dailyTab-food > span:nth-last-child(3),
+  .dailyUnifiedHeader.dailyTab-mood > span:nth-last-child(3) {
+    display: none !important;
+  }
+
+  /* 月度行少保留一个空白操作占位，避免产生隐形空列。 */
+  .dailyUnifiedMonthRow.dailyTab-food > span:last-child,
+  .dailyUnifiedMonthRow.dailyTab-mood > span:last-child {
+    display: none !important;
+  }
+
+  /* 饮食：食物列由 170px 增至 221px，约 +30%。 */
+  .dailyUnifiedHeader.dailyTab-food,
+  .dailyUnifiedMonthRow.dailyTab-food,
+  .dailyUnifiedRow.dailyTab-food {
+    grid-template-columns: 124px 221px 118px 38px 46px !important;
+    min-width: 547px !important;
+  }
+
+  /* 心情：移除重新获取列，只保留日期、心情、修改、删除。 */
+  .dailyUnifiedHeader.dailyTab-mood,
+  .dailyUnifiedMonthRow.dailyTab-mood,
+  .dailyUnifiedRow.dailyTab-mood {
+    grid-template-columns: 124px 170px 38px 46px !important;
+    min-width: 378px !important;
+  }
+
+  /* 食物单元格最多三行；超出的内容截断，不再跑出格子。 */
+  .dailyUnifiedRow.dailyTab-food > .dailyTagList:nth-child(2),
+  .dailyUnifiedMonthRow.dailyTab-food > .dailyWrapCell:nth-child(2) {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    max-height: calc(1.28em * 3) !important;
+    overflow: hidden !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 3 !important;
+    white-space: normal !important;
+    text-overflow: ellipsis !important;
+    word-break: break-word !important;
+    line-height: 1.28 !important;
+  }
+
+  /* 标签本身保持原有条件颜色，但字号减一号且不加粗。 */
+  .dailyUnifiedRow.dailyTab-food > .dailyTagList:nth-child(2),
+  .dailyUnifiedRow.dailyTab-food > .dailyTagList:nth-child(2) > span,
+  .dailyUnifiedMonthRow.dailyTab-food > .dailyWrapCell:nth-child(2) {
+    font-size: 13px !important;
+    font-weight: 400 !important;
+  }
+
+  .dailyUnifiedRow.dailyTab-food > .dailyTagList:nth-child(2) {
+    gap: 1px 5px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+}
+

@@ -354,7 +354,7 @@ export default function Home({
         <div className="homeCausalStatus">
           <button type="button" className="homeCausalRow" onClick={() => openDailyDetail('steps')}>
             <span className="homeCausalIcon">👟</span>
-            <span className="homeCausalLeft">你最新步数 <strong>{homeYesterdaySteps}</strong> </span>
+            <span className="homeCausalLeft">你最近步数 <strong>{homeYesterdaySteps}</strong> </span>
             <span className="homeCausalArrow">→</span>
             <span className="homeCausalRight">它体型 <strong>{body.label}</strong></span>
           </button>

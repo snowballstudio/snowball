@@ -11,6 +11,7 @@ export default function SnowballCall({
 }) {
   const inputRef = useRef(null)
 
+
   useEffect(() => {
     const textarea = inputRef.current
     if (!textarea) return
@@ -35,7 +36,7 @@ export default function SnowballCall({
   if (!call.callActive) return null
 
   return (
-    <section className="chatCard" ref={call.chatCardRef}>
+    <section className="chatCard snowballCallCard" ref={call.chatCardRef}>
       <div className="chatTop">
         <div className="chatActionLine">
           <button
