@@ -13,7 +13,8 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "getAuthorizationStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestAuthorization", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "presentReport", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "presentReport", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readActivityData", returnType: CAPPluginReturnPromise)
     ]
 
     @objc public func getAuthorizationStatus(_ call: CAPPluginCall) {
@@ -104,6 +105,87 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                     "date": self.formatSnowballDate(dayStart)
                 ])
             }
+        }
+    }
+
+
+    @objc public func readActivityData(_ call: CAPPluginCall) {
+        guard AuthorizationCenter.shared.authorizationStatus
+                == .approved else {
+            call.reject("请先授权苹果屏幕时间。")
+            return
+        }
+
+        guard let defaults = UserDefaults(
+            suiteName: "group.com.snowball.health"
+        ) else {
+            call.reject("无法打开雪球 App Group 共享容器。")
+            return
+        }
+
+        guard let data = defaults.data(
+            forKey: "snowball.ios-screen-time.days.v1"
+        ) else {
+            call.resolve([
+                "days": [],
+                "message":
+                    "共享容器中还没有报告数据，请先打开一次对应日期的苹果系统报告。"
+            ])
+            return
+        }
+
+        do {
+            guard let cache = try JSONSerialization
+                .jsonObject(with: data) as? [String: Any] else {
+                call.reject("苹果屏幕时间共享数据格式无效。")
+                return
+            }
+
+            let allDays =
+                cache["days"] as? [[String: Any]] ?? []
+            let requestedEndDate =
+                parseSnowballDate(call.getString("startDate"))
+                ?? Date()
+            let requestedCount =
+                max(1, call.getInt("days") ?? 1)
+            let calendar = Calendar.autoupdatingCurrent
+            let endDate = calendar.startOfDay(
+                for: requestedEndDate
+            )
+            let startDate = calendar.date(
+                byAdding: .day,
+                value: -(requestedCount - 1),
+                to: endDate
+            ) ?? endDate
+
+            let filteredDays = allDays.filter { day in
+                guard let text = day["date"] as? String,
+                      let date = self.parseSnowballDate(text)
+                else {
+                    return false
+                }
+
+                let normalized =
+                    calendar.startOfDay(for: date)
+                return normalized >= startDate
+                    && normalized <= endDate
+            }.sorted { left, right in
+                (left["date"] as? String ?? "")
+                    < (right["date"] as? String ?? "")
+            }
+
+            call.resolve([
+                "days": filteredDays,
+                "updatedAt": cache["updatedAt"] ?? "",
+                "version": cache["version"] ?? 1,
+                "source": "ios-device-activity-report-cache"
+            ])
+        } catch {
+            call.reject(
+                "读取苹果屏幕时间共享数据失败：\(error.localizedDescription)",
+                nil,
+                error
+            )
         }
     }
 
