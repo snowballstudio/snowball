@@ -4177,3 +4177,247 @@ body,
   }
 }
 
+/* ======================================================
+   V1.2｜返回箭头统一 + 使用说明固定标题
+   1. 今日状态、日常数据表统一为小号钝角返回箭头；
+   2. 使用说明禁止横向移动，只允许纵向滚动；
+   3. “使用说明”标题滚动时固定在弹窗顶部。
+   ====================================================== */
+
+/* 今日状态与日常数据表：统一小号钝角箭头 */
+.dailyBackMini,
+.todayStatusBack {
+  display: grid !important;
+  place-items: center !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+  text-indent: 0 !important;
+  overflow: visible !important;
+}
+
+.dailyBackMini::before,
+.todayStatusBack::before {
+  content: "" !important;
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-left: 2px solid currentColor !important;
+  border-bottom: 2px solid currentColor !important;
+  border-radius: 1px !important;
+  transform: rotate(45deg) !important;
+  box-sizing: border-box !important;
+}
+
+/* 日常数据表箭头：保持原按钮占位，只改变箭头外观 */
+.dailyBackMini {
+  width: 28px !important;
+  min-width: 28px !important;
+  height: 28px !important;
+  color: rgba(255,255,255,0.9) !important;
+  position: relative;
+  top: 5.5px;      /* 往下 */
+}
+
+/* 今日状态箭头：与标题垂直居中 */
+.todayStatusBack {
+  width: 36px !important;
+  height: 40px !important;
+  left: 12px !important;
+  top: 23px !important;
+  padding: 0 !important;
+  color: rgba(31,37,43,.76) !important;
+}
+
+/* 使用说明：整个遮罩禁止横向滚动 */
+.usageInfoOverlay {
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-x: none !important;
+  touch-action: pan-y !important;
+  padding:
+    max(12px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left)) !important;
+}
+
+/* 使用说明弹窗成为唯一纵向滚动容器 */
+.usageInfoBox {
+  position: relative !important;
+  box-sizing: border-box !important;
+  width: min(680px, 100%) !important;
+  max-width: 100% !important;
+  height: calc(
+    100dvh
+    - max(24px, env(safe-area-inset-top))
+    - max(28px, env(safe-area-inset-bottom))
+  ) !important;
+  max-height: calc(
+    100dvh
+    - max(24px, env(safe-area-inset-top))
+    - max(28px, env(safe-area-inset-bottom))
+  ) !important;
+  margin: 0 !important;
+  padding: 0 22px 22px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+}
+
+/* 标题固定在弹窗顶部 */
+.usageInfoBox > h2 {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 5 !important;
+  margin: 0 -22px 18px !important;
+  padding: 22px 22px 14px !important;
+  background: #0d1828 !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+/* 正文不产生横向宽度 */
+.usageInfoText,
+.usageVersionBlock,
+.usageCloseBtn {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.usageInfoText {
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+@supports not (height: 100dvh) {
+  .usageInfoBox {
+    height: calc(100vh - 40px) !important;
+    max-height: calc(100vh - 40px) !important;
+  }
+}
+
+/* ======================================================
+   V1.2｜饮食 TAB 三行显示与月度 TOP8
+   - 每日饮食：普通字重，最多三行，超出省略；
+   - 月度饮食 TOP8：加粗，最多三行，超出省略；
+   - 使用连续文本节点，避免换行后只显示每行第一个名词。
+   ====================================================== */
+.dailyFoodText,
+.dailyMonthFoodTop {
+  display: -webkit-box !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  max-height: calc(1.3em * 3) !important;
+  overflow: hidden !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 3 !important;
+  line-clamp: 3 !important;
+  white-space: normal !important;
+  text-overflow: ellipsis !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  line-height: 1.3 !important;
+}
+
+.dailyFoodText {
+  font-weight: 400 !important;
+}
+
+.dailyMonthFoodTop {
+  font-weight: 800 !important;
+}
+
+/* 覆盖日常表旧的单行 nowrap 规则。 */
+.dailyUnifiedRow > .dailyFoodText,
+.dailyUnifiedMonthRow > .dailyMonthFoodTop {
+  white-space: normal !important;
+  overflow: hidden !important;
+}
+
+/* 允许饮食行随三行内容自然增高。 */
+.dailyUnifiedRow.dailyTab-food,
+.dailyUnifiedMonthRow.dailyTab-food {
+  align-items: center !important;
+  min-height: 0 !important;
+}
+
+/* ======================================================
+   V1.2｜饮食 TAB 三行裁切最终修正
+   1. 月度 TOP8 字重与月度日期一致；
+   2. 固定三行可视高度，并进行绘制裁切；
+   3. 避免 iOS 在省略号下方残留第四行文字。
+   ====================================================== */
+@media (max-width: 900px) {
+  /* 比旧的 nth-child 规则更具体，确保月度食物真正加粗。 */
+  .dailyUnifiedMonthRow.dailyTab-food
+  > .dailyWrapCell.dailyMonthFoodTop:nth-child(2) {
+    font-size: 13px !important;
+    font-weight: 800 !important;
+  }
+
+  /* 每日与月度食物：严格限定为三行高度。 */
+  .dailyUnifiedRow.dailyTab-food
+  > .dailyFoodText:nth-child(2),
+  .dailyUnifiedMonthRow.dailyTab-food
+  > .dailyWrapCell.dailyMonthFoodTop:nth-child(2) {
+    display: -webkit-box !important;
+    box-sizing: border-box !important;
+
+    height: calc(1.3em * 3) !important;
+    min-height: calc(1.3em * 3) !important;
+    max-height: calc(1.3em * 3) !important;
+
+    line-height: 1.3 !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+    white-space: normal !important;
+    text-overflow: ellipsis !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+
+    /* iOS WebKit 偶尔会在 line-clamp 下绘制第四行残影；
+       contain + clip-path 将绘制严格限制在单元格内部。 */
+    contain: paint !important;
+    clip-path: inset(0) !important;
+    -webkit-mask-image: linear-gradient(#000, #000) !important;
+  }
+
+  .dailyUnifiedRow.dailyTab-food
+  > .dailyFoodText:nth-child(2) {
+    font-size: 13px !important;
+    font-weight: 400 !important;
+  }
+
+  /* 行本身也裁切，防止任何文字落到下一格。 */
+  .dailyUnifiedRow.dailyTab-food,
+  .dailyUnifiedMonthRow.dailyTab-food {
+    overflow: hidden !important;
+  }
+}
+
+/* ======================================================
+   V1.2｜饮食名词垂直居中（仅此项）
+   保留原有 grid 列宽、三行截断、字重和省略号逻辑。
+   关键：取消食物单元格强制占满三行的固定高度，
+   让一行、两行内容按实际高度参与原有 grid 的居中对齐。
+   ====================================================== */
+@media (max-width: 900px) {
+  .dailyUnifiedRow.dailyTab-food
+  > .dailyFoodText:nth-child(2),
+  .dailyUnifiedMonthRow.dailyTab-food
+  > .dailyWrapCell.dailyMonthFoodTop:nth-child(2) {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: calc(1.3em * 3) !important;
+    align-self: center !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+}
+

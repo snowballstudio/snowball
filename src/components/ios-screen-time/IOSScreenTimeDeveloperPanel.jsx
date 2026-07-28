@@ -4,8 +4,10 @@ import {
   getIOSScreenTimeStatus,
   isIOSScreenTimeAvailable,
   openIOSScreenTimeReport,
+  readIOSScreenTimeData,
   requestIOSScreenTimeAuthorization,
 } from './iosScreenTimeService.js'
+import { normalizeIOSScreenTimePayload } from './screenTimeDataService.js'
 
 const EMPTY_STATUS = {
   available: false,
@@ -21,6 +23,7 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
   const [status, setStatus] = useState(EMPTY_STATUS)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [preview, setPreview] = useState(null)
 
   const refreshStatus = useCallback(async () => {
     setBusy(true)
@@ -70,6 +73,27 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
     }
   }
 
+  async function readData() {
+    setBusy(true)
+    setMessage('')
+    setPreview(null)
+    try {
+      const result = await readIOSScreenTimeData({
+        startDate: date,
+        days: 1,
+        cutoffHour: 5,
+        minimumActivitySeconds: 10,
+      })
+      const normalized = normalizeIOSScreenTimePayload(result)
+      setPreview(normalized)
+      setMessage(normalized?.days?.length ? '当天正式数据读取成功。' : '当天没有返回数据。')
+    } catch (error) {
+      setMessage(errorText(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (!isIOSScreenTimeAvailable()) return null
 
   const approved = status.status === 'approved'
@@ -99,11 +123,19 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
         <button type="button" onClick={openReport} disabled={busy || !approved}>
           打开当天系统报告
         </button>
+        <button type="button" onClick={readData} disabled={busy || !approved}>
+          读取当天正式数据
+        </button>
       </div>
 
       {message && <p className="iosScreenTimeDeveloperMessage">{message}</p>}
+      {preview && (
+        <pre className="iosScreenTimeDeveloperMessage" style={{ whiteSpace: 'pre-wrap', maxHeight: '240px', overflow: 'auto' }}>
+          {JSON.stringify(preview, null, 2)}
+        </pre>
+      )}
       <p className="iosScreenTimeDeveloperNote">
-        第一阶段报告在苹果原生窗口中显示总时长和系统类别。确认真机数据后，再接入雪球列车。
+        正式读取需要原生插件返回 APP 明细、小时活动、拿起时间和活动段数据。
       </p>
     </section>
   )

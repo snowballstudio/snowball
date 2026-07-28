@@ -272,7 +272,7 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
   }
   function applyThingMove(id, nextType) {
     const current = things.find(item => item.id === id); if (!current) return
-    const line = nextType === 'treasure' ? `祝贺你得到「${current.name}」。` : `明白了。「${current.name}」进入舍离区，留下记录，也腾出空间。`
+    const line = nextType === 'treasure' ? `你得到「${current.name}」，雪粒为你高兴。` : `明白了。「${current.name}」进入舍离区，留下记录，也腾出空间。`
     setData(prev => ({ ...prev, things: (prev.things || []).map(item => item.id === id ? { ...item, type: nextType, pawText: line, pawCount: Number(item.pawCount || 0) + 1 } : item), thingsSavedAt: Date.now(), lastSavedAt: Date.now() }))
     setThingsMode(nextType); setSelectedThingId(id); showThingMessage(nextType === 'treasure' ? '祝贺你' : '确认舍离', line)
   }

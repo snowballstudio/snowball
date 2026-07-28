@@ -71,6 +71,24 @@ function formatHomeRestTime(value) {
   return `${displayHour} : ${minute}`
 }
 
+function homeRestTimeReachedGoal(value) {
+  const text = String(value || '').trim()
+  const match = text.match(/^(\d{1,2})\s*[:：]\s*(\d{2})$/)
+  if (!match) return false
+
+  const hour = Number(match[1])
+  const minute = Number(match[2])
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return false
+
+  // 与雪粒现有离机达标逻辑一致：05:00 至 23:30（含）。
+  const totalMinutes = hour * 60 + minute
+  return totalMinutes >= 5 * 60 && totalMinutes <= 23 * 60 + 30
+}
+
+function homeStatusValueClass(isGood) {
+  return isGood ? 'homeStatusValue homeStatusValue-good' : 'homeStatusValue'
+}
+
 export default function Home({
   MOTION,
   bgImg,
@@ -122,6 +140,19 @@ export default function Home({
   const [goodNightModal, setGoodNightModal] = useState(null)
   const [rememberGoodNightDevice, setRememberGoodNightDevice] = useState(false)
   const moodFlower = homeMoodFlowerState(mood)
+
+  const homeStatusGoals = {
+    steps:
+      String(homeYesterdaySteps ?? '').trim() !== '' &&
+      Number(homeYesterdaySteps) >= 5000,
+    body: ['正好', '胖嘟'].includes(String(body?.label || '').trim()),
+    rest: homeRestTimeReachedGoal(homeYesterdaySleep),
+    fur: String(furDisplay || '').includes('浓密'),
+    foodHealth: String(food?.healthLabel || '').trim() === '合理',
+    furColor: String(food?.label || '').trim() === '雪白',
+    mood: String(mood?.statusLabel || '').trim() === '正面',
+    eyes: String(mood?.eyes || '').trim() === '圆亮',
+  }
 
   function goodNightTimeInfo(now = new Date()) {
     const hour = now.getHours()
@@ -354,25 +385,46 @@ export default function Home({
         <div className="homeCausalStatus">
           <button type="button" className="homeCausalRow" onClick={() => openDailyDetail('steps')}>
             <span className="homeCausalIcon">👟</span>
-            <span className="homeCausalLeft">你最近步数 <strong>{homeYesterdaySteps}</strong> </span>
-            <span className="homeCausalArrow">→</span>
-            <span className="homeCausalRight">它体型 <strong>{body.label}</strong></span>
+            <span className="homeCausalLeft">你最近步数 <strong className={homeStatusValueClass(homeStatusGoals.steps)}>{homeYesterdaySteps}</strong> </span>
+            <span
+              className={`homeCausalArrow${homeStatusGoals.steps && homeStatusGoals.body ? ' homeCausalArrow-good' : ''}`}
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 15 14" focusable="false">
+                <path d="M2 4 L15.0 7 L2.3 11.6 Z" />
+              </svg>
+            </span>
+            <span className="homeCausalRight">它体型 <strong className={homeStatusValueClass(homeStatusGoals.body)}>{body.label}</strong></span>
           </button>
 
           <button type="button" className="homeCausalRow" onClick={() => openDailyDetail('offscreen')}>
             <span className="homeCausalIcon">🌙</span>
-            <span className="homeCausalLeft">你上次休息 <strong>
+            <span className="homeCausalLeft">你上次休息 <strong className={homeStatusValueClass(homeStatusGoals.rest)}>
   {formatHomeRestTime(homeYesterdaySleep)}
 </strong> </span>
-            <span className="homeCausalArrow">→</span>
-            <span className="homeCausalRight">它毛形 <strong>{furDisplay}</strong></span>
+            <span
+              className={`homeCausalArrow${homeStatusGoals.rest && homeStatusGoals.fur ? ' homeCausalArrow-good' : ''}`}
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 15 14" focusable="false">
+                <path d="M2 4 L15.0 7 L2.3 11.6 Z" />
+              </svg>
+            </span>
+            <span className="homeCausalRight">它毛形 <strong className={homeStatusValueClass(homeStatusGoals.fur)}>{furDisplay}</strong></span>
           </button>
 
           <div className="homeCausalRow homeCausalSplitRow">
             <span className="homeCausalIcon">🍽️</span>
-            <button type="button" className="homeCausalTextButton homeCausalLeft" onClick={() => openDailyDetail('food')}>你今日饮食 <strong>{food.healthLabel}</strong></button>
-            <span className="homeCausalArrow">→</span>
-            <button type="button" className="homeCausalTextButton homeCausalRight" onClick={() => openDailyDetail('food')}>它毛色 <strong>{food.label}</strong></button>
+            <button type="button" className="homeCausalTextButton homeCausalLeft" onClick={() => openDailyDetail('food')}>你今日饮食 <strong className={homeStatusValueClass(homeStatusGoals.foodHealth)}>{food.healthLabel}</strong></button>
+            <span
+              className={`homeCausalArrow${homeStatusGoals.foodHealth && homeStatusGoals.furColor ? ' homeCausalArrow-good' : ''}`}
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 15 14" focusable="false">
+                <path d="M2 4 L15.0 7 L2.3 11.6 Z" />
+              </svg>
+            </span>
+            <button type="button" className="homeCausalTextButton homeCausalRight" onClick={() => openDailyDetail('food')}>它毛色 <strong className={homeStatusValueClass(homeStatusGoals.furColor)}>{food.label}</strong></button>
           </div>
 
           <button type="button" className="homeCausalRow" onClick={() => openDailyDetail('mood')}>
@@ -383,9 +435,16 @@ export default function Home({
                 alt={moodFlower.alt}
               />
             </span>
-            <span className="homeCausalLeft">你今日心情 <strong>{mood.statusLabel}</strong></span>
-            <span className="homeCausalArrow">→</span>
-            <span className="homeCausalRight">它眼睛 <strong>{mood.eyes}</strong></span>
+            <span className="homeCausalLeft">你今日心情 <strong className={homeStatusValueClass(homeStatusGoals.mood)}>{mood.statusLabel}</strong></span>
+            <span
+              className={`homeCausalArrow${homeStatusGoals.mood && homeStatusGoals.eyes ? ' homeCausalArrow-good' : ''}`}
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 15 14" focusable="false">
+                <path d="M2 4 L15.0 7 L2.3 11.6 Z" />
+              </svg>
+            </span>
+            <span className="homeCausalRight">它眼睛 <strong className={homeStatusValueClass(homeStatusGoals.eyes)}>{mood.eyes}</strong></span>
           </button>
         </div>
 
@@ -433,7 +492,7 @@ export default function Home({
               <>
                 <h2 style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: 600 }}>今日晚安</h2>
                 <p style={{ margin: 0, lineHeight: 1.75, color: 'rgba(238, 239, 236, 0.84)', fontSize: '14px' }}>
-                  此按钮是为 iPhone 用户设计，在自动获取功能生效之前，点击产生当日离机时间。安卓用户可以忽略此功能。
+                  此按钮是为 iPhone 用户设计，为减少自动数据误差，点击产生当日精确离机时间。安卓用户可以忽略此功能。
                 </p>
                 <button type="button" style={goodNightButtonStyle} onClick={() => chooseGoodNightDevice('android')}>
                   我是安卓用户，忽略

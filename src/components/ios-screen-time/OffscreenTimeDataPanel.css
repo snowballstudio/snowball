@@ -1,0 +1,87 @@
+/*
+ * 离机时间内部源表
+ * 多日期只读开发者表。
+ */
+
+.offscreenTimeDataPage {
+  width: min(1460px, 98vw);
+}
+
+.offscreenTimeDataCard {
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.offscreenTimeTitleLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.offscreenTimeTitleLine h2 {
+  margin: 0;
+}
+
+.offscreenTimeTitleLine .dailyAddDateBtn {
+  width: auto;
+  min-width: 92px;
+  margin: 0;
+}
+
+.offscreenTimeScroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.offscreenTimeHeader,
+.offscreenTimeRow {
+  min-width: 1460px;
+  display: grid;
+  grid-template-columns:
+    112px
+    120px
+    100px
+    146px
+    186px
+    166px
+    172px
+    156px
+    154px;
+  gap: 8px;
+  align-items: center;
+}
+
+.offscreenTimeHeader {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+}
+
+.offscreenTimeRow {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  font-size: 13px;
+}
+
+.offscreenTimeRow > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offscreenTimeEmpty {
+  margin: 20px 10px;
+  color: rgba(223, 231, 244, 0.72);
+}
+
+@media (max-width: 900px) {
+  .offscreenTimeDataPage {
+    width: 100%;
+    max-width: 100%;
+  }
+}

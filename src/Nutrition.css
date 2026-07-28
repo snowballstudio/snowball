@@ -89,8 +89,8 @@
 
     --nutrition-row-height: 35px;
     --nutrition-col-1: 0.58fr;
-    --nutrition-col-2: 0.86fr;
-    --nutrition-col-3: 1.72fr;
+    --nutrition-col-2: 0.73fr;
+    --nutrition-col-3: 1.85fr;
     --nutrition-row-label-size: 12px;
     --nutrition-row-value-size: 12px;
     --nutrition-row-food-size: 11px;
@@ -607,3 +607,23 @@
     background: transparent !important;
   }
 }
+
+/* ======================================================
+   V1.2｜营养表 TOP4 与第三列左移
+   第三列继续单行显示，TOP4 放不下时使用省略号。
+   列宽仍由上方三个变量统一控制。
+   ====================================================== */
+@media (max-width: 900px) {
+  .dailyNutritionPage
+  .nutritionMiniTableThreeCol
+  .dailyMiniRow
+  em {
+    display: block !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+}
+

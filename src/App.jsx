@@ -13,6 +13,19 @@ import { NoticeModal, StatusPair } from './components/SnowballShared'
 import Onboarding from './components/onboarding/Onboarding.jsx'
 import StepAutoTable from './StepAutoTable.jsx'
 import IOSScreenTimeDeveloperPanel from './components/ios-screen-time/IOSScreenTimeDeveloperPanel.jsx'
+import ScreenTimeDataPanel from './components/ios-screen-time/ScreenTimeDataPanel.jsx'
+import OffscreenTimeDataPanel from './components/ios-screen-time/OffscreenTimeDataPanel.jsx'
+import {
+  normalizeIOSScreenTimePayload,
+  offscreenCalculatedTimeForDate,
+  screenSystemTotalMinutesForDate,
+} from './components/ios-screen-time/screenTimeDataService.js'
+import {
+  calculateIOSOffscreenDay,
+  recalculateIOSOffscreenRecord,
+  getIOSScreenTimeStatus,
+  readIOSScreenTimeData,
+} from './components/ios-screen-time/iosScreenTimeService.js'
 import { restoreIOSPlaybackAudioSession } from './components/audio/iosAudioSessionService.js'
 import { ingestStepPayload, stepValueForDate } from './stepDataService.js'
 import { conversationBrainPercent, emptyConversationRecord, readConversationRecord, saveConversationRecord } from './components/call/conversationDataService.js'
@@ -280,6 +293,7 @@ const DEFAULT = {
   upgradeSeenKeys: [],
   records: [],
   screenRecords: [],
+  offscreenRecords: [],
   stepAutoRecords: [],
   messages: [],
   installDate: todayText(),
@@ -428,7 +442,7 @@ function generationInfo(days) {
 
 function bodyInfo(steps) {
   const n = Number(steps || 0)
-  if (n < 5000) return { key: 'thin', label: '消瘦' }
+  if (n < 5000) return { key: 'thin', label: '偏瘦' }
   if (n < 10000) return { key: 'normal', label: '正好' }
   return { key: 'fat', label: '胖嘟' }
 }
@@ -563,14 +577,14 @@ function dailySummaryText(data, sleepOk) {
   const steps = Number(data.yesterdaySteps || 0)
   const stepText =
     steps < 5000
-      ? `你昨天只走了${steps}步，雪粒变瘦。`
+      ? `你昨天只走了${steps}步，雪粒的体型偏瘦。`
       : steps < 10000
         ? `你昨天顺利地走了${steps}步，雪粒长胖了。`
         : `你昨天成功地走了${steps}步，雪粒越来越壮了。`
 
   const sleepText = sleepOk
-    ? `你昨天${data.yesterdaySleepTime || '晚上11点半'}以后就没用手机了，雪粒的毛发保持着蓬松浓密。`
-    : `你昨天晚上11点半以后还用了手机，雪粒的毛发变稀疏了。`
+    ? `你昨天${data.yesterdaySleepTime || '晚上11点半'}以后就没用手机了，雪粒的毛形保持着蓬松浓密。`
+    : `你昨天晚上11点半以后还用了手机，雪粒有些掉毛。`
 
   return `${stepText}${sleepText}`
 }
@@ -727,7 +741,7 @@ function buildDailyMonthGroups(records = []) {
         avgSteps: steps.length ? Math.round(steps.reduce((sum, n) => sum + n, 0) / steps.length) : '—',
         avgOffscreen: offscreens.length ? formatClockFromMinutes(offscreens.reduce((sum, n) => sum + n, 0) / offscreens.length) : '—',
         avgScreen: screens.length ? formatDurationFromMinutes(screens.reduce((sum, n) => sum + n, 0) / screens.length) : '—',
-        topFood: topTags(items, 'food'),
+        topFood: topTags(items, 'food', 8),
         topTaste: topTags(items, 'taste'),
         topMood: topTags(items, 'mood'),
         avgBrain: brains.length ? `${Math.round(brains.reduce((sum, n) => sum + n, 0) / brains.length)}%` : '—',
@@ -763,7 +777,7 @@ const DAILY_FOOD_GROUPS = [
 
 // 营养归类：营养光谱只读这里，后期增删食物主名只改这张表。
 const FOOD_NUTRITION_MAP = {
-  米饭: ['carbs', 'minerals'], 面食: ['carbs', 'minerals'], 面包: ['carbs', 'minerals'], 土豆: ['carbs', 'minerals'], 薯类: ['carbs', 'minerals'], 玉米: ['carbs', 'minerals'], 其它主食: ['carbs', 'minerals'],
+  米饭: ['carbs', '删除'], 面食: ['carbs', '删除'], 面包: ['carbs', 'minerals'], 土豆: ['carbs', 'minerals'], 薯类: ['carbs', 'minerals'], 玉米: ['carbs', 'minerals'], 其它主食: ['carbs', 'minerals'],
   蛋: ['protein', 'minerals'], 奶制品: ['protein', 'minerals'], 豆制品: ['protein', 'minerals'], 鸡鸭鹅: ['protein', 'minerals'], 牛羊肉: ['protein', 'minerals'], 猪肉: ['protein', 'minerals'], 香肠: ['protein', 'minerals'], 鱼虾蟹贝: ['protein', 'minerals'], 其它蛋白: ['protein', 'minerals'],
   白菜: ['vitamins', 'fiber'], 绿叶菜: ['vitamins', 'fiber'], 花椰菜: ['vitamins', 'fiber'], 胡白萝卜: ['vitamins', 'fiber'], 洋葱: ['vitamins', 'fiber'], 芹菜: ['vitamins', 'fiber'], 豆角豆荚: ['vitamins', 'fiber'], 辣椒茄子: ['vitamins', 'fiber'], 草莓: ['vitamins', 'fiber'], 瓜类: ['vitamins', 'fiber'], 苹果: ['vitamins', 'fiber'], 橙橘柚: ['vitamins', 'fiber'], 香蕉: ['vitamins', 'fiber'], 葡萄: ['vitamins', 'fiber'], 桃李杏: ['vitamins', 'fiber'], 其它蔬菜: ['vitamins', 'fiber'], 其它水果: ['vitamins', 'fiber'],
   坚果: ['vitamins', 'minerals'], 海带: ['vitamins', 'minerals'], 紫菜: ['vitamins', 'minerals'], 菌类: ['vitamins', 'minerals'], 粗粮杂粮: ['vitamins', 'minerals'],
@@ -773,8 +787,19 @@ const FOOD_NUTRITION_MAP = {
 const DAILY_FOOD_OPTIONS = DAILY_FOOD_GROUPS.flatMap(group => group.options)
 
 const TASTE_GROUPS = [
-  { key: 'normal', label: '正常口味', options: ['清淡', '常规', '正常口味', '寻常', '生吃', '一般口味', '空气炸锅', '烤箱', '普通','家常','新鲜', '凉拌', '淡', '清炒', '素', '少油', '少盐','糖醋','普通','随意', '家常','平常',  '蒸', '炒',  '清炒', '爆炒', '清蒸', '小炒', '煎', '煮', '水煮', '慢炖', '小火炖', '炖', '炸','炖','红烧','正常'] },
-  { key: 'heavy', label: '过重口味', options: ['重油','油炸', '油淋', '红油', '油焖','烟熏', '油泼','烟', '腊肠', '腊肉',  '腊牛肉', '熏', '油爆','高糖', '蛋糕','巧克力','奶糖','碳酸','咖啡', '可乐', '红牛', '雪碧', '七喜', '泡椒',  '泡菜', '剁椒', '咸鱼', '咸肉', '炭烧', '重辣','培根','咸鸡', '重盐', '盐水', '腌制', '老干妈', '辣酱', '榨菜','腌','辛辣', '油辣子', '烤串', '烤肉', '火锅', '麻辣烫', '麻辣','烧烤'] },
+  { key: 'normal', label: '正常口味', options: ['清淡', '常规', '正常口味', '寻常', '生吃', '一般口味',
+     '空气炸锅', '烤箱', '普通','家常','新鲜', '凉拌', '淡', '清炒', '素', '少油', '少盐',
+     '糖醋','普通','随意', '家常','平常',  '蒸', '炒',  '清炒', '爆炒', 
+      '椒盐',  '蒜蓉',  '耗油', '清蒸', '小炒', '煎', '煮', '水煮', 
+      '慢炖', '小火炖', '炖', '炸','炖','红烧','正常'] },
+
+  { key: 'heavy', label: '过重口味', options: ['重油','油炸', '油淋', '香烟', 
+    '白酒', '红油', '油焖','烟熏', '油泼','烟', '腊肠', '腊肉', 
+    '腊牛肉', '熏', '油爆','高糖', '蛋糕','巧克力','奶糖','碳酸','咖啡', 
+    '可乐', '红牛', '雪碧', '七喜', '泡椒',  '泡菜', '剁椒', '咸鱼', 
+    '咸肉', '炭烧', '重辣','培根','咸鸡', '重盐', '盐水', '腌制', 
+    '老干妈', '辣酱', '榨菜','腌','辛辣', '油辣子', '饭扫光', '剁辣椒', 
+    '烤串', '烤肉', '火锅', '麻辣烫', '麻辣','烧烤'] },
 ]
 
 const TASTE_OPTIONS = TASTE_GROUPS.flatMap(group => group.options)
@@ -782,8 +807,23 @@ const HEALTHY_TASTE_OPTIONS = TASTE_GROUPS.find(group => group.key === 'normal')
 const HEAVY_TASTE_OPTIONS = TASTE_GROUPS.find(group => group.key === 'heavy')?.options || []
 
 const MOOD_GROUPS = [
-  { key: 'positive', label: '正面', options: ['开心', '愉快', '平静', '爽快', '踏实', '可以','好得很', '狂喜', '庆祝', '圆满', '预料之中','收获', '光荣','被关注','被爱','温暖',  '还行', '安心','有面子','尊重','省心','保护','安全感','放心','正常','正能量','鼓舞','笑', '乐', '美', '满意',  '好', '挺好','放松','不错','爽','上头','同情','共情','共鸣','心动','理解','懂得','幸福','高兴','得意','兴奋','喜悦','欣慰','宁静','期待','欢','浪漫','幸','喜','欣','解脱','享受','成就','正面'] },
-  { key: 'negative', label: '负面', options: ['疲惫', '焦虑', '失望','绝望','恐惧','惊吓','没面子','嫉妒','害怕','难过', '坏','生气','糟糕','怒','害怕', '担心','不放心','放心不下','不省心','恶心','心疼','揪心','下头','怜悯','痛心','纠结','反感','讨厌','急','郁闷','紧张', '抑郁', '担忧','低落','不开心', '不好', '内疚','后悔','不高兴', '不满意', '不行', '不甘', '委屈', '烦', '恼', '不咋地', '不得劲', '沉重', '寂寞', '没劲', '无聊', '痛苦','孤独', '悲哀', '压抑', '负面'] },
+  { key: 'positive', label: '正面', options: ['开心', '愉快', '平静', '爽快', '踏实',  '清醒', '还好', 
+    '没问题',  '积极', '松了一口气',  '还可以', '可以','好得很', '狂喜', '搞定', '潇洒', '激动', '淡定', 
+    '庆祝', '圆满', '预料之中','收获', '光荣','自豪','被关注','被爱','温暖',  '感动', '骄傲', 
+    '还行', '安心','荣誉','尊重','省心','保护','安全感','放心','正常','美滋滋','喜滋滋',
+    '正能量','鼓舞','笑', '乐', '美', '满意',  '好', '挺好','放松','兴致','乐趣','雅兴',
+    '不错','爽','上头','同情','共情','共鸣','心动','理解','懂得','幸福','高兴','静好','舒服',
+    '得意','兴奋','喜悦','欣慰','宁静','期待','欢','浪漫','幸','喜','欣','安慰','平和','舒心',
+    '解脱','享受','松弛','稳定','云淡风轻','成就','正面'] },
+
+  { key: 'negative', label: '负面', options: ['疲惫', '焦虑', '失望','绝望','恐惧','强迫','膨胀','脆弱',
+    '惊吓','没面子','嫉妒','消极', '负能量', '忧心', '害怕','难过', '厌倦', '乏味', '不舒服', 
+    '坏','生气','糟糕','怒','害怕', '担心','不放心','放心不下','不安','惭愧','羞愧','不是滋味',
+    '不省心','恶心','心疼','揪心','下头','怜悯','痛心','纠结','抓狂','被气到','被刺激','受刺激','警惕',
+    '反感','讨厌','急','郁闷','紧张', '抑郁', '担忧','低落','疯狂','沦陷','堕落','后悔','懊悔','懊恼',
+    '不开心', '不好', '内疚','后悔','不高兴', '不满意', '没兴致', '没心情', '疲倦', '懒', '懈怠', 
+    '不行', '不甘', '委屈', '烦', '恼', '不咋地', '不得劲', '沉重',  '炫耀',  '虚荣',  '空虚', 
+    '寂寞', '没劲', '无聊', '痛苦','孤独', '悲哀', '压抑', '负面'] },
 ]
 
 const MOOD_OPTIONS = MOOD_GROUPS.flatMap(group => group.options)
@@ -990,6 +1030,7 @@ function normalizeStoredData(raw) {
     upgradeSeenKeys,
     records: records.sort((a, b) => dateKey(b.date).localeCompare(dateKey(a.date))),
     screenRecords: (base.screenRecords || []).map(normalizeScreenRecord),
+    offscreenRecords: Array.isArray(base.offscreenRecords) ? base.offscreenRecords : [],
     stepAutoRecords: Array.isArray(base.stepAutoRecords) ? base.stepAutoRecords : [],
   }
 }
@@ -1075,19 +1116,19 @@ function daysFromYesterdayBackTo(records = [], today = new Date()) {
 
 const FOOD_ALIAS = {
   米饭: ['米饭', '白米饭', '大米', '香米','八宝饭','白米', '炒饭', '蛋炒饭', '八宝粥','腊八粥','血糯米','崇明糕','盖交饭', '糯米饭','糯米饼','糯米粥','糯米','米饼','寿司', '饭团', '粥',  '小米粥', '粽子', '年糕', '松糕','米糕','糍粑',  '皮蛋瘦肉粥',  '菜饭', '稀饭'],
-  面食: ['面食', '面', '面条', '拉面', '牛肉拉面', '螺蛳粉', '肠粉','河粉','炒河粉','炒面','馒头', '包子', '肉包', '菜包', '馍馍', '小笼包','生煎','米线','饺子', '馄饨', '云吞','抄手','云吞面','小馄饨','意大利面','葱油饼','煎饼','意面', '披萨', '汉堡'],
+  面食: ['面食', '面条', '拉面', '牛肉拉面', '螺蛳粉', '肠粉','河粉','炒河粉','炒面','馒头', '包子', '肉包', '菜包', '馍馍', '小笼包','生煎','米线','饺子', '馄饨', '云吞','抄手','云吞面','小馄饨','意大利面','葱油饼','煎饼','意面', '披萨', '汉堡'],
   面包: ['面包', '吐司', '汉堡包', '切片', '菠萝包','肉松包', '白切面包', '三明治', '烤面包'],
-  土豆: ['土豆', '马铃薯', '土豆泥','薯片','薯条'],
+  土豆: ['土豆', '马铃薯', '土豆泥','土豆丝','土豆片'],
   薯类: ['红薯', '烤地瓜','山药','凉薯','芋艿','芋头','烤地瓜','地瓜'],
-  其它主食: ['其它主食', '鸡蛋饼', '饼干', '韭菜盒子', '发糕','窝窝头',  '饼', '鸡蛋灌饼','汤饭','菜饭','皮带面','粉丝','宽粉','粉','鸭血粉丝','肉夹馍','手擀面','手撕饼'],
+  其它主食: ['其它主食', '鸡蛋饼', '饼干',  '馅饼', '水晶饺', '烧卖', '燕饺','韭菜盒子', '发糕','窝窝头',  '饼', '鸡蛋灌饼','汤饭','菜饭','皮带面','粉丝','宽粉','鸭血粉丝','肉夹馍','手擀面','手撕饼'],
   蛋: ['鸡蛋', '蛋', '鸭蛋', '鹌鹑蛋', '蒸鸡蛋','炖蛋','鹌鹑蛋','煮鸡蛋', '水煮蛋', '煎蛋', '炒蛋', '番茄炒蛋', '番茄炒鸡蛋','辣椒炒鸡蛋','煎鸡蛋', '荷包蛋'],
-  奶制品: ['牛奶', '奶', '鲜奶', '酸奶', '起司', '奶酪', '椰奶', '芝士', '乳酪', '奶昔'],
+  奶制品: ['牛奶', '奶', '鲜奶', '酸奶', '起司', '椰奶','豆奶','奶酪', '椰奶', '芝士', '乳酪', '奶昔'],
   豆制品: ['豆浆', '豆奶', '豆腐', '老豆腐', '冻豆腐', '豆腐皮', '豆腐丝', '嫩豆腐', '麻婆豆腐', '家常豆腐', '油豆腐', '豆皮' ],
   鸡鸭鹅: ['鸡鸭鹅', '鸡', '鸡肉', '炸鸡', '鸡汤','鸡胗','母鸡汤','鸡丝','鸡丁','宫保鸡丁','童子鸡','鸡公煲','鸡腿', '鸡翅', '鸡块', '鸡排', '鸡爪', '鸡胸脯', '油鸡', '鸡柳','熏鸡',  '烤鸡', '鸭', '烧鸭','烧鹅','鸭肉', '烤鸭'],
-  牛羊肉: ['牛肉', '煎牛排', '牛排','牛腩','牛肉汤','羊肉汤','罗宋汤','牛骨汤','牛腿肉','牛柳','牛腱子','牛肉丝','牛肉丸','烤牛排','和牛','牛肚','百叶','羊排','烤羊排','羊','羊肉','涮羊肉','牛蹄筋','羊蝎子','肥羊'],
-  猪肉: ['猪肉','蛋饺', '炒肉', '肉','炖肉','红烧肉','狮子头','红烧狮子头','酱肘子','炒肉丝','辣椒炒肉','青椒炒肉','肉片','猪柳', '蹄膀', '猪皮冻', '红烧排骨', '肉汤',  '排骨汤',  '骨头汤',  '蹄膀汤', '猪脚', '猪耳朵', '夫妻肺片', '猪肚', '大排', '小排', '唐排', '回锅肉', '肉丝','肉糜','炒肉','五花肉', '肉丸'],
+  牛羊肉: ['牛肉', '煎牛排', '牛排','牛里脊','牛腩','牛肉汤','羊肉汤','罗宋汤','牛骨汤','牛腿肉','牛柳','牛腱子','牛肉丝','牛肉丸','烤牛排','和牛','牛肚','百叶','羊排','烤羊排','羊','羊肉','涮羊肉','牛蹄筋','羊蝎子','肥羊'],
+  猪肉: ['猪肉','蛋饺', '炒肉', '肉','炖肉','里脊','里脊肉','肋条','梅头','肉末','红烧肉','狮子头','红烧狮子头','酱肘子','炒肉丝','辣椒炒肉','青椒炒肉','肉片','猪柳', '蹄膀', '猪皮冻', '红烧排骨', '肉汤',  '排骨汤',  '骨头汤',  '蹄膀汤', '猪脚', '猪耳朵', '夫妻肺片', '猪肚', '大排', '小排', '唐排', '回锅肉', '肉丝','肉糜','炒肉','五花肉', '肉丸'],
   香肠: ['香肠', '火腿肠', '午餐肉', '腊肠'],
-  鱼虾蟹贝: ['虾蟹', '虾',  '鱼','老虎虾', '基围虾', '香蕉虾', '蛤蜊', '田螺', '淡菜', '鱿鱼', '墨鱼', '小河虾','明虾', '斑节虾',  '琵琶虾', '桂鱼', '鲈鱼', '生蚝', '扇贝', '泥蟹', '青蟹', '蟹', '鱼', '草鱼', '黑鱼', '鳊鱼', '多宝鱼', '鸦片鱼', '大闸蟹', '海鲜', '鲫鱼', '三文鱼','黄鱼', '带鱼', '鳕鱼', '海鱼', '鲍鱼', '胖头鱼', '河鱼',  '活鱼','鱼片', '鱼丸', '水煮鱼', '烤鱼', '小龙虾',  '金枪鱼', '螃蟹', '龙虾'],
+  鱼虾蟹贝: ['虾蟹', '虾', '虾饺',  '鱼','老虎虾', '基围虾', '香蕉虾', '蛤蜊', '田螺', '淡菜', '鱿鱼', '墨鱼', '小河虾','明虾', '斑节虾',  '琵琶虾', '桂鱼', '鲈鱼', '生蚝', '扇贝', '泥蟹', '青蟹', '蟹', '鱼', '草鱼', '黑鱼', '鳊鱼', '多宝鱼', '鸦片鱼', '大闸蟹', '海鲜', '鲫鱼', '三文鱼','黄鱼', '带鱼', '鳕鱼', '海鱼', '鲍鱼', '胖头鱼', '河鱼',  '活鱼','鱼片', '鱼丸', '水煮鱼', '烤鱼', '小龙虾',  '金枪鱼', '螃蟹', '龙虾'],
   其它蛋白: ['其它蛋白'],
   白菜: ['白菜', '黄牙菜','卷心菜','包心白菜','娃娃菜','大白菜'],
   绿叶菜: ['青菜', '小青菜', '油菜', '上海青', '油麦菜', '菠菜', '米苋', '空心菜', '茼蒿', '芥兰', '芥菜', '西洋菜', '香菜', '生菜', '木耳菜', '秋葵', '蒜苔'],
@@ -1098,15 +1139,15 @@ const FOOD_ALIAS = {
   豆角豆荚: ['豆角', '扁豆', '荷兰豆', '四季豆', '毛豆', '长豆角', '刀豆', '豇豆', '蚕豆', '菜豆', '甜豆'],
   辣椒茄子: ['辣椒', '青椒', '红椒','尖椒','螺丝椒','番茄炒蛋','杭椒','灯笼椒','黄椒','菜椒','尖辣椒',,'辣椒炒肉','茄子','番茄','西红柿','柿子'],
   苹果: ['苹果', '嘎啦果', '嘎啦', '青苹果', '红富士', '火箭苹果', '黄焦'],
-  橙橘柚: ['橙子', '橘子', '柚子', '葡萄柚', '手剥橙', '果粒橙', '沙糖桔', '甜橙', '脐橙', '桔子'],
+  橙橘柚: ['橙子', '橘子', '柚子', '血柚', '血橙', '柠檬', '葡萄柚', '手剥橙', '果粒橙', '沙糖桔', '甜橙', '脐橙', '桔子'],
   香蕉: ['香蕉'],
   葡萄: ['葡萄'],
   草莓: ['草莓', '蓝莓', '红莓', '桑葚', '覆盆子', '黑莓'],
   瓜类: ['西瓜', '黄瓜', '南瓜', '冬瓜', '苦瓜', '甜瓜','香瓜','丝瓜','葫芦瓜','菜瓜','伊丽莎白','早春红玉','哈密瓜'],
   桃李杏: ['桃子', '李子', '杏子', '布林', '桃', '李', '杏', '油奈', '毛桃', '黄桃', '白桃', '油桃', '蟠桃', '水蜜桃'],
   其它蔬菜: ['菜叶', '韭菜','蔬菜','笋','冬笋','莴笋','茭白','苦芥菜','香菜','包菜','手撕包菜','素菜'],
-  其它水果: ['水果', '菠萝', '果汁','苹果汁','石榴','石榴汁','橙汁','鲜榨饮料','果粒橙','枇杷','神仙果','无花果','荔枝','牛油果', '车厘子', '热情果', '圣女果','山竹','樱桃','梨', '鸭梨', '杨梅', '香梨', '火龙果', '猕猴桃'],
-  坚果: ['坚果', '核桃', '瓜子',  '花生',  '杏仁',  '火山果',  '巴达木', '榛子', '开心果',  '松仁',  '芝麻',  '南瓜子',  '西瓜子',  '小核桃', '腰果'],
+  其它水果: ['水果', '菠萝', '果汁','苹果汁','石榴','大枣', '枣子', '甜枣', '石榴汁','胡萝卜汁','椰子汁','椰子水','椰子','芒果','芒果汁','橙汁','鲜榨饮料','果粒橙','枇杷','神仙果','无花果','荔枝','牛油果', '车厘子', '热情果', '圣女果','山竹','樱桃','梨', '鸭梨', '杨梅', '香梨', '火龙果', '猕猴桃'],
+  坚果: ['坚果', '核桃', '瓜子',  '花生',  '杏仁', '红枣',  '火山果',  '巴达木', '榛子', '开心果',  '松仁',  '芝麻',  '南瓜子',  '西瓜子',  '小核桃', '腰果'],
   海带: ['海带','海苔','海参','海蜇','海蜇皮'],
   紫菜: ['紫菜'],
   菌类: ['菌类', '蘑菇', '香菇', '杏鲍菇', '鸡腿菇', '木耳', '野山菌', '牛肝菌', '银耳','草菇', '金针菇'],
@@ -1192,8 +1233,12 @@ function classifyDailyTaste(text) {
 }
 
 function classifyDailyMood(text) {
-  const source = String(text || '')
-  const tags = MOOD_OPTIONS.filter(option => source.includes(option))
+  /*
+    心情词按长度从长到短识别，并从剩余文本中移除已经匹配的内容。
+    例如“不高兴”匹配后，不会再识别其中的“高兴”；
+    “不好”匹配后，也不会再识别其中的“好”。
+  */
+  const tags = findWordsNoOverlap(text, MOOD_OPTIONS)
   return uniqueJoin(tags)
 }
 
@@ -1262,6 +1307,20 @@ function renderDailyTagList(text, isPositiveTag, emptyText = '—') {
       {tags.map((tag, index) => (
         <span key={`${tag}-${index}`} className={isPositiveTag(tag) ? 'dailyTagPositive' : ''}>{tag}</span>
       ))}
+    </span>
+  )
+}
+
+function renderDailyFoodText(text, emptyText = '—') {
+  const tags = splitTags(text)
+  const visibleText = tags.length ? tags.join('、') : emptyText
+
+  return (
+    <span
+      className={`dailyFoodText${tags.length ? ' dailyTagPositive' : ''}`}
+      title={String(text || '')}
+    >
+      {visibleText}
     </span>
   )
 }
@@ -1429,18 +1488,42 @@ function nutritionStatsFromRecords(records = [], range = 'today') {
 
   return Object.entries(NUTRITION_TYPES).map(([key, label]) => {
     const foodCounts = {}
+
     const total = scoped.reduce((sum, record) => {
       const foods = splitTags(record.food || record.foodKeyword || record.foodText || '')
 
-      return sum + foods.reduce((count, food) => {
-        const primaryTags = foodPrimaryTagsForTag(food)
-        const matched = primaryTags.some(primary => (FOOD_NUTRITION_MAP[primary] || []).includes(key))
-        if (matched) foodCounts[food] = (foodCounts[food] || 0) + 1
-        return count + (matched ? 1 : 0)
-      }, 0)
+      /*
+        “种类数”与饮食好坏判断使用同一套主名逻辑：
+        先把日常表里的原始食物名映射到 FOOD_ALIAS 主名，
+        再在当天记录内按主名去重。
+        例如“牛奶、酸奶”都归入“奶制品”，只计算为 1 种。
+      */
+      const uniquePrimaryFoods = [
+        ...new Set(foods.flatMap(foodPrimaryTagsForTag)),
+      ]
+
+      const categoryPrimaryCount = uniquePrimaryFoods.filter(primary =>
+        (FOOD_NUTRITION_MAP[primary] || []).includes(key)
+      ).length
+
+      /*
+        第三列仍显示用户在日常表中记录的原始食物名字，
+        只用主名判断它属于哪一类营养；不把显示文字替换为主名。
+      */
+      foods.forEach(food => {
+        const belongsToCategory = foodPrimaryTagsForTag(food).some(primary =>
+          (FOOD_NUTRITION_MAP[primary] || []).includes(key)
+        )
+        if (belongsToCategory) {
+          foodCounts[food] = (foodCounts[food] || 0) + 1
+        }
+      })
+
+      return sum + categoryPrimaryCount
     }, 0)
 
     const value = range === 'today' || range === 'yesterday' ? total : total / divisor
+
     // 彩虹带仅保留三种明确状态：
     // >= 2种：彩色；> 0且< 2种：灰色；= 0：不显示。
     let level = 'empty'
@@ -1449,7 +1532,7 @@ function nutritionStatsFromRecords(records = [], range = 'today') {
 
     const topFoods = Object.entries(foodCounts)
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh-CN'))
-      .slice(0, 3)
+      .slice(0, 4)
       .map(([name]) => name)
       .join('、')
 
@@ -1524,11 +1607,14 @@ function normalizeScreenRecord(item = {}, index = 0) {
     ? existingSnowballName
     : matchedSnowballName
 
+  const recordType = item.recordType === 'screen-total' ? 'screen-total' : 'app'
+
   return {
     ...item,
     id: item.id || `screen-${index}`,
+    recordType,
     date: item.date || todayText(),
-    app,
+    app: recordType === 'screen-total' ? '屏幕时间小计' : app,
     realAppName: realAppName || existingSnowballName,
     packageName: String(item.packageName ?? item.package ?? item.bundleId ?? '').trim(),
     mapped: Boolean(app),
@@ -1539,7 +1625,9 @@ function normalizeScreenRecord(item = {}, index = 0) {
 
 function buildScreenEntries(screenRecords = [], dailyRecords = []) {
   if (!Array.isArray(screenRecords)) return []
-  return screenRecords.map(normalizeScreenRecord)
+  return screenRecords
+    .map(normalizeScreenRecord)
+    .filter(item => item.recordType !== 'screen-total')
 }
 
 function appStatsFromEntries(entries = [], range = 'today', dailyRecords = []) {
@@ -1967,19 +2055,35 @@ function mergeNativeDailyDays(prev, payload = {}, { force = false, liveToday = f
       patch.stepsAutoFetchedAt = Date.now()
       patch.stepsAutoImportedAt = Date.now()
     }
-    if (platform === 'android') {
-      if (mayWriteScreen && Number.isFinite(Number(day?.screenMinutes))) {
-        patch.screenMinutes = Math.max(0, Math.round(Number(day.screenMinutes)))
-        patch.screenAutoFetchedAt = Date.now()
-      }
-      if (mayWriteOffscreen && String(day?.offscreenTime || '').trim()) {
-        patch.offscreenTime = formatClockForDaily(day.offscreenTime)
-        patch.yesterdaySleep = formatClockForDaily(day.offscreenTime)
-        patch.offscreenAutoFetchedAt = Date.now()
-      } else if (force && mayWriteOffscreen) {
-        patch.offscreenTime = ''
-        patch.yesterdaySleep = ''
-      }
+    /*
+      日常表原有字段与更新节奏完全保留：
+      - screenMinutes 从雪粒 APP 详情表的“屏幕时间小计”复制；
+      - offscreenTime / yesterdaySleep 从雪粒离机时间表的
+        “计算离机时间”复制；
+      - 不再直接读取本次手机 payload 的这两个值。
+    */
+    const internalScreenMinutes = screenSystemTotalMinutesForDate(
+      prev.screenRecords || [],
+      dayDate,
+    )
+    const internalOffscreenTime = offscreenCalculatedTimeForDate(
+      prev.offscreenRecords || [],
+      dayDate,
+    )
+
+    if (mayWriteScreen && internalScreenMinutes !== null) {
+      patch.screenMinutes = internalScreenMinutes
+      patch.screenAutoFetchedAt = Date.now()
+    }
+
+    if (mayWriteOffscreen && internalOffscreenTime) {
+      patch.offscreenTime = formatClockForDaily(internalOffscreenTime)
+      patch.yesterdaySleep = formatClockForDaily(internalOffscreenTime)
+      patch.offscreenAutoFetchedAt = Date.now()
+    } else if (force && mayWriteOffscreen) {
+      patch.offscreenTime = ''
+      patch.yesterdaySleep = ''
+      patch.offscreenAutoFetchedAt = Date.now()
     }
 
     records = mergeDailyRecord(records, dayDate, patch)
@@ -2037,6 +2141,27 @@ function mergeNativeScreenDays(prev, payload = {}, { force = false, liveToday = 
     if (exists && !shouldReplace) return
 
     if (shouldReplace) screenRecords = screenRecords.filter(item => dateKey(item?.date) !== dayKey)
+
+    // 手机系统返回的“当日屏幕时间小计”作为 APP 详情表中的只读源记录。
+    // 日常表的 screenMinutes 只从这一行复制；APP 明细小计只用于核查。
+    if (Number.isFinite(Number(day?.screenMinutes))) {
+      screenRecords.push(normalizeScreenRecord({
+        id: `device-${dayKey}-screen-total`,
+        recordType: 'screen-total',
+        date: dayDate,
+        app: '屏幕时间小计',
+        realAppName: '手机系统屏幕时间',
+        packageName: '',
+        mapped: true,
+        minutes: Math.max(0, Math.round(Number(day.screenMinutes))),
+        pickups: 0,
+        autoSource: day?.sourcePlatform === 'ios'
+          ? 'ios-screen-total'
+          : 'device-screen-total',
+        deviceSyncedAt: Date.now(),
+      }))
+    }
+
     const nativeApps = Array.isArray(day?.apps) ? day.apps : []
     nativeApps.forEach((appItem, index) => {
       const realAppName = String(appItem?.realAppName || appItem?.appName || '').trim()
@@ -2050,7 +2175,9 @@ function mergeNativeScreenDays(prev, payload = {}, { force = false, liveToday = 
         mapped: Boolean(app),
         minutes: Math.max(0, Math.round(Number(appItem?.minutes || 0))),
         pickups: Math.max(0, Math.round(Number(appItem?.pickups || 0))),
-        autoSource: 'device',
+        autoSource: day?.sourcePlatform === 'ios'
+          ? 'ios-screen-time'
+          : 'device',
         deviceSyncedAt: Date.now(),
       }))
     })
@@ -2061,6 +2188,74 @@ function mergeNativeScreenDays(prev, payload = {}, { force = false, liveToday = 
     screenRecords,
     lastDeviceSyncAt: Date.now(),
     lastDeviceSyncPlatform: Capacitor.getPlatform(),
+    lastSavedAt: Date.now(),
+  }
+}
+
+function mergeNativeOffscreenDays(prev, payload = {}, { force = false, liveToday = false, refreshDates = [] } = {}) {
+  const days = nativePayloadDays(payload)
+  if (!days.length) return prev
+
+  const refreshDateKeys = new Set(
+    (refreshDates || []).map(item => dateKey(formatDateForDaily(item)))
+  )
+  let offscreenRecords = [...(prev.offscreenRecords || [])]
+
+  days.forEach(day => {
+    const dayDate = formatDateForDaily(day?.date || todayText())
+    const dayKey = dateKey(dayDate)
+    const isToday = dayKey === dateKey(todayText())
+    const existingIndex = offscreenRecords.findIndex(
+      item => dateKey(item?.date) === dayKey
+    )
+    const shouldReplace =
+      force ||
+      (liveToday && isToday) ||
+      refreshDateKeys.has(dayKey) ||
+      existingIndex < 0
+
+    if (!shouldReplace) return
+
+    const old = existingIndex >= 0 ? offscreenRecords[existingIndex] : {}
+    const androidTime = formatClockForDaily(day?.offscreenTime || '')
+
+    const iosResult = calculateIOSOffscreenDay(
+      { ...day, date: dayDate },
+      {
+        goodNightTime: old.iosGoodNightTime || '',
+        cutoffHour: 5,
+        minimumActivitySeconds: 10,
+      },
+    )
+
+    const next = androidTime
+      ? {
+          ...old,
+          id: old.id || `offscreen-${dayKey}`,
+          date: dayDate,
+          calculatedOffscreenTime: androidTime,
+          dataSource: '安卓手机',
+          androidOffscreenTime: androidTime,
+          deviceSyncedAt: Date.now(),
+        }
+      : {
+          ...old,
+          ...(iosResult || {}),
+          id: old.id || `offscreen-${dayKey}`,
+          date: dayDate,
+          iosGoodNightTime: old.iosGoodNightTime || iosResult?.iosGoodNightTime || '',
+          deviceSyncedAt: Date.now(),
+        }
+
+    if (existingIndex >= 0) offscreenRecords[existingIndex] = next
+    else offscreenRecords.push(next)
+  })
+
+  return {
+    ...prev,
+    offscreenRecords: offscreenRecords.sort(
+      (a, b) => dateKey(b.date).localeCompare(dateKey(a.date))
+    ),
     lastSavedAt: Date.now(),
   }
 }
@@ -2181,6 +2376,7 @@ function App() {
   const [pendingDailyDelete, setPendingDailyDelete] = useState(null)
   const [selectedScreenDate, setSelectedScreenDate] = useState(todayText())
   const [screenReturnMode, setScreenReturnMode] = useState('home')
+  const [offscreenReturnMode, setOffscreenReturnMode] = useState('home')
   const [upgradeModal, setUpgradeModal] = useState(null)
   const lastUpgradePromptKeyRef = useRef('')
   const rewardTimerRef = useRef(null)
@@ -2313,15 +2509,24 @@ function App() {
         if (alive && Array.isArray(todayResult?.days) && todayResult.days.length) {
           setData(prev => {
             let next = { ...prev }
-            if (dailySupported || screenSupported) {
-              next = mergeNativeDailyDays(next, todayResult, {
+
+            // 先实时更新雪粒内部源表。
+            if (screenSupported) {
+              next = mergeNativeScreenDays(next, todayResult, {
+                force: false,
+                liveToday: true,
+                refreshDates: [today],
+              })
+              next = mergeNativeOffscreenDays(next, todayResult, {
                 force: false,
                 liveToday: true,
                 refreshDates: [today],
               })
             }
-            if (screenSupported) {
-              next = mergeNativeScreenDays(next, todayResult, {
+
+            // 再按原有“今日随时更新”规则写入日常表原字段。
+            if (dailySupported || screenSupported) {
+              next = mergeNativeDailyDays(next, todayResult, {
                 force: false,
                 liveToday: true,
                 refreshDates: [today],
@@ -2367,7 +2572,7 @@ function App() {
           ? missingHistoricalDates(current.records || [], dailyHistoryStart, yesterday)
           : []
         const screenMissingDates = screenSupported
-          ? missingHistoricalDates(current.records || [], screenHistoryStart, yesterday)
+          ? missingHistoricalDates(current.screenRecords || [], screenHistoryStart, yesterday)
           : []
 
         const dailyRefreshDates = [...new Set([
@@ -2407,31 +2612,33 @@ function App() {
         setData(prev => {
           let next = { ...prev }
 
-          if (dailySupported && (dailyFirstImport || dailyRefreshDates.length)) {
-            next = mergeNativeDailyDays(next, historyResult, {
+          const dailyDates = dailyFirstImport
+            ? dateListInclusive(firstImportStart, yesterday)
+            : dailyRefreshDates
+          const screenDates = screenFirstImport
+            ? dateListInclusive(firstImportStart, yesterday)
+            : screenRefreshDates
+
+          // 先按原有“首次7天、昨日一次、空缺日一次”节奏更新内部源表。
+          if (screenSupported && (screenFirstImport || screenRefreshDates.length)) {
+            next = mergeNativeScreenDays(next, historyResult, {
               force: false,
-              refreshDates: dailyFirstImport
-                ? dateListInclusive(firstImportStart, yesterday)
-                : dailyRefreshDates,
+              refreshDates: screenDates,
+            })
+            next = mergeNativeOffscreenDays(next, historyResult, {
+              force: false,
+              refreshDates: screenDates,
             })
           }
 
-          if (screenSupported && (screenFirstImport || screenRefreshDates.length)) {
-            // 安卓日常表中的屏幕总时长和离机时间仍由 daily merge 写入；
-            // APP 详情表由 screen merge 单独更新。
-            if (!dailySupported) {
-              next = mergeNativeDailyDays(next, historyResult, {
-                force: false,
-                refreshDates: screenFirstImport
-                  ? dateListInclusive(firstImportStart, yesterday)
-                  : screenRefreshDates,
-              })
-            }
-            next = mergeNativeScreenDays(next, historyResult, {
+          // 再按完全相同的日期范围，把内部源表结果复制到日常表原字段。
+          if (
+            (dailySupported && (dailyFirstImport || dailyRefreshDates.length)) ||
+            (screenSupported && (screenFirstImport || screenRefreshDates.length))
+          ) {
+            next = mergeNativeDailyDays(next, historyResult, {
               force: false,
-              refreshDates: screenFirstImport
-                ? dateListInclusive(firstImportStart, yesterday)
-                : screenRefreshDates,
+              refreshDates: [...new Set([...dailyDates, ...screenDates])],
             })
           }
 
@@ -2683,24 +2890,24 @@ function App() {
 
     let summaryLine
     if (allGood) {
-      summaryLine = <>今天整体状态很好，雪粒<StatusWord type="good">活泼漂亮</StatusWord>，已经准备好回应你了。</>
+      summaryLine = <>今天整体状态很好，雪粒<StatusWord type="good">活泼漂亮</StatusWord>。</>
     } else if (goodCount >= 2) {
-      summaryLine = <>今天状态不错，还可以继续改善。雪粒会陪你一起恢复<StatusWord type="good">活泼漂亮</StatusWord>。</>
+      summaryLine = <>今天可以继续改善，雪粒才会到<StatusWord type="good">最佳状态</StatusWord>。</>
     } else {
-      summaryLine = <>今天只是普通的一天。早点休息、多走一走，雪粒明天有机会重新<StatusWord type="good">漂亮起来</StatusWord>。</>
+      summaryLine = <>今天比较普通，早点休息、多走一走，雪粒明天有机会恢复<StatusWord type="good">状态</StatusWord>。</>
     }
 
     let companionLine
     if (allGood && brainReady) {
-      companionLine = <>今天你和雪粒已经互动过了。拍拍它，看看它会不会<StatusWord type="blue">动起来</StatusWord>。</>
+      companionLine = <>今天已经和雪粒通话过了。拍拍它，看看它会不会<StatusWord type="blue">动起来</StatusWord>。</>
     } else if (allGood && hasTalked) {
-      companionLine = <>今天已经和雪粒通话了，再多聊几句，拍拍它，它就可能会<StatusWord type="blue">动起来</StatusWord>。</>
+      companionLine = <>今天再多与雪粒聊几句，拍拍它，它可能会<StatusWord type="blue">动起来</StatusWord>。</>
     } else if (allGood) {
-      companionLine = <>今天还没有和雪粒通话。和它说说今天发生了什么，再拍拍它，说不定会有一点小惊喜。</>
+      companionLine = <>今天还没有和雪粒通话。和它说说话，再拍拍它，说不定会有一点小惊喜。</>
     } else if (hasTalked) {
-      companionLine = <>雪粒已经了解你的饮食和心情了。今晚早点睡、多走走，等状态回升，它就更有机会动起来。</>
+      companionLine = <>雪粒已经了解你的饮食和心情。今晚早点睡、多走走，等状态回升，它就有机会动起来。</>
     } else {
-      companionLine = <>今天还没有和雪粒通话。和它互动，再把生活节作息调整好，明天就有机会看到雪粒活动起来。</>
+      companionLine = <>今天还没有和雪粒通话。和它通话，再把作息调整好，明天就有机会看到雪粒活泼起来。</>
     }
 
     return {
@@ -2716,6 +2923,146 @@ function App() {
       goodCount,
     }
   }, [homeYesterdaySteps, homeYesterdaySleep, sleepOk, todayDailyRecord, food.good, mood.good, currentBrainScore, data.messages])
+
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'ios') return undefined
+
+    let alive = true
+
+    async function syncIOSScreenTime() {
+      try {
+        const authorization = await getIOSScreenTimeStatus()
+        if (authorization?.status !== 'approved') return
+
+        const today = formatDateForDaily(todayText())
+        const yesterday = yesterdayText()
+        const current = (() => {
+          try {
+            const saved = localStorage.getItem(STORAGE_KEY)
+            return saved ? normalizeStoredData(JSON.parse(saved)) : data
+          } catch (_) {
+            return data
+          }
+        })()
+
+        const todayRawPayload = await readIOSScreenTimeData({
+          startDate: today,
+          days: 1,
+          cutoffHour: 5,
+          minimumActivitySeconds: 10,
+        })
+        const todayPayload = normalizeIOSScreenTimePayload(
+          todayRawPayload,
+          snowballAppNameFor,
+        )
+
+        if (alive && todayPayload?.days?.length) {
+          setData(prev => {
+            let next = mergeNativeScreenDays(prev, todayPayload, {
+              liveToday: true,
+              refreshDates: [today],
+            })
+            next = mergeNativeOffscreenDays(next, todayPayload, {
+              liveToday: true,
+              refreshDates: [today],
+            })
+            return mergeNativeDailyDays(next, todayPayload, {
+              liveToday: true,
+              refreshDates: [today],
+            })
+          })
+        }
+
+        const todayKey = dateKey(today)
+        const firstImport = !current.deviceScreenInitialImportDone
+        const yesterdayNeeded = current.lastDeviceScreenAutoSyncDate !== todayKey
+
+        const yesterdayDate = parseLocalDate(yesterday)
+        const firstDate = new Date(
+          yesterdayDate.getFullYear(),
+          yesterdayDate.getMonth(),
+          yesterdayDate.getDate(),
+        )
+        firstDate.setDate(firstDate.getDate() - (DEVICE_INITIAL_IMPORT_DAYS - 1))
+
+        const historyStart = firstImport
+          ? formatDateForDaily(firstDate)
+          : formatDateForDaily(current.installDate || yesterday)
+
+        const missingDates = (() => {
+          const existing = new Set(
+            (current.screenRecords || []).map(row => dateKey(row?.date))
+          )
+          return dateListInclusive(historyStart, yesterday)
+            .filter(date => !existing.has(dateKey(date)))
+        })()
+
+        const refreshDates = [...new Set([
+          ...(firstImport ? dateListInclusive(firstDate, yesterday) : []),
+          ...(yesterdayNeeded ? [yesterday] : []),
+          ...missingDates,
+        ].map(formatDateForDaily))]
+
+        if (!refreshDates.length) return
+
+        const oldest = refreshDates.map(parseLocalDate).sort((a, b) => a - b)[0]
+        const days = Math.max(
+          1,
+          Math.floor((yesterdayDate - oldest) / 86400000) + 1,
+        )
+
+        const historyRawPayload = await readIOSScreenTimeData({
+          startDate: yesterday,
+          days,
+          cutoffHour: 5,
+          minimumActivitySeconds: 10,
+        })
+        const historyPayload = normalizeIOSScreenTimePayload(
+          historyRawPayload,
+          snowballAppNameFor,
+        )
+
+        if (!alive || !historyPayload?.days?.length) return
+
+        setData(prev => {
+          let next = mergeNativeScreenDays(prev, historyPayload, {
+            refreshDates,
+          })
+          next = mergeNativeOffscreenDays(next, historyPayload, {
+            refreshDates,
+          })
+          next = mergeNativeDailyDays(next, historyPayload, {
+            refreshDates,
+          })
+
+          return {
+            ...next,
+            deviceScreenInitialImportDone: true,
+            lastDeviceScreenAutoSyncDate: todayKey,
+            lastDeviceAutoSyncAt: Date.now(),
+          }
+        })
+      } catch (error) {
+        console.warn('苹果屏幕时间正式数据同步失败。', error)
+      }
+    }
+
+    syncIOSScreenTime()
+
+    function handleResume() {
+      syncIOSScreenTime()
+    }
+
+    document.addEventListener('visibilitychange', handleResume)
+    window.addEventListener('focus', handleResume)
+
+    return () => {
+      alive = false
+      document.removeEventListener('visibilitychange', handleResume)
+      window.removeEventListener('focus', handleResume)
+    }
+  }, [])
 
   const dailyMonthGroups = useMemo(() => buildDailyMonthGroups(latestRecords), [latestRecords])
   const dailyMonthKeys = useMemo(() => dailyMonthGroups.map(group => group.key).join('|'), [dailyMonthGroups])
@@ -3119,37 +3466,64 @@ function App() {
     setDailyDateModal(null)
   }
 
-  async function readNativeDate(date) {
-    if (!Capacitor.isNativePlatform()) throw new Error('只有安装到手机后的雪粒才能读取设备数据。')
-    const targetDate = formatDateForDaily(date || yesterdayText())
-    return DeviceData.readDailyData({ days: 1, startDate: targetDate, cutoffHour: 5 })
-  }
-
   async function refreshDailyRecordForDate(recordOrDate) {
-    const targetDate = formatDateForDaily(recordOrDate?.date || recordOrDate || yesterdayText())
-    try {
-      const result = await readNativeDate(targetDate)
-      if (!Array.isArray(result?.days) || !result.days.length) throw new Error('手机没有返回这一天的数据。')
-      setData(prev => mergeNativeDailyDays(prev, result, {
-        force: true,
-        refreshDates: [targetDate],
-      }))
-      setDailyModal({ title: '重新获取完成', text: `${targetDate} 的步数已从雪粒步数自动获取表重新写入；离机时间和屏幕总时长也已用手机数据更新。APP 详情表没有改变。` })
-    } catch (error) {
-      setDailyModal({ title: '重新获取失败', text: String(error?.message || error || '请检查健康和使用情况权限。') })
-    }
-  }
+    const targetDate = formatDateForDaily(
+      recordOrDate?.date || recordOrDate || yesterdayText()
+    )
 
-  async function refreshScreenRecordsForDate(date = selectedScreenDate) {
-    const targetDate = formatDateForDaily(date || yesterdayText())
     try {
-      if (Capacitor.getPlatform() !== 'android') throw new Error('iPhone 暂不支持读取 APP 屏幕详情。')
-      const result = await readNativeDate(targetDate)
-      if (!Array.isArray(result?.days) || !result.days.length) throw new Error('手机没有返回这一天的数据。')
-      setData(prev => mergeNativeScreenDays(prev, result, { force: true }))
-      setDailyModal({ title: 'APP详情已重新获取', text: `${targetDate} 的真实 APP、Package、使用时间和打开次数已更新。日常数据表没有改变。` })
+      setData(prev => {
+        const existing =
+          dailyRecordForDate(prev.records || [], targetDate) ||
+          emptyDailyRecord(targetDate)
+        const stepValue = stepValueForDate(prev.stepAutoRecords || [], targetDate)
+        const screenValue = screenSystemTotalMinutesForDate(
+          prev.screenRecords || [],
+          targetDate,
+        )
+        const offscreenValue = offscreenCalculatedTimeForDate(
+          prev.offscreenRecords || [],
+          targetDate,
+        )
+
+        const patch = {
+          ...(stepValue !== null ? {
+            steps: stepValue,
+            stepsAutoFetchedAt: Date.now(),
+            stepsAutoImportedAt: Date.now(),
+          } : {}),
+          ...(screenValue !== null ? {
+            screenMinutes: screenValue,
+            screenAutoFetchedAt: Date.now(),
+          } : {}),
+          offscreenTime: formatClockForDaily(offscreenValue || ''),
+          yesterdaySleep: formatClockForDaily(offscreenValue || ''),
+          offscreenAutoFetchedAt: Date.now(),
+          healthy: dailyRecordHealthy({
+            ...existing,
+            ...(stepValue !== null ? { steps: stepValue } : {}),
+            ...(screenValue !== null ? { screenMinutes: screenValue } : {}),
+            offscreenTime: formatClockForDaily(offscreenValue || ''),
+            yesterdaySleep: formatClockForDaily(offscreenValue || ''),
+          }),
+        }
+
+        return {
+          ...prev,
+          records: mergeDailyRecord(prev.records || [], targetDate, patch),
+          lastSavedAt: Date.now(),
+        }
+      })
+
+      setDailyModal({
+        title: '重新获取完成',
+        text: `${targetDate} 的步数、屏幕时间和离机时间已从雪粒内部三张自动数据表重新写入日常数据表。`,
+      })
     } catch (error) {
-      setDailyModal({ title: '重新获取失败', text: String(error?.message || error || '请检查使用情况访问权限。') })
+      setDailyModal({
+        title: '重新获取失败',
+        text: String(error?.message || error || '雪粒内部数据暂不可用。'),
+      })
     }
   }
 
@@ -3192,6 +3566,23 @@ function App() {
     }, 180)
   }
 
+  function openOffscreenTable(returnMode = null) {
+    if (!data.developerMode) return
+    const targetReturnMode =
+      returnMode ||
+      (String(dailyMode || '').startsWith('detail-')
+        ? dailyMode
+        : dailyMode || 'home')
+    setOffscreenReturnMode(targetReturnMode)
+    setDailyMode('offscreen-table')
+    setShowDataPanel(true)
+  }
+
+  function saveOffscreenTableAndReturn() {
+    setDailyMode(offscreenReturnMode || 'home')
+    setShowDataPanel(true)
+  }
+
   function validateScreenTotalForDate() {
     // 屏幕总时长与 APP 详情采用不同统计口径，差异不再阻止保存或返回。
     return true
@@ -3226,29 +3617,33 @@ function App() {
     const savedTime = formatClockForDaily(time)
 
     setData(prev => {
-      const current = dailyRecordForDate(prev.records || [], recordDate) || emptyDailyRecord(recordDate)
-      const record = {
-        ...current,
-        id: current.id || dailyRecordIdFor(recordDate),
-        date: recordDate,
-        offscreenTime: savedTime,
-        yesterdaySleep: savedTime,
-        todaySleep: savedTime,
-        offscreenManual: true,
-        editReason: '主页今日晚安',
-        manualSavedAt: Date.now(),
-      }
-      record.healthy = dailyRecordHealthy(record)
+      const rows = [...(prev.offscreenRecords || [])]
+      const rowIndex = rows.findIndex(
+        row => dateKey(row?.date) === dateKey(recordDate)
+      )
+      const current = rowIndex >= 0 ? rows[rowIndex] : {}
 
-      const isCalendarToday = dateKey(recordDate) === dateKey(todayText())
+      /*
+        主页“今日晚安”现在只写入离机时间内部源表。
+        05:00—24:00 写入当日；00:00—05:00 的日期归属与 24+ 小时格式
+        已由 Home.goodNightTimeInfo() 保持原逻辑处理。
+      */
+      const nextRow = recalculateIOSOffscreenRecord({
+        ...current,
+        id: current.id || `offscreen-${dateKey(recordDate)}`,
+        date: recordDate,
+        iosGoodNightTime: savedTime,
+        goodNightSavedAt: Date.now(),
+      })
+
+      if (rowIndex >= 0) rows[rowIndex] = nextRow
+      else rows.push(nextRow)
 
       return {
         ...prev,
-        ...(isCalendarToday ? {
-          yesterdaySleepTime: savedTime,
-          todaySleepTime: savedTime,
-        } : {}),
-        records: mergeDailyRecord(prev.records || [], recordDate, record),
+        offscreenRecords: rows.sort(
+          (a, b) => dateKey(b.date).localeCompare(dateKey(a.date))
+        ),
         lastSavedAt: Date.now(),
       }
     })
@@ -4075,7 +4470,7 @@ const homeFloatingFootprintMemory = ''
     ]
     if (dailyViewTab === 'food') return [
       <span className="dailyMonthName" key="month">{openMark} {group.label}</span>,
-      <span className="dailyWrapCell" key="food" title={group.topFood}>{group.topFood}</span>,
+      <span className="dailyWrapCell dailyMonthFoodTop" key="food" title={group.topFood}>{group.topFood}</span>,
       <span className="dailyWrapCell" key="taste" title={group.topTaste}>{group.topTaste}</span>,
     ]
     if (dailyViewTab === 'mood') return [
@@ -4087,7 +4482,7 @@ const homeFloatingFootprintMemory = ''
       <span key="steps">{group.avgSteps}</span>,
       <span key="offscreen">{group.avgOffscreen}</span>,
       <span key="screen">{group.avgScreen}</span>,
-      <span className="dailyWrapCell" key="food" title={group.topFood}>{group.topFood}</span>,
+      <span className="dailyWrapCell dailyMonthFoodTop" key="food" title={group.topFood}>{group.topFood}</span>,
       <span className="dailyWrapCell" key="taste" title={group.topTaste}>{group.topTaste}</span>,
       <span className="dailyWrapCell" key="mood" title={group.topMood}>{group.topMood}</span>,
       <span key="brain">{group.avgBrain}</span>,
@@ -4098,6 +4493,28 @@ const homeFloatingFootprintMemory = ''
     const stepsValue = Number(r.steps || r.yesterdaySteps || 0)
     const offscreenValue = r.yesterdaySleep || r.offscreenTime || ''
     const offscreenText = formatClockForDaily(offscreenValue) || '—'
+    const offscreenButton = data.developerMode ? (
+      <button
+        className={`dailyScreenLink dailyScreenValuePlain ${dailyValueClass(sleepGood(offscreenValue))}`}
+        type="button"
+        onClick={event => {
+          event.preventDefault()
+          event.stopPropagation()
+          openOffscreenTable('home')
+        }}
+        key="offscreen"
+        aria-label="打开离机时间表"
+      >
+        {offscreenText}
+      </button>
+    ) : (
+      <span
+        key="offscreen"
+        className={dailyValueClass(sleepGood(offscreenValue))}
+      >
+        {offscreenText}
+      </span>
+    )
     const screenMinutes = recordScreenMinutes(r)
     const screenGood = Number.isFinite(screenMinutes) && screenMinutes <= 5 * 60
     const screenButton = data.developerMode ? (
@@ -4119,7 +4536,7 @@ const homeFloatingFootprintMemory = ''
         {formatDurationFromMinutes(screenMinutes)}
       </span>
     )
-    const foodCell = renderDailyTagList(r.food || '', tag => foodPrimaryTagsForTag(tag).length > 0)
+    const foodCell = renderDailyFoodText(r.food || '')
     const tasteCell = renderDailyTagList(r.taste || '', tag => HEALTHY_TASTE_OPTIONS.includes(tag))
     const moodCell = renderDailyTagList(r.mood || '', tag => POSITIVE_MOOD_OPTIONS.includes(tag))
     if (dailyViewTab === 'steps') return [
@@ -4128,7 +4545,7 @@ const homeFloatingFootprintMemory = ''
     ]
     if (dailyViewTab === 'offscreen') return [
       <span key="date">{formatDailyDateWithWeek(r.date)}</span>,
-      <span key="offscreen" className={dailyValueClass(sleepGood(offscreenValue))}>{offscreenText}</span>,
+      offscreenButton,
     ]
     if (dailyViewTab === 'screen') return [
       <span key="date">{formatDailyDateWithWeek(r.date)}</span>,
@@ -4146,7 +4563,7 @@ const homeFloatingFootprintMemory = ''
     return [
       <span key="date">{formatDailyDateWithWeek(r.date)}</span>,
       <span key="steps" className={dailyValueClass(stepsValue >= 5000)}>{stepsValue}</span>,
-      <span key="offscreen" className={dailyValueClass(sleepGood(offscreenValue))}>{offscreenText}</span>,
+      offscreenButton,
       screenButton,
       foodCell,
       tasteCell,
@@ -4154,13 +4571,6 @@ const homeFloatingFootprintMemory = ''
       <span key="brain">{recordBrainPercent(r)}%</span>,
     ]
   }
-
-  const selectedScreenRows = (data.screenRecords || [])
-    .filter(item => dateKey(item?.date) === dateKey(selectedScreenDate))
-  const selectedScreenDetailTotal = selectedScreenRows
-    .reduce((sum, item) => sum + screenMinutesFromRecord(item), 0)
-  const selectedScreenDailyRecord = dailyRecordForDate(data.records || [], selectedScreenDate)
-  const selectedScreenDailyTotal = recordScreenMinutes(selectedScreenDailyRecord || {})
 
   return (
     <main
@@ -4390,47 +4800,25 @@ const homeFloatingFootprintMemory = ''
               onBack={() => setDailyMode('home')}
             />
           ) : dailyMode === 'screen' ? (
-            <div className="dailyPage dailySubPage dailyScreenPage dailyScreenRawPage">
-              <div className="dailyTableCard dailyScreenDetailCard dailyScreenPlainCard" style={{ overflowX: 'auto' }}>
-                <label className="dailyScreenDateLabel">日期
-                  <input value={selectedScreenDate} disabled />
-                </label>
-                <div className="screenDetailScroll">
-                  <div className="screenDetailHeader screenDetailHeaderEdit">
-                    <span>日期</span><span>雪粒APP</span><span>真实APP</span><span>Package</span><span>屏时</span><span>次数</span><span></span>
-                  </div>
-                  <div className="screenDetailBody">
-                  {(data.screenRecords || []).map((row, index) => ({ row, index })).filter(item => dateKey(item.row.date) === dateKey(selectedScreenDate)).map(({ row, index }) => (
-                    <div className="screenDetailRow screenDetailEditRow" key={row.id || index}>
-                      <input value={row.date || selectedScreenDate} disabled />
-                      <select value={row.app || ''} onChange={e => updateScreenRecord(index, 'app', e.target.value)} title={row.app ? '雪粒已识别名称' : '未匹配时可手动选择'}>
-                        <option value="">未匹配</option>
-                        {APP_OPTIONS.map(app => <option key={app} value={app}>{app}</option>)}
-                      </select>
-                      <input value={row.realAppName || ''} onChange={e => updateScreenRecord(index, 'realAppName', e.target.value)} placeholder="手机返回名称" title="输入真实名称后自动匹配雪粒 APP 名" />
-                      <input value={row.packageName || ''} onChange={e => updateScreenRecord(index, 'packageName', e.target.value)} placeholder="Package Name" />
-                      <input value={formatHoursInputFromMinutes(screenMinutesFromRecord(row))} type="number" min="0" step="0.1" onChange={e => updateScreenRecord(index, 'minutes', e.target.value)} placeholder="小时" />
-                      <input value={row.pickups || ''} type="number" min="0" onChange={e => updateScreenRecord(index, 'pickups', e.target.value)} placeholder="次数" />
-                      <button type="button" className="dailyRowDeleteBtn screenRowDeleteBtn" aria-label="删除这条 APP 详情" title="删除" onClick={() => deleteScreenRecord(index)}>×</button>
-                    </div>
-                  ))}
-                    {!(data.screenRecords || []).some(row => dateKey(row.date) === dateKey(selectedScreenDate)) && <p className="screenEmptyTip">这个日期还没有屏幕详情记录。</p>}
-                  </div>
-                </div>
-                <div className="screenDetailSummary">
-                  <span>详情小计 <strong>{formatDurationFromMinutes(selectedScreenDetailTotal)}</strong></span>
-                  <span>日常屏时 <strong>{formatDurationFromMinutes(selectedScreenDailyTotal)}</strong></span>
-                </div>
-                <div className="screenDetailActions">
-                  <button type="button" className="dailyAddDateBtn" onClick={() => refreshScreenRecordsForDate(selectedScreenDate)}>重新获取</button>
-                  <button type="button" className="dailyAddDateBtn" onClick={addScreenRecord}>新增</button>
-                  <button type="button" className="dailyAddDateBtn" onClick={saveScreenDetailAndReturn}>保存返回</button>
-                </div>
-                {data.developerMode && Capacitor.getPlatform() === 'ios' && (
-                  <IOSScreenTimeDeveloperPanel date={selectedScreenDate} />
-                )}
-              </div>
-            </div>
+            <ScreenTimeDataPanel
+              selectedDate={selectedScreenDate}
+              screenRecords={data.screenRecords || []}
+              appOptions={APP_OPTIONS}
+              onUpdateRecord={updateScreenRecord}
+              onDeleteRecord={deleteScreenRecord}
+              onAddRecord={addScreenRecord}
+              onSaveAndReturn={saveScreenDetailAndReturn}
+              developerPanel={
+                data.developerMode && Capacitor.getPlatform() === 'ios'
+                  ? <IOSScreenTimeDeveloperPanel date={selectedScreenDate} />
+                  : null
+              }
+            />
+          ) : dailyMode === 'offscreen-table' ? (
+            <OffscreenTimeDataPanel
+              records={data.offscreenRecords || []}
+              onBack={saveOffscreenTableAndReturn}
+            />
           ) : dailyMode === 'home' ? (
             <div className="dailyPage dailyHomePage">
               <div className="dailyTableNavLine">

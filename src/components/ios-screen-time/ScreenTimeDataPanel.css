@@ -1,0 +1,159 @@
+/*
+ * Screen Time APP 详情表
+ *
+ * 第一阶段保留 App.css 中原有规则作为兼容层，
+ * 本文件集中声明该组件的最终结构，确认无误后再清理 App.css 的旧副本。
+ */
+
+.dailyScreenRawPage {
+  width: min(1180px, 96vw);
+}
+
+.dailyScreenRawPage .dailyScreenPlainCard {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dailyScreenDateLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dailyScreenDateLabel input {
+  min-width: 0;
+}
+
+.screenDetailScroll {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+
+.screenDetailHeaderEdit,
+.screenDetailEditRow {
+  min-width: 980px;
+  display: grid;
+  grid-template-columns:
+    118px
+    130px
+    minmax(150px, 1.15fr)
+    minmax(190px, 1.4fr)
+    88px
+    78px
+    34px;
+  gap: 8px;
+  align-items: center;
+}
+
+.screenDetailHeaderEdit {
+  padding: 9px 10px;
+}
+
+.screenDetailBody {
+  min-width: 0;
+}
+
+.screenDetailEditRow {
+  padding: 8px 10px;
+}
+
+.screenDetailEditRow input,
+.screenDetailEditRow select {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.screenDetailEditRow .dailyRowDeleteBtn,
+.screenDetailEditRow .screenRowDeleteBtn {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+}
+
+.screenEmptyTip {
+  margin: 16px 10px;
+}
+
+.screenDetailSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.screenDetailActions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.screenDetailActions .dailyAddDateBtn {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .dailyScreenRawPage {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .dailyScreenRawPage .dailyScreenPlainCard {
+    width: 100%;
+  }
+
+  .screenDetailSummary {
+    flex-wrap: wrap;
+  }
+}
+
+/* 手机系统屏幕时间小计：独立只读源记录。 */
+.screenSystemTotalRow {
+  background: rgba(241, 223, 177, 0.10);
+}
+
+.screenSystemTotalRow > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.screenSystemTotalRow strong {
+  color: #f1dfb1;
+}
+
+.screenDetailActionsTwo {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* APP 详情表：只让表格区域左右滚动，日期、汇总和底部按钮保持可见。 */
+.dailyScreenRawPage .dailyScreenPlainCard {
+  overflow-x: hidden !important;
+}
+
+.dailyScreenRawPage .screenDetailScroll {
+  overscroll-behavior-x: contain;
+}
+
+@media (max-width: 900px) {
+  .dailyScreenRawPage {
+    overflow-x: hidden;
+  }
+
+  .dailyScreenRawPage .dailyScreenPlainCard {
+    max-width: 100%;
+  }
+
+  .screenDetailScroll {
+    cursor: grab;
+  }
+}
+

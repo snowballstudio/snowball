@@ -1758,7 +1758,7 @@ top: 2px;
 
 :root {
   --home-mood-flower-size: 130%;
-  --home-status-arrow-y: 5px;
+  --home-status-arrow-y: 6px;
 }
 
 :root {
@@ -1851,4 +1851,57 @@ top: 2px;
   .homePage.callMode > .homeBottomNav {
     display: none !important;
   }
+}
+
+/* ======================================================
+   V1.2｜主页状态条件标记
+   数值始终保持原有金色；
+   中间箭头改为圆润空心三角，达标时淡金填充。
+   ====================================================== */
+.homeCausalLeft strong.homeStatusValue-good,
+.homeCausalRight strong.homeStatusValue-good,
+.homeCausalTextButton strong.homeStatusValue-good {
+  color: var(--m-home-gold, #f1dfb1) !important;
+  text-shadow: none !important;
+}
+
+.homeCausalArrow {
+  width: 15px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  color: rgba(241, 223, 177, 0.72);
+  font-size: 0 !important;
+  line-height: 0;
+}
+
+.homeCausalArrow svg {
+  display: block;
+  width: 15px;
+  height: 14px;
+  overflow: visible;
+}
+
+.homeCausalArrow path {
+  fill: transparent;
+  stroke: currentColor;
+  stroke-width: 0.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition:
+    fill 180ms ease,
+    stroke 180ms ease,
+    opacity 180ms ease;
+}
+
+.homeCausalArrow-good {
+  color: rgba(249, 235, 188, 1);
+}
+
+.homeCausalArrow-good path {
+  fill: rgba(241, 235, 188, 0.75);
+}
+
+.homeCausalArrow-good svg{
+    transform:scale(1.05);
 }
