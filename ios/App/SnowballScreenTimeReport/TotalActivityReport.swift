@@ -47,6 +47,10 @@ struct TotalActivityConfiguration: Sendable {
 
 
 private enum SnowballScreenTimeSharedStore {
+    private static func diagnostic(_ message: String) {
+        print("SNOWBALL_SCREEN_TIME: \(message)")
+    }
+
     static let appGroupIdentifier = "group.com.snowball.health"
     static let cacheKey = "snowball.ios-screen-time.days.v1"
 
@@ -56,20 +60,33 @@ private enum SnowballScreenTimeSharedStore {
         applications: [ScreenTimeApplicationRow],
         devices: [ScreenTimeDeviceRow]
     ) {
+        diagnostic("进入 save")
+        diagnostic(
+            "原始数据：totalDuration=\(totalDuration)秒，" +
+            "segments=\(segments.count)，" +
+            "applications=\(applications.count)，" +
+            "devices=\(devices.count)"
+        )
+
         guard let defaults = UserDefaults(
             suiteName: appGroupIdentifier
         ) else {
+            diagnostic("失败：无法打开 App Group \(appGroupIdentifier)")
             return
         }
+
+        diagnostic("成功：已打开 App Group \(appGroupIdentifier)")
 
         guard let reportDate = reportDate(
             segments: segments,
             applications: applications
         ) else {
+            diagnostic("失败：没有可用于确定日期的数据")
             return
         }
 
         let dateText = dateFormatter.string(from: reportDate)
+        diagnostic("报告日期：\(dateText)")
 
         var appBuckets: [String: [String: Any]] = [:]
 
@@ -122,6 +139,10 @@ private enum SnowballScreenTimeSharedStore {
                     == .orderedAscending
             }
 
+        diagnostic(
+            "APP 合并完成：原始 \(applications.count) 条，合并后 \(apps.count) 条"
+        )
+
         let hourlyActivity: [[String: Any]] = segments.map { row in
             var item: [String: Any] = [
                 "hourStart": isoFormatter.string(from: row.start),
@@ -133,9 +154,6 @@ private enum SnowballScreenTimeSharedStore {
             ]
 
             if let firstPickup = row.firstPickup {
-                // DeviceActivity exposes the segment's first pickup.
-                // The JS calculation accepts this field as the pickup
-                // reference for the final active hour.
                 item["lastPickupTime"] =
                     isoFormatter.string(from: firstPickup)
             }
@@ -184,17 +202,25 @@ private enum SnowballScreenTimeSharedStore {
 
         var daysByDate: [String: [String: Any]] = [:]
 
-        if let oldData = defaults.data(forKey: cacheKey),
-           let oldObject = try? JSONSerialization.jsonObject(
+        if let oldData = defaults.data(forKey: cacheKey) {
+            diagnostic("发现旧缓存：\(oldData.count) 字节")
+
+            if let oldObject = try? JSONSerialization.jsonObject(
                 with: oldData
-           ) as? [String: Any],
-           let oldDays = oldObject["days"]
-                as? [[String: Any]] {
-            for oldDay in oldDays {
-                if let oldDate = oldDay["date"] as? String {
-                    daysByDate[oldDate] = oldDay
+            ) as? [String: Any],
+               let oldDays = oldObject["days"]
+                    as? [[String: Any]] {
+                for oldDay in oldDays {
+                    if let oldDate = oldDay["date"] as? String {
+                        daysByDate[oldDate] = oldDay
+                    }
                 }
+                diagnostic("旧缓存解析成功：\(oldDays.count) 天")
+            } else {
+                diagnostic("警告：旧缓存无法解析，将覆盖重建")
             }
+        } else {
+            diagnostic("没有旧缓存，将创建第一条记录")
         }
 
         daysByDate[dateText] = day
@@ -210,15 +236,44 @@ private enum SnowballScreenTimeSharedStore {
             "version": 1
         ]
 
-        guard JSONSerialization.isValidJSONObject(cache),
-              let data = try? JSONSerialization.data(
-                withJSONObject: cache
-              ) else {
+        guard JSONSerialization.isValidJSONObject(cache) else {
+            diagnostic("失败：cache 不是有效 JSON 对象")
             return
         }
 
+        guard let data = try? JSONSerialization.data(
+            withJSONObject: cache
+        ) else {
+            diagnostic("失败：JSON 数据生成失败")
+            return
+        }
+
+        diagnostic(
+            "JSON 生成成功：\(data.count) 字节，\(sortedDays.count) 天"
+        )
+
         defaults.set(data, forKey: cacheKey)
-        defaults.synchronize()
+        let synchronized = defaults.synchronize()
+
+        diagnostic("写入完成：synchronize=\(synchronized)")
+
+        if let readBack = defaults.data(forKey: cacheKey) {
+            diagnostic("立即读回成功：\(readBack.count) 字节")
+
+            if let object = try? JSONSerialization.jsonObject(
+                with: readBack
+            ) as? [String: Any],
+               let readBackDays = object["days"]
+                    as? [[String: Any]] {
+                diagnostic(
+                    "立即读回解析成功：\(readBackDays.count) 天"
+                )
+            } else {
+                diagnostic("失败：立即读回后 JSON 无法解析")
+            }
+        } else {
+            diagnostic("失败：写入后立即读回为空")
+        }
     }
 
     private static func reportDate(
@@ -262,6 +317,7 @@ struct TotalActivityReport: DeviceActivityReportScene {
     func makeConfiguration(
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> TotalActivityConfiguration {
+        print("SNOWBALL_SCREEN_TIME: makeConfiguration 开始")
         var totalDuration: TimeInterval = 0
         var segments: [ScreenTimeSegmentRow] = []
         var applications: [ScreenTimeApplicationRow] = []
@@ -384,12 +440,21 @@ struct TotalActivityReport: DeviceActivityReportScene {
             left.name < right.name
         }
 
+         print(
+            "SNOWBALL_SCREEN_TIME: makeConfiguration 汇总完成，" +
+            "segments=\(segments.count)，" +
+            "applications=\(applications.count)，" +
+            "devices=\(devices.count)"
+        )
+
         SnowballScreenTimeSharedStore.save(
             totalDuration: totalDuration,
             segments: segments,
             applications: applications,
             devices: devices
         )
+
+        print("SNOWBALL_SCREEN_TIME: makeConfiguration 即将返回")
 
         return TotalActivityConfiguration(
             totalDuration: totalDuration,
@@ -399,3 +464,4 @@ struct TotalActivityReport: DeviceActivityReportScene {
         )
     }
 }
+
