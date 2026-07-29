@@ -50,31 +50,18 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         let calendar = Calendar.autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: date)
 
-        // 非整点窗口实验：
-        // 请求当天 00:15 到次日 00:15，并继续使用 hourly。
-        // 报告页会显示 Apple 实际返回的 Segment 起止时间。
-        guard
-            let start = calendar.date(
-                byAdding: .minute,
-                value: 15,
-                to: dayStart
-            ),
-            let nextDayStart = calendar.date(
-                byAdding: .day,
-                value: 1,
-                to: dayStart
-            ),
-            let end = calendar.date(
-                byAdding: .minute,
-                value: 15,
-                to: nextDayStart
-            )
-        else {
-            call.reject("无法计算非整点报告区间。")
+        // 使用标准自然日区间：当天 00:00 到次日 00:00。
+        // 避免非整点 hourly 区间导致系统无法生成报告配置。
+        guard let end = calendar.date(
+            byAdding: .day,
+            value: 1,
+            to: dayStart
+        ) else {
+            call.reject("无法计算屏幕时间报告区间。")
             return
         }
 
-        let interval = DateInterval(start: start, end: end)
+        let interval = DateInterval(start: dayStart, end: end)
         let filter = DeviceActivityFilter(
             segment: .hourly(during: interval),
             users: .all,
@@ -91,7 +78,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             let reportView = IOSScreenTimeReportContainer(
                 context: context,
                 filter: filter,
-                dateText: self.formatSnowballDate(dayStart) + "（请求00:15–次日00:15）",
+                dateText: self.formatSnowballDate(dayStart) + "（00:00–次日00:00）",
                 onClose: {
                     presenter.dismiss(animated: true)
                 }
