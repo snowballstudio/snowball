@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './Footprint.css'
 import { MapArtwork } from './components/SnowballShared'
 
@@ -58,6 +58,184 @@ export default function Footprint({
 }) {
   const [openYears, setOpenYears] = useState({})
   const [popupVisitIndex, setPopupVisitIndex] = useState(0)
+  const [openFuturePlanType, setOpenFuturePlanType] = useState(null)
+  const futurePlanLayerRef = useRef(null)
+  const futurePlanDragRef = useRef(null)
+
+  const futurePlanImages = {
+    world: '/refine/footprintbag_world.png',
+    china: '/refine/footprintbag_china.png',
+    local: '/refine/footprintbag_local.png',
+  }
+
+
+  useEffect(() => {
+    if (!openFuturePlanType) return undefined
+
+    const html = document.documentElement
+    const body = document.body
+    const scrollX = window.scrollX || 0
+    const scrollY = window.scrollY || 0
+    const previous = {
+      htmlOverflow: html.style.overflow,
+      htmlOverscrollBehavior: html.style.overscrollBehavior,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width,
+      bodyOverflow: body.style.overflow,
+      bodyOverscrollBehavior: body.style.overscrollBehavior,
+    }
+
+    html.classList.add('futureFootprintPlanOpen')
+    body.classList.add('futureFootprintPlanOpen')
+    html.style.overflow = 'hidden'
+    html.style.overscrollBehavior = 'none'
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.left = `-${scrollX}px`
+    body.style.right = '0'
+    body.style.width = '100%'
+    body.style.overflow = 'hidden'
+    body.style.overscrollBehavior = 'none'
+
+    return () => {
+      html.classList.remove('futureFootprintPlanOpen')
+      body.classList.remove('futureFootprintPlanOpen')
+      html.style.overflow = previous.htmlOverflow
+      html.style.overscrollBehavior = previous.htmlOverscrollBehavior
+      body.style.position = previous.bodyPosition
+      body.style.top = previous.bodyTop
+      body.style.left = previous.bodyLeft
+      body.style.right = previous.bodyRight
+      body.style.width = previous.bodyWidth
+      body.style.overflow = previous.bodyOverflow
+      body.style.overscrollBehavior = previous.bodyOverscrollBehavior
+      window.scrollTo(scrollX, scrollY)
+    }
+  }, [openFuturePlanType])
+
+  function currentFuturePlan(type = footprintView) {
+    const saved = data?.futureFootprintPlans?.[type] || {}
+    return {
+      text: typeof saved.text === 'string' ? saved.text : '',
+      x: Number.isFinite(Number(saved.x)) ? Number(saved.x) : 88,
+      y: Number.isFinite(Number(saved.y)) ? Number(saved.y) : 84,
+    }
+  }
+
+  function updateFuturePlan(type, patch) {
+    setData(prev => {
+      const existingPlans = prev.futureFootprintPlans || {}
+      const existingPlan = existingPlans[type] || {}
+      return {
+        ...prev,
+        futureFootprintPlans: {
+          ...existingPlans,
+          [type]: {
+            ...existingPlan,
+            ...patch,
+          },
+        },
+        lastSavedAt: Date.now(),
+      }
+    })
+  }
+
+  function beginFuturePlanDrag(event) {
+    if (yearsMode !== 'browseFull') return
+    const layer = futurePlanLayerRef.current
+    const luggage = event.currentTarget.closest('.futureFootprintLuggage')
+    if (!layer || !luggage) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+
+    const layerRect = layer.getBoundingClientRect()
+    const luggageRect = luggage.getBoundingClientRect()
+    futurePlanDragRef.current = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startLeft: luggageRect.left - layerRect.left + luggageRect.width / 2,
+      startTop: luggageRect.top - layerRect.top + luggageRect.height / 2,
+      halfWidth: luggageRect.width / 2,
+      halfHeight: luggageRect.height / 2,
+      layerWidth: layerRect.width,
+      layerHeight: layerRect.height,
+      luggage,
+      moved: false,
+      nextX: null,
+      nextY: null,
+    }
+  }
+
+  function moveFuturePlanDrag(event) {
+    const drag = futurePlanDragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    const dx = event.clientX - drag.startClientX
+    const dy = event.clientY - drag.startClientY
+    if (!drag.moved && Math.hypot(dx, dy) < 8) return
+    drag.moved = true
+
+    const leftPx = Math.min(
+      drag.layerWidth - drag.halfWidth,
+      Math.max(drag.halfWidth, drag.startLeft + dx),
+    )
+    const topPx = Math.min(
+      drag.layerHeight - drag.halfHeight,
+      Math.max(drag.halfHeight, drag.startTop + dy),
+    )
+
+    drag.nextX = Number(((leftPx / drag.layerWidth) * 100).toFixed(2))
+    drag.nextY = Number(((topPx / drag.layerHeight) * 100).toFixed(2))
+    drag.luggage.style.left = `${drag.nextX}%`
+    drag.luggage.style.top = `${drag.nextY}%`
+  }
+
+  function endFuturePlanDrag(event) {
+    const drag = futurePlanDragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (drag.moved && Number.isFinite(drag.nextX) && Number.isFinite(drag.nextY)) {
+      updateFuturePlan(footprintView, { x: drag.nextX, y: drag.nextY })
+    }
+    futurePlanDragRef.current = null
+    event.currentTarget.releasePointerCapture?.(event.pointerId)
+  }
+
+  function handleSaveFootprint() {
+    const year = Number(footprintDraft?.year)
+    const month = Number(footprintDraft?.month)
+    const now = new Date()
+    const currentYearNumber = now.getFullYear()
+    const currentMonthNumber = now.getMonth() + 1
+
+    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+      setFootprintModal({
+        title: '年月不正确',
+        text: '请输入有效的年份和1到12之间的月份。',
+      })
+      return
+    }
+
+    if (year > currentYearNumber || (year === currentYearNumber && month > currentMonthNumber)) {
+      setFootprintModal({
+        title: '这是未来的日期',
+        text: '足迹只记录已经发生的经历。未来计划请点击页面上的行李箱纸条记录。',
+      })
+      return
+    }
+
+    saveFootprint()
+  }
 
   const footprintTypeLabel = type => FOOTPRINT_TYPES[type] || type || '足迹'
 
@@ -270,7 +448,7 @@ export default function Footprint({
               </div>
             </div>
       
-            <div className="footprintMapLayout">
+            <div className="footprintMapLayout" ref={futurePlanLayerRef}>
               <div
                 className={`simpleMap fullMap ${footprintView} ${yearsMode === 'addMap' || yearsMode === 'setHome' ? 'mapEditingActive' : ''} ${yearsMode === 'addMap' && !footprintDraft.place ? 'mapEditingPlaceEmpty' : ''} ${yearsMode === 'setHome' ? 'mapHomePickingActive' : ''}`}
                 onClick={yearsMode === 'setHome' ? pickHomePosition : yearsMode === 'addMap' ? pickFootprintDraftPosition : undefined}
@@ -497,13 +675,13 @@ export default function Footprint({
                     </div>
                   )}
                   <div className="footprintSaveActions">
-                    <button className="saveFootprintBtn" disabled={!placeInputValid || !footprintDraft.place || !footprintDraft.year || !footprintDraft.month} onClick={saveFootprint}>保存</button>
+                    <button className="saveFootprintBtn" disabled={!placeInputValid || !footprintDraft.place || !footprintDraft.year || !footprintDraft.month} onClick={handleSaveFootprint}>保存</button>
                     <button type="button" className="saveFootprintBtn footprintCancelBtn" onClick={cancelFootprintEdit}>放弃</button>
                   </div>
                 </div>
               ) : (
                 <div className="yearsCard footprintEditorCard footprintBrowseListCard">
-                  <p className="footprintTip">点击图钉或下方记录，查看足迹详情。</p>
+                  <p className="footprintTip">点图钉或记录查看详情；拖行李箱拉杆、点纸条写计划。</p>
                   <div className="footprintFullList compactFootprintList">
                     {footprints.filter(item => item.type === footprintView).length === 0 && <p>这里还没有足迹。</p>}
                     {footprints.filter(item => item.type === footprintView).map(item => {
@@ -528,6 +706,48 @@ export default function Footprint({
                   </div>
                 </div>
               )}
+
+              {yearsMode === 'browseFull' && (() => {
+                const plan = currentFuturePlan(footprintView)
+                return (
+                  <div
+                    className={`futureFootprintLuggage futureFootprintLuggage-${footprintView}`}
+                    style={{ left: `${plan.x}%`, top: `${plan.y}%` }}
+                    onClick={event => event.stopPropagation()}
+                    aria-label={`${FOOTPRINT_TYPES[footprintView] || '足迹'}行程计划`}
+                  >
+                    <img
+                      className="futureFootprintLuggageImage"
+                      src={futurePlanImages[footprintView] || futurePlanImages.local}
+                      alt="行李箱"
+                      draggable="false"
+                    />
+                    <span
+                      className="futureFootprintLuggageHandle"
+                      role="button"
+                      tabIndex={0}
+                      aria-label="按住拉杆拖动行李箱"
+                      onPointerDown={beginFuturePlanDrag}
+                      onPointerMove={moveFuturePlanDrag}
+                      onPointerUp={endFuturePlanDrag}
+                      onPointerCancel={endFuturePlanDrag}
+                      onClick={event => event.preventDefault()}
+                    />
+                    <button
+                      type="button"
+                      className="futureFootprintNoteButton"
+                      onPointerDown={event => event.stopPropagation()}
+                      onClick={event => {
+                        event.stopPropagation()
+                        setOpenFuturePlanType(footprintView)
+                      }}
+                      aria-label="打开行程计划便签"
+                    >
+                      <span aria-hidden="true">🗒</span>
+                    </button>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         ) : (
@@ -655,6 +875,44 @@ export default function Footprint({
           </div>
         )}
       </div>
+
+      {openFuturePlanType && (() => {
+        const plan = currentFuturePlan(openFuturePlanType)
+        return (
+          <div
+            className="futureFootprintNoteOverlay"
+            onClick={() => setOpenFuturePlanType(null)}
+            onTouchMove={event => {
+              if (!event.target.closest('.futureFootprintNotePaper textarea')) event.preventDefault()
+            }}
+          >
+            <section
+              className="futureFootprintNotePaper"
+              role="dialog"
+              aria-modal="true"
+              aria-label="行程计划"
+              onClick={event => event.stopPropagation()}
+              onPointerDown={event => event.stopPropagation()}
+              onTouchMove={event => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="futureFootprintNoteClose"
+                onClick={() => setOpenFuturePlanType(null)}
+                aria-label="关闭行程计划"
+              >×</button>
+              <h2>行程计划</h2>
+              <textarea
+                value={plan.text}
+                onChange={event => updateFuturePlan(openFuturePlanType, { text: event.target.value })}
+                placeholder="写下未来想去的地方和计划……"
+                aria-label="未来足迹计划内容"
+                autoFocus
+              />
+            </section>
+          </div>
+        )
+      })()}
 
       {footprintModal && (
         <div className="footprintNoticeOverlay" onClick={() => setFootprintModal(null)}>
