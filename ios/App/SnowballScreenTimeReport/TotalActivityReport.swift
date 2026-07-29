@@ -154,7 +154,7 @@ private enum SnowballScreenTimeSharedStore {
             ]
 
             if let firstPickup = row.firstPickup {
-                item["lastPickupTime"] =
+                item["firstPickupTime"] =
                     isoFormatter.string(from: firstPickup)
             }
 

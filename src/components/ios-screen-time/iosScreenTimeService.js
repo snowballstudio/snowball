@@ -163,27 +163,38 @@ function longestSegmentEndMs(hour = {}, date = '') {
   return longest?.end ?? null
 }
 
-function pickupTimes(day = {}, lastHour = null) {
+function firstPickupInLastActiveHourMs(lastHour = null, date = '') {
+  if (!lastHour) return null
+
+  const explicit = timestampMs(
+    lastHour.firstPickupTime ||
+    lastHour.firstPickup ||
+    // 兼容此前原生缓存误用的字段名；其内容实际也是 segment.firstPickup。
+    lastHour.lastPickupTime,
+    date,
+  )
+  if (explicit !== null) return explicit
+
+  const hourStart = hourStartMs(lastHour, date)
+  const hourEnd = timestampMs(
+    lastHour.hourEnd ||
+    lastHour.endTime ||
+    lastHour.end,
+    date,
+  )
+
   const values = []
+  const hourly = Array.isArray(lastHour.pickups) ? lastHour.pickups : []
 
-  const append = value => {
-    const ms = timestampMs(value, day.date)
-    if (ms !== null) values.push(ms)
-  }
+  hourly.forEach(item => {
+    const ms = timestampMs(item?.time || item?.timestamp || item, date)
+    if (ms === null) return
+    if (hourStart !== null && ms < hourStart) return
+    if (hourEnd !== null && ms >= hourEnd) return
+    values.push(ms)
+  })
 
-  append(day.lastPickupTime)
-  append(day.lastPickUpTime)
-
-  const topLevel = Array.isArray(day.pickups) ? day.pickups : []
-  topLevel.forEach(item => append(item?.time || item?.timestamp || item))
-
-  if (lastHour) {
-    const hourly = Array.isArray(lastHour.pickups) ? lastHour.pickups : []
-    hourly.forEach(item => append(item?.time || item?.timestamp || item))
-    append(lastHour.lastPickupTime)
-  }
-
-  return values.sort((a, b) => a - b)
+  return values.length ? Math.min(...values) : null
 }
 
 function maxTimestamp(values = []) {
@@ -195,7 +206,7 @@ function maxTimestamp(values = []) {
  * 根据苹果小时短报告推算离机时间。
  *
  * 三个候选值取最晚：
- * 1. 最后一次拿起手机时间 + 最后活动小时内总活动时长；
+ * 1. 最后活动小时内第一次拿起手机的时间 + 该小时总活动时长；
  * 2. 最后活动小时内最长活动段的结束时间；
  * 3. 用户点击“今日晚安”的时间。
  *
@@ -236,12 +247,10 @@ export function calculateIOSOffscreenDay(
 
   const lastHour = hours.at(-1) || null
   const lastHourActivitySeconds = lastHour?._activitySeconds || 0
-  const pickups = pickupTimes({ ...day, date }, lastHour)
-    .filter(ms => ms >= start.getTime() && ms < end)
-  const lastPickupMs = pickups.at(-1) ?? null
+  const firstPickupMs = firstPickupInLastActiveHourMs(lastHour, date)
 
-  const pickupPlusActivityMs = lastPickupMs !== null
-    ? lastPickupMs + lastHourActivitySeconds * 1000
+  const pickupPlusActivityMs = firstPickupMs !== null
+    ? firstPickupMs + lastHourActivitySeconds * 1000
     : null
 
   const longestActivityEndMs = lastHour
@@ -261,7 +270,7 @@ export function calculateIOSOffscreenDay(
     dataSource: calculatedMs !== null ? '苹果推算' : '',
     androidOffscreenTime: '',
     iosLastLongActivityEnd: clockForLogicalDay(longestActivityEndMs, date, cutoffHour),
-    iosLastPickupTime: clockForLogicalDay(lastPickupMs, date, cutoffHour),
+    iosLastHourFirstPickupTime: clockForLogicalDay(firstPickupMs, date, cutoffHour),
     iosLastHourActivityMinutes: lastHourActivitySeconds
       ? Math.round((lastHourActivitySeconds / 60) * 10) / 10
       : 0,
@@ -279,11 +288,16 @@ export function recalculateIOSOffscreenRecord(
   } = {},
 ) {
   const date = dateKey(record.date)
-  const lastPickupMs = timestampMs(record.iosLastPickupTime, date)
+  const firstPickupMs = timestampMs(
+    record.iosLastHourFirstPickupTime ||
+    // 兼容旧记录字段；旧字段保存的实际内容也是该小时 firstPickup。
+    record.iosLastPickupTime,
+    date,
+  )
   const activitySeconds = Number(record.iosLastActiveHourSeconds || 0) ||
     Math.round(Number(record.iosLastHourActivityMinutes || 0) * 60)
-  const pickupPlusActivityMs = lastPickupMs !== null && activitySeconds > 0
-    ? lastPickupMs + activitySeconds * 1000
+  const pickupPlusActivityMs = firstPickupMs !== null && activitySeconds > 0
+    ? firstPickupMs + activitySeconds * 1000
     : null
   const longestActivityEndMs = timestampMs(record.iosLastLongActivityEnd, date)
   const goodNightMs = timestampMs(record.iosGoodNightTime, date)
@@ -313,6 +327,7 @@ export function recalculateIOSOffscreenRecord(
  *     hourlyActivity: [{
  *       hourStart,
  *       activitySeconds,
+ *       firstPickupTime,
  *       pickups: [{ time }],
  *       segments: [{ startTime, endTime }]
  *     }]

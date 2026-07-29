@@ -140,7 +140,7 @@
   --fp-map-panel-height: 40vh;
   --fp-map-list-height: calc(100vh - var(--fp-full-top-height) - var(--fp-map-panel-height));
   --fp-map-radius: 0px;
-  --fp-map-border: rgba(45,55,65,0.18);
+  --fp-map-border: rgba(23, 187, 176, 0.18);
   --fp-map-bg-blur: 0px;
   --fp-map-brightness: 0.96;
   --fp-map-saturate: 0.86;
@@ -437,7 +437,7 @@
   z-index: 11 !important;
   padding: 0 !important;
   margin: 0 !important;
-  background: #f7fbff !important;
+  background: #f7f8f7 !important;
   border: none !important;
   border-radius: 12px !important;
   box-shadow: none !important;
@@ -613,7 +613,7 @@
   align-items: center !important;
   padding: 0 12px !important;
   margin: 0 !important;
-  background: #fff !important;
+  background: #fbfaf6 !important;
   border-bottom: 1px solid var(--fp-soft-line) !important;
 }
 
@@ -658,8 +658,23 @@
 
 .footprintTextTabs button.active,
 .footprintTabs button.active {
-  color: var(--fp-text) !important;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.13) !important;
+  color: var(--fp-gold) !important;
+  font-weight: 700 !important;
+  position: relative !important;
+  text-shadow: 0 2px 6px rgba(184,145,67,0.22) !important;
+}
+
+.footprintTextTabs button.active::after,
+.footprintTabs button.active::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 8% !important;
+  right: 8% !important;
+  bottom: -8px !important;
+  height: 2px !important;
+  border-radius: 999px !important;
+  background: rgba(184,145,67,0.55) !important;
+  box-shadow: 0 2px 8px rgba(184,145,67,0.22) !important;
 }
 
 .footprintMapLayout {
@@ -683,7 +698,7 @@
   margin: 0 !important;
   border-radius: var(--fp-map-radius) !important;
   border: none !important;
-  border-bottom: 1px solid var(--fp-map-border) !important;
+  border-bottom: 0px solid var(--fp-map-border) !important;
   overflow: hidden !important;
   background-size: contain !important;
   background-repeat: no-repeat !important;
@@ -893,13 +908,16 @@
 .footprintBrowseListCard {
   display: grid !important;
   grid-template-rows: auto minmax(0, 1fr) auto !important;
+  background: #f7f6f2 !important;
+  border-top: none !important;
 }
 
 .footprintTip {
-  margin: 0 0 8px !important;
-  color: var(--fp-muted) !important;
+  margin: 0 0 10px !important;
+  color: #5b6d60 !important;
   font-size: 12px !important;
-  line-height: 1.4 !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
 }
 
 .footprintFullList.compactFootprintList,
@@ -1832,3 +1850,24 @@ margin-right: 4px !important;
   z-index: 1 !important;
 }
 
+/* ======================================================
+   FOOTPRINT SUBPAGE ATMOSPHERE FINAL
+   放在文件最后，覆盖前面旧的白色记录区规则。
+   只影响世界 / 中国 / 身边三个浏览子页面。
+   ====================================================== */
+.footprintFullPage .footprintBrowseListCard {
+  background: #f8f8f7 !important;
+  border-top: 1px solid rgba(111, 91, 58, 0.10) !important;
+}
+
+.footprintFullPage .footprintBrowseListCard > .footprintTip {
+  color: #4e87a3 !important;
+  font-weight: 450 !important;
+  text-shadow: none !important;
+}
+
+/* 记录列表与每条记录保持透明，让暖米色从整个区域透出来。 */
+.footprintFullPage .footprintBrowseListCard .compactFootprintList,
+.footprintFullPage .footprintBrowseListCard .footprintListRecord {
+  background: transparent !important;
+}

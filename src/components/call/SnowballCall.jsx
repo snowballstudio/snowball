@@ -21,6 +21,11 @@ export default function SnowballCall({
     return /iPad|iPhone|iPod/i.test(ua) || touchMac
   }
 
+  function isAndroidWebView() {
+    if (typeof navigator === 'undefined') return false
+    return /Android/i.test(navigator.userAgent || '')
+  }
+
   function keepMessagesAtBottom() {
     const messages = call.messagesRef.current
     if (!messages) return
@@ -123,6 +128,16 @@ export default function SnowballCall({
       callViewportReadyRef.current = false
     }
   }, [call.callActive])
+
+  useEffect(() => {
+    if (!isAndroidWebView()) return undefined
+
+    document.documentElement.classList.add('snowballAndroidApp')
+
+    return () => {
+      document.documentElement.classList.remove('snowballAndroidApp')
+    }
+  }, [])
 
   useEffect(() => {
     if (!isIOSWebKit() || !window.visualViewport) return undefined
@@ -238,7 +253,7 @@ export default function SnowballCall({
           placeholder={
             call.isListening
               ? '正在听你说话...'
-              : '点录音后说话，也可以直接打字...'
+              : '点录音说话或直接打字'
           }
           aria-label="通话文字输入"
         />

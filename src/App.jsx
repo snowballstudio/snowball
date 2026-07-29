@@ -762,8 +762,8 @@ const NUTRITION_TYPES = {
   protein: '蛋白',
   carbs: '碳水',
   vitamins: '维生素',
-  minerals: '微量元素',
-  fiber: '膳食纤维',
+  minerals: '微量素',
+  fiber: '纤维',
 }
 
 // 输入分类：按照用户日常理解展示。
@@ -780,7 +780,7 @@ const FOOD_NUTRITION_MAP = {
   米饭: ['carbs', '删除'], 面食: ['carbs', '删除'], 面包: ['carbs', 'minerals'], 土豆: ['carbs', 'minerals'], 薯类: ['carbs', 'minerals'], 玉米: ['carbs', 'minerals'], 其它主食: ['carbs', 'minerals'],
   蛋: ['protein', 'minerals'], 奶制品: ['protein', 'minerals'], 豆制品: ['protein', 'minerals'], 鸡鸭鹅: ['protein', 'minerals'], 牛羊肉: ['protein', 'minerals'], 猪肉: ['protein', 'minerals'], 香肠: ['protein', 'minerals'], 鱼虾蟹贝: ['protein', 'minerals'], 其它蛋白: ['protein', 'minerals'],
   白菜: ['vitamins', 'fiber'], 绿叶菜: ['vitamins', 'fiber'], 花椰菜: ['vitamins', 'fiber'], 胡白萝卜: ['vitamins', 'fiber'], 洋葱: ['vitamins', 'fiber'], 芹菜: ['vitamins', 'fiber'], 豆角豆荚: ['vitamins', 'fiber'], 辣椒茄子: ['vitamins', 'fiber'], 草莓: ['vitamins', 'fiber'], 瓜类: ['vitamins', 'fiber'], 苹果: ['vitamins', 'fiber'], 橙橘柚: ['vitamins', 'fiber'], 香蕉: ['vitamins', 'fiber'], 葡萄: ['vitamins', 'fiber'], 桃李杏: ['vitamins', 'fiber'], 其它蔬菜: ['vitamins', 'fiber'], 其它水果: ['vitamins', 'fiber'],
-  坚果: ['vitamins', 'minerals'], 海带: ['vitamins', 'minerals'], 紫菜: ['vitamins', 'minerals'], 菌类: ['vitamins', 'minerals'], 粗粮杂粮: ['vitamins', 'minerals'],
+  坚果: ['fiber', 'minerals'], 海带: ['fiber', 'minerals'], 紫菜: ['fiber', 'minerals'], 菌类: ['fiber', 'minerals'], 粗粮杂粮: ['vitamins', 'minerals'],
   VC: ['vitamins'], VD: ['vitamins'], VE: ['vitamins'], 其它维生素: ['vitamins'], 鱼油: ['minerals'], 钙片: ['minerals'], 铁片: ['minerals'], 其它微量元素: ['minerals'],
 }
 
@@ -789,15 +789,15 @@ const DAILY_FOOD_OPTIONS = DAILY_FOOD_GROUPS.flatMap(group => group.options)
 const TASTE_GROUPS = [
   { key: 'normal', label: '正常口味', options: ['清淡', '常规', '正常口味', '寻常', '生吃', '一般口味',
      '空气炸锅', '烤箱', '普通','家常','新鲜', '凉拌', '淡', '清炒', '素', '少油', '少盐',
-     '糖醋','普通','随意', '家常','平常',  '蒸', '炒',  '清炒', '爆炒', 
+     '糖醋','普通','随意', '家常','平常',  '蒸', '炒',  '清炒', '爆炒', '拌', '酱油', 
       '椒盐',  '蒜蓉',  '耗油', '清蒸', '小炒', '煎', '煮', '水煮', 
       '慢炖', '小火炖', '炖', '炸','炖','红烧','正常'] },
 
-  { key: 'heavy', label: '过重口味', options: ['重油','油炸', '油淋', '香烟', 
-    '白酒', '红油', '油焖','烟熏', '油泼','烟', '腊肠', '腊肉', 
+  { key: 'heavy', label: '过重口味', options: ['重油','油炸', '油淋', '香烟', '奶油', '黄油', '猪油', '牛油', 
+    '白酒', '红油', '油焖','烟熏', '油泼','烟', '腊肠', '腊肉', '湖南菜', '湘菜', '川菜', 
     '腊牛肉', '熏', '油爆','高糖', '蛋糕','巧克力','奶糖','碳酸','咖啡', 
-    '可乐', '红牛', '雪碧', '七喜', '泡椒',  '泡菜', '剁椒', '咸鱼', 
-    '咸肉', '炭烧', '重辣','培根','咸鸡', '重盐', '盐水', '腌制', 
+    '可乐', '红牛', '雪碧', '七喜', '泡椒',  '泡菜', '剁椒', '咸鱼', '酸辣',
+    '咸肉', '炭烧', '重辣','培根','咸鸡', '重盐', '盐水', '腌制', '豆豉','霉豆腐','臭豆腐',
     '老干妈', '辣酱', '榨菜','腌','辛辣', '油辣子', '饭扫光', '剁辣椒', 
     '烤串', '烤肉', '火锅', '麻辣烫', '麻辣','烧烤'] },
 ]
@@ -1542,7 +1542,7 @@ function nutritionStatsFromRecords(records = [], range = 'today') {
       value,
       level,
       display: range === 'today' || range === 'yesterday' ? `${Math.round(value)}种` : `${value.toFixed(1)}种/天`,
-      topFoods: topFoods || '空缺，建议补充',
+      topFoods: topFoods || '不足，有待补充',
       score: Math.min(100, Math.round(value * 34)),
     }
   })

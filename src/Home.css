@@ -1905,3 +1905,44 @@ top: 2px;
 .homeCausalArrow-good svg{
     transform:scale(1.05);
 }
+
+/* ======================================================
+   V1.2｜Android 原生键盘高度修复
+   Android 的 adjustResize 会缩短 WebView 本身；通话页必须跟随
+   “当前 WebView 高度”，不能继续使用可能保持物理屏幕高度的 100dvh。
+   iPhone 不进入本规则，继续沿用现有 visualViewport 逻辑。
+   ====================================================== */
+@media (max-width: 900px) {
+  html.snowballAndroidApp,
+  html.snowballAndroidApp body,
+  html.snowballAndroidApp #root,
+  html.snowballAndroidApp .app,
+  html.snowballAndroidApp .phoneShell {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  html.snowballAndroidApp .phoneShell:has(.homePage.callMode) {
+    position: relative !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  html.snowballAndroidApp .homePage.callMode {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  html.snowballAndroidApp .homePage.callMode > .snowballCallCard {
+    min-height: 0 !important;
+    height: auto !important;
+    flex: 1 1 0 !important;
+  }
+}
+

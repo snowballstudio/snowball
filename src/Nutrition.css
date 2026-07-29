@@ -11,10 +11,10 @@
 @media (max-width: 900px) {
   :root {
     /* 顶部标题 */
-    --nutrition-title-top: 40px;
+    --nutrition-title-top: 32px;
     --nutrition-title-size: 25px;
     --nutrition-back-left: 21px;
-    --nutrition-back-top: 36px;
+    --nutrition-back-top: 28px;
     --nutrition-back-size: 35px;
 
     /* 页面背景 */
@@ -24,7 +24,7 @@
     --nutrition-bg-saturate: 0.95;
 
     /* 彩虹整体 */
-    --nutrition-rainbow-top: 130px;
+    --nutrition-rainbow-top: 122px;
     --nutrition-rainbow-left: 50%;
     --nutrition-rainbow-scale: 0.58;
     --nutrition-rainbow-radius: 999px;
@@ -50,8 +50,8 @@
     --nutrition-arc5-b: 14px;
 
     /* 彩虹左侧标签（已经独立于彩虹缩放，直接按屏幕位置调） */
-    --nutrition-label-left: 34px;
-    --nutrition-label-top: 208px;
+    --nutrition-label-left: 33px;
+    --nutrition-label-top: 199px;
     --nutrition-label-gap: 24px;
     --nutrition-label-size: 10px;
     --nutrition-label-tilt: -8deg;
@@ -98,10 +98,10 @@
     --nutrition-row-food-color: rgba(255,255,255,.84);
 
     /* 猫和动图 */
-    --nutrition-cat-width: 118px;
-    --nutrition-cat-left: 70px;
-    --nutrition-cat-bottom: 13px;
-    --nutrition-motion-width: 118px;
+    --nutrition-cat-width: 102px;
+    --nutrition-cat-left: 62px;
+    --nutrition-cat-bottom: 5px;
+    --nutrition-motion-width: 102px;
   }
 }
 
