@@ -1,9 +1,79 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import './OffscreenTimeDataPanel.css'
+
+const IOSScreenTime = registerPlugin('IOSScreenTime')
 
 export default function OffscreenTimeDataPanel({
   records = [],
   onBack,
 }) {
+  const [iosMonitorRecords, setIosMonitorRecords] = useState([])
+  const [monitorMessage, setMonitorMessage] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadIOSMonitorTest() {
+      if (Capacitor.getPlatform() !== 'ios') return
+
+      try {
+        // 每次进入离机时间表时尝试注册。原生端会先停止旧监控再重建，
+        // 便于本轮真机测试，不需要另做测试按钮。
+        const startResult = await IOSScreenTime.startOffscreenMonitoring()
+        const readResult =
+          await IOSScreenTime.readOffscreenMonitoringData()
+
+        if (cancelled) return
+
+        setIosMonitorRecords(
+          Array.isArray(readResult?.records)
+            ? readResult.records
+            : []
+        )
+        setMonitorMessage(
+          readResult?.message ||
+          startResult?.message ||
+          ''
+        )
+      } catch (error) {
+        if (cancelled) return
+        setMonitorMessage(
+          error?.message ||
+          String(error) ||
+          '苹果离机时间 Monitor 测试失败。'
+        )
+      }
+    }
+
+    loadIOSMonitorTest()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const mergedRecords = useMemo(() => {
+    const rowsByDate = new Map()
+
+    records.forEach((row) => {
+      if (row?.date) rowsByDate.set(row.date, row)
+    })
+
+    iosMonitorRecords.forEach((row) => {
+      if (!row?.date) return
+      const oldRow = rowsByDate.get(row.date) || {}
+      rowsByDate.set(row.date, {
+        ...oldRow,
+        ...row,
+      })
+    })
+
+    return Array.from(rowsByDate.values()).sort((a, b) =>
+      String(b.date || '').localeCompare(String(a.date || ''))
+    )
+  }, [records, iosMonitorRecords])
+
   return (
     <div className="dailyPage dailySubPage offscreenTimeDataPage">
       <div className="dailyTableCard offscreenTimeDataCard">
@@ -17,6 +87,12 @@ export default function OffscreenTimeDataPanel({
             返回
           </button>
         </div>
+
+        {!!monitorMessage && (
+          <p className="offscreenTimeEmpty">
+            苹果测试：{monitorMessage}
+          </p>
+        )}
 
         <div className="offscreenTimeScroll">
           <div className="offscreenTimeHeader">
@@ -32,7 +108,7 @@ export default function OffscreenTimeDataPanel({
           </div>
 
           <div className="offscreenTimeBody">
-            {records.map((row, index) => (
+            {mergedRecords.map((row, index) => (
               <div
                 className="offscreenTimeRow"
                 key={row.id || `${row.date}-${index}`}
@@ -53,9 +129,9 @@ export default function OffscreenTimeDataPanel({
               </div>
             ))}
 
-            {!records.length && (
+            {!mergedRecords.length && (
               <p className="offscreenTimeEmpty">
-                离机时间表目前为空。下一轮接入测试数据后，将按日期自动生成记录。
+                离机时间表目前为空。今晚达到第一档阈值后，再进入本页查看。
               </p>
             )}
           </div>

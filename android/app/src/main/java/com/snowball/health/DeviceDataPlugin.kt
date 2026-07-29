@@ -17,6 +17,9 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Build
 import android.provider.Settings
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
@@ -38,7 +41,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.time.Instant
+import java.time.Duration
 import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.coroutines.resume
@@ -56,6 +61,44 @@ import kotlin.math.max
 class DeviceDataPlugin : Plugin() {
     private val scope = CoroutineScope(Dispatchers.IO)
     private val stepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
+
+    override fun load() {
+        super.load()
+        // 最小测试：插件加载时安排一次本地时间19:30的后台累计步数读取。
+        scheduleStepCounterTestAt1930()
+    }
+
+    private fun scheduleStepCounterTestAt1930() {
+        val zone = ZoneId.systemDefault()
+        val now = ZonedDateTime.now(zone)
+        var target = now.withHour(19).withMinute(30).withSecond(0).withNano(0)
+        if (!target.isAfter(now)) {
+            target = target.plusDays(1)
+        }
+
+        val delayMillis = maxOf(
+            0L,
+            Duration.between(now, target).toMillis()
+        )
+
+        val request = OneTimeWorkRequestBuilder<StepCounterTestWorker>()
+            .setInitialDelay(delayMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+            .addTag(StepCounterTestWorker.WORK_TAG)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            StepCounterTestWorker.UNIQUE_WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
+
+        context.getSharedPreferences(
+            StepCounterTestWorker.PREFS_NAME,
+            Context.MODE_PRIVATE
+        ).edit()
+            .putLong(StepCounterTestWorker.KEY_SCHEDULED_FOR, target.toInstant().toEpochMilli())
+            .apply()
+    }
 
     @PluginMethod
     fun getStatus(call: PluginCall) {
@@ -165,6 +208,38 @@ class DeviceDataPlugin : Plugin() {
 
                 val today = LocalDate.now(zone)
                 val cumulativeSteps = readCurrentCumulativeSteps()
+                val stepTestPrefs = context.getSharedPreferences(
+                    StepCounterTestWorker.PREFS_NAME,
+                    Context.MODE_PRIVATE
+                )
+                val backgroundCumulativeSteps =
+                    if (stepTestPrefs.contains(StepCounterTestWorker.KEY_CUMULATIVE_STEPS)) {
+                        stepTestPrefs.getLong(
+                            StepCounterTestWorker.KEY_CUMULATIVE_STEPS,
+                            0L
+                        )
+                    } else null
+                val backgroundCapturedAt =
+                    stepTestPrefs.getLong(
+                        StepCounterTestWorker.KEY_CAPTURED_AT,
+                        0L
+                    ).takeIf { it > 0L }
+                val backgroundScheduledFor =
+                    stepTestPrefs.getLong(
+                        StepCounterTestWorker.KEY_SCHEDULED_FOR,
+                        0L
+                    ).takeIf { it > 0L }
+                val backgroundStatus =
+                    stepTestPrefs.getString(
+                        StepCounterTestWorker.KEY_STATUS,
+                        ""
+                    ).orEmpty()
+                val backgroundDate = backgroundCapturedAt
+                    ?.let {
+                        Instant.ofEpochMilli(it)
+                            .atZone(zone)
+                            .toLocalDate()
+                    }
 
                 for (offset in 0 until days) {
                     val date = startDate.minusDays(offset.toLong())
@@ -208,6 +283,33 @@ class DeviceDataPlugin : Plugin() {
                         day.put("cumulativeSteps", cumulativeSteps)
                         day.put("stepCounter", cumulativeSteps)
                     }
+
+                    if (backgroundDate == date) {
+                        if (backgroundCumulativeSteps != null) {
+                            day.put(
+                                "backgroundCumulativeSteps",
+                                backgroundCumulativeSteps
+                            )
+                        }
+                        if (backgroundCapturedAt != null) {
+                            day.put(
+                                "backgroundCapturedAt",
+                                backgroundCapturedAt
+                            )
+                        }
+                        day.put(
+                            "backgroundStepTestStatus",
+                            backgroundStatus
+                        )
+                    }
+
+                    if (date == today && backgroundScheduledFor != null) {
+                        day.put(
+                            "backgroundScheduledFor",
+                            backgroundScheduledFor
+                        )
+                    }
+
                     day.put("screenMinutes", usage.screenMinutes)
                     day.put("offscreenTime", usage.offscreenTime)
                     val apps = JSArray()

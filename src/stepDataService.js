@@ -63,7 +63,21 @@ function sourceFieldsForDay(day = {}, platform = '') {
 }
 
 function cumulativeFieldsForDay(day = {}, payload = {}) {
+  const backgroundCumulativeSteps = finiteStep(
+    day.backgroundCumulativeSteps ?? payload.backgroundCumulativeSteps
+  )
+  const backgroundCapturedAt =
+    Number(day.backgroundCapturedAt ?? payload.backgroundCapturedAt) || null
+  const backgroundScheduledFor =
+    Number(day.backgroundScheduledFor ?? payload.backgroundScheduledFor) || null
+  const backgroundStepTestStatus =
+    String(day.backgroundStepTestStatus ?? payload.backgroundStepTestStatus ?? '')
+
   return {
+    backgroundCumulativeSteps,
+    backgroundCapturedAt,
+    backgroundScheduledFor,
+    backgroundStepTestStatus,
     firstCumulativeSteps: finiteStep(
       day.firstCumulativeSteps ??
       day.firstStepCounter ??
@@ -223,6 +237,22 @@ export function ingestStepPayload(existingRecords = [], payload = {}, {
       ),
       firstCumulativeSteps: firstCumulative,
       lastCumulativeSteps: lastCumulative,
+      backgroundCumulativeSteps:
+        cumulative.backgroundCumulativeSteps ??
+        previous.backgroundCumulativeSteps ??
+        null,
+      backgroundCapturedAt:
+        cumulative.backgroundCapturedAt ??
+        previous.backgroundCapturedAt ??
+        null,
+      backgroundScheduledFor:
+        cumulative.backgroundScheduledFor ??
+        previous.backgroundScheduledFor ??
+        null,
+      backgroundStepTestStatus:
+        cumulative.backgroundStepTestStatus ||
+        previous.backgroundStepTestStatus ||
+        '',
       firstCapturedAt: previous.firstCapturedAt || (hasCumulative ? capturedAt : null),
       lastCapturedAt: hasCumulative ? capturedAt : previous.lastCapturedAt || null,
       loginCount: liveToday && hasCumulative

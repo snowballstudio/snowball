@@ -14,7 +14,10 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getAuthorizationStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestAuthorization", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "presentReport", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "readActivityData", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "readActivityData", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startOffscreenMonitoring", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readOffscreenMonitoringData", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stopOffscreenMonitoring", returnType: CAPPluginReturnPromise)
     ]
 
     @objc public func getAuthorizationStatus(_ call: CAPPluginCall) {
@@ -176,6 +179,134 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+
+    // MARK: - Snowball 离机时间 Monitor 测试
+
+    @objc public func startOffscreenMonitoring(_ call: CAPPluginCall) {
+        guard AuthorizationCenter.shared.authorizationStatus == .approved else {
+            call.reject("请先授权苹果屏幕时间。")
+            return
+        }
+
+        let center = DeviceActivityCenter()
+        let activityNames = SnowballOffscreenMonitorDefinition.activityNames
+
+        // 先停止旧监控，避免重复注册或旧事件残留。
+        center.stopMonitoring(activityNames)
+
+        do {
+            try center.startMonitoring(
+                SnowballOffscreenMonitorDefinition.eveningEarly,
+                during: SnowballOffscreenMonitorDefinition.schedule(
+                    startHour: 20,
+                    endHour: 22
+                ),
+                events: SnowballOffscreenMonitorDefinition.events(
+                    prefix: "g1",
+                    intervalMinutes: 10,
+                    maximumMinutes: 120
+                )
+            )
+
+            try center.startMonitoring(
+                SnowballOffscreenMonitorDefinition.eveningLate,
+                during: SnowballOffscreenMonitorDefinition.schedule(
+                    startHour: 22,
+                    endHour: 1
+                ),
+                events: SnowballOffscreenMonitorDefinition.events(
+                    prefix: "g2",
+                    intervalMinutes: 5,
+                    maximumMinutes: 180
+                )
+            )
+
+            try center.startMonitoring(
+                SnowballOffscreenMonitorDefinition.afterMidnight,
+                during: SnowballOffscreenMonitorDefinition.schedule(
+                    startHour: 1,
+                    endHour: 5
+                ),
+                events: SnowballOffscreenMonitorDefinition.events(
+                    prefix: "g3",
+                    intervalMinutes: 10,
+                    maximumMinutes: 240
+                )
+            )
+
+            let defaults = UserDefaults(
+                suiteName: SnowballOffscreenMonitorDefinition.appGroup
+            )
+            defaults?.set(
+                ISO8601DateFormatter().string(from: Date()),
+                forKey: "snowball.offscreen.monitor.registeredAt"
+            )
+
+            call.resolve([
+                "started": true,
+                "activities": activityNames.map(\.rawValue),
+                "eventCount": 72,
+                "message": "已启动三组苹果离机时间监控。"
+            ])
+        } catch {
+            call.reject(
+                "启动苹果离机时间监控失败：\(error.localizedDescription)",
+                nil,
+                error
+            )
+        }
+    }
+
+    @objc public func stopOffscreenMonitoring(_ call: CAPPluginCall) {
+        let center = DeviceActivityCenter()
+        center.stopMonitoring(
+            SnowballOffscreenMonitorDefinition.activityNames
+        )
+        call.resolve([
+            "stopped": true
+        ])
+    }
+
+    @objc public func readOffscreenMonitoringData(_ call: CAPPluginCall) {
+        guard let defaults = UserDefaults(
+            suiteName: SnowballOffscreenMonitorDefinition.appGroup
+        ) else {
+            call.reject("无法打开雪球 App Group 共享容器。")
+            return
+        }
+
+        let registeredAt = defaults.string(
+            forKey: "snowball.offscreen.monitor.registeredAt"
+        ) ?? ""
+
+        guard let data = defaults.data(
+            forKey: SnowballOffscreenMonitorDefinition.cacheKey
+        ) else {
+            call.resolve([
+                "records": [],
+                "registeredAt": registeredAt,
+                "message": "监控已经可以注册，但目前还没有收到阈值回调。"
+            ])
+            return
+        }
+
+        do {
+            let object = try JSONSerialization.jsonObject(with: data)
+            let records = object as? [[String: Any]] ?? []
+            call.resolve([
+                "records": records,
+                "registeredAt": registeredAt,
+                "source": "ios-device-activity-monitor"
+            ])
+        } catch {
+            call.reject(
+                "读取苹果离机时间 Monitor 数据失败：\(error.localizedDescription)",
+                nil,
+                error
+            )
+        }
+    }
+
     private func statusPayload() -> [String: Any] {
         let status = AuthorizationCenter.shared.authorizationStatus
 
@@ -258,5 +389,76 @@ private struct IOSScreenTimeReportContainer: View {
                     }
                 }
         }
+    }
+}
+
+
+private enum SnowballOffscreenMonitorDefinition {
+    static let appGroup = "group.com.snowball.health"
+    static let cacheKey = "snowball.offscreen.monitor.records.v1"
+
+    static let eveningEarly =
+        DeviceActivityName("snowball.offscreen.20-22")
+    static let eveningLate =
+        DeviceActivityName("snowball.offscreen.22-01")
+    static let afterMidnight =
+        DeviceActivityName("snowball.offscreen.01-05")
+
+    static let activityNames: [DeviceActivityName] = [
+        eveningEarly,
+        eveningLate,
+        afterMidnight
+    ]
+
+    static func schedule(
+        startHour: Int,
+        endHour: Int
+    ) -> DeviceActivitySchedule {
+        DeviceActivitySchedule(
+            intervalStart: DateComponents(
+                hour: startHour,
+                minute: 0
+            ),
+            intervalEnd: DateComponents(
+                hour: endHour,
+                minute: 0
+            ),
+            repeats: true
+        )
+    }
+
+    static func events(
+        prefix: String,
+        intervalMinutes: Int,
+        maximumMinutes: Int
+    ) -> [DeviceActivityEvent.Name: DeviceActivityEvent] {
+        var result: [
+            DeviceActivityEvent.Name: DeviceActivityEvent
+        ] = [:]
+
+        guard intervalMinutes > 0,
+              maximumMinutes >= intervalMinutes else {
+            return result
+        }
+
+        for minutes in stride(
+            from: intervalMinutes,
+            through: maximumMinutes,
+            by: intervalMinutes
+        ) {
+            let eventName = DeviceActivityEvent.Name(
+                String(
+                    format: "snowball.offscreen.%@.%03d",
+                    prefix,
+                    minutes
+                )
+            )
+
+            result[eventName] = DeviceActivityEvent(
+                threshold: DateComponents(minute: minutes)
+            )
+        }
+
+        return result
     }
 }
