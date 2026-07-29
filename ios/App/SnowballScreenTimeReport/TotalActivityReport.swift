@@ -2,6 +2,7 @@ import DeviceActivity
 import ExtensionKit
 import Foundation
 import ManagedSettings
+import OSLog
 import SwiftUI
 
 extension DeviceActivityReport.Context {
@@ -47,8 +48,13 @@ struct TotalActivityConfiguration: Sendable {
 
 
 private enum SnowballScreenTimeSharedStore {
+    private static let logger = Logger(
+        subsystem: "com.snowball.health.SnowballScreenTimeReport",
+        category: "SharedStore"
+    )
+
     private static func diagnostic(_ message: String) {
-        print("SNOWBALL_SCREEN_TIME: \(message)")
+        logger.notice("SNOWBALL_SCREEN_TIME: \(message, privacy: .public)")
     }
 
     static let appGroupIdentifier = "group.com.snowball.health"
@@ -76,6 +82,14 @@ private enum SnowballScreenTimeSharedStore {
         }
 
         diagnostic("成功：已打开 App Group \(appGroupIdentifier)")
+
+        if let containerURL = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupIdentifier
+        ) {
+            diagnostic("App Group 容器路径：\(containerURL.path)")
+        } else {
+            diagnostic("失败：系统未返回 App Group 容器路径")
+        }
 
         guard let reportDate = reportDate(
             segments: segments,
@@ -311,13 +325,18 @@ private enum SnowballScreenTimeSharedStore {
 }
 
 struct TotalActivityReport: DeviceActivityReportScene {
+    private static let logger = Logger(
+        subsystem: "com.snowball.health.SnowballScreenTimeReport",
+        category: "ReportScene"
+    )
+
     let context: DeviceActivityReport.Context = .totalActivity
     let content: (TotalActivityConfiguration) -> TotalActivityView
 
     func makeConfiguration(
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> TotalActivityConfiguration {
-        print("SNOWBALL_SCREEN_TIME: makeConfiguration 开始")
+        Self.logger.notice("SNOWBALL_SCREEN_TIME: makeConfiguration 开始")
         var totalDuration: TimeInterval = 0
         var segments: [ScreenTimeSegmentRow] = []
         var applications: [ScreenTimeApplicationRow] = []
@@ -440,11 +459,8 @@ struct TotalActivityReport: DeviceActivityReportScene {
             left.name < right.name
         }
 
-         print(
-            "SNOWBALL_SCREEN_TIME: makeConfiguration 汇总完成，" +
-            "segments=\(segments.count)，" +
-            "applications=\(applications.count)，" +
-            "devices=\(devices.count)"
+        Self.logger.notice(
+            "SNOWBALL_SCREEN_TIME: makeConfiguration 汇总完成，segments=\(segments.count, privacy: .public)，applications=\(applications.count, privacy: .public)，devices=\(devices.count, privacy: .public)"
         )
 
         SnowballScreenTimeSharedStore.save(
@@ -454,7 +470,7 @@ struct TotalActivityReport: DeviceActivityReportScene {
             devices: devices
         )
 
-        print("SNOWBALL_SCREEN_TIME: makeConfiguration 即将返回")
+        Self.logger.notice("SNOWBALL_SCREEN_TIME: makeConfiguration 即将返回")
 
         return TotalActivityConfiguration(
             totalDuration: totalDuration,
