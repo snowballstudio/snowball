@@ -64,40 +64,8 @@ class DeviceDataPlugin : Plugin() {
 
     override fun load() {
         super.load()
-        // 最小测试：插件加载时安排一次本地时间19:30的后台累计步数读取。
-        scheduleStepCounterTestAt1930()
-    }
-
-    private fun scheduleStepCounterTestAt1930() {
-        val zone = ZoneId.systemDefault()
-        val now = ZonedDateTime.now(zone)
-        var target = now.withHour(19).withMinute(30).withSecond(0).withNano(0)
-        if (!target.isAfter(now)) {
-            target = target.plusDays(1)
-        }
-
-        val delayMillis = maxOf(
-            0L,
-            Duration.between(now, target).toMillis()
-        )
-
-        val request = OneTimeWorkRequestBuilder<StepCounterTestWorker>()
-            .setInitialDelay(delayMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
-            .addTag(StepCounterTestWorker.WORK_TAG)
-            .build()
-
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            StepCounterTestWorker.UNIQUE_WORK_NAME,
-            ExistingWorkPolicy.REPLACE,
-            request
-        )
-
-        context.getSharedPreferences(
-            StepCounterTestWorker.PREFS_NAME,
-            Context.MODE_PRIVATE
-        ).edit()
-            .putLong(StepCounterTestWorker.KEY_SCHEDULED_FOR, target.toInstant().toEpochMilli())
-            .apply()
+        // 每次插件加载时确认下一次23:50任务已登记；后台Worker也会自行续排下一天。
+        StepCounterTestWorker.scheduleNext(context)
     }
 
     @PluginMethod
@@ -212,34 +180,6 @@ class DeviceDataPlugin : Plugin() {
                     StepCounterTestWorker.PREFS_NAME,
                     Context.MODE_PRIVATE
                 )
-                val backgroundCumulativeSteps =
-                    if (stepTestPrefs.contains(StepCounterTestWorker.KEY_CUMULATIVE_STEPS)) {
-                        stepTestPrefs.getLong(
-                            StepCounterTestWorker.KEY_CUMULATIVE_STEPS,
-                            0L
-                        )
-                    } else null
-                val backgroundCapturedAt =
-                    stepTestPrefs.getLong(
-                        StepCounterTestWorker.KEY_CAPTURED_AT,
-                        0L
-                    ).takeIf { it > 0L }
-                val backgroundScheduledFor =
-                    stepTestPrefs.getLong(
-                        StepCounterTestWorker.KEY_SCHEDULED_FOR,
-                        0L
-                    ).takeIf { it > 0L }
-                val backgroundStatus =
-                    stepTestPrefs.getString(
-                        StepCounterTestWorker.KEY_STATUS,
-                        ""
-                    ).orEmpty()
-                val backgroundDate = backgroundCapturedAt
-                    ?.let {
-                        Instant.ofEpochMilli(it)
-                            .atZone(zone)
-                            .toLocalDate()
-                    }
 
                 for (offset in 0 until days) {
                     val date = startDate.minusDays(offset.toLong())
@@ -284,31 +224,32 @@ class DeviceDataPlugin : Plugin() {
                         day.put("stepCounter", cumulativeSteps)
                     }
 
-                    if (backgroundDate == date) {
-                        if (backgroundCumulativeSteps != null) {
-                            day.put(
-                                "backgroundCumulativeSteps",
-                                backgroundCumulativeSteps
-                            )
-                        }
-                        if (backgroundCapturedAt != null) {
-                            day.put(
-                                "backgroundCapturedAt",
-                                backgroundCapturedAt
-                            )
-                        }
-                        day.put(
-                            "backgroundStepTestStatus",
-                            backgroundStatus
-                        )
+                    val dateKey = date.toString()
+                    val cumulativeKey = StepCounterTestWorker.dayKey(
+                        StepCounterTestWorker.KEY_CUMULATIVE_STEPS_PREFIX,
+                        dateKey
+                    )
+                    val capturedKey = StepCounterTestWorker.dayKey(
+                        StepCounterTestWorker.KEY_CAPTURED_AT_PREFIX,
+                        dateKey
+                    )
+                    val scheduledKey = StepCounterTestWorker.dayKey(
+                        StepCounterTestWorker.KEY_SCHEDULED_FOR_PREFIX,
+                        dateKey
+                    )
+                    val statusKey = StepCounterTestWorker.dayKey(
+                        StepCounterTestWorker.KEY_STATUS_PREFIX,
+                        dateKey
+                    )
+                    if (stepTestPrefs.contains(cumulativeKey)) {
+                        day.put("backgroundCumulativeSteps", stepTestPrefs.getLong(cumulativeKey, 0L))
                     }
-
-                    if (date == today && backgroundScheduledFor != null) {
-                        day.put(
-                            "backgroundScheduledFor",
-                            backgroundScheduledFor
-                        )
-                    }
+                    val capturedAt = stepTestPrefs.getLong(capturedKey, 0L).takeIf { it > 0L }
+                    if (capturedAt != null) day.put("backgroundCapturedAt", capturedAt)
+                    val scheduledFor = stepTestPrefs.getLong(scheduledKey, 0L).takeIf { it > 0L }
+                    if (scheduledFor != null) day.put("backgroundScheduledFor", scheduledFor)
+                    val status = stepTestPrefs.getString(statusKey, "").orEmpty()
+                    if (status.isNotBlank()) day.put("backgroundStepTestStatus", status)
 
                     day.put("screenMinutes", usage.screenMinutes)
                     day.put("offscreenTime", usage.offscreenTime)

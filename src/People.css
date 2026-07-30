@@ -1827,3 +1827,115 @@
     transform: translateY(0) !important;
   }
 }
+
+
+/* ======================================================
+   V1.1｜人间数据表 Excel 式冻结（平滑版）
+   表头与内容位于同一个原生滚动容器中，由 sticky 直接冻结。
+   不再用 JavaScript 逐帧追踪 scrollLeft，避免左右滚动时表头抖动。
+   ====================================================== */
+.peopleTableCard {
+  display: block !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  isolation: isolate;
+  border-radius: 24px !important;
+}
+
+.peopleTableScroll {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+  padding-top: 0 !important;
+  overscroll-behavior: none !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y !important;
+  scrollbar-gutter: stable;
+}
+
+/* 表头上下冻结；横向移动直接跟随同一滚动层，因此不会滞后或抖动。 */
+.peopleTableHeader {
+  position: sticky !important;
+  top: 0 !important;
+  left: auto !important;
+  z-index: 30 !important;
+  transform: none !important;
+  will-change: auto !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  background: rgba(219, 226, 228, 0.99) !important;
+  border-radius: 8px !important;
+  box-shadow:
+    -7px 0 10px rgba(219, 226, 228, 0.82),
+     7px 0 10px rgba(219, 226, 228, 0.82) !important;
+}
+
+/* 左上角姓名表头同时冻结在顶部和左侧。 */
+.peopleTableHeader > button:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 35 !important;
+  transform: none !important;
+  will-change: auto !important;
+  background: rgba(219, 226, 228, 1) !important;
+  border-radius: 8px 0 0 8px !important;
+  box-shadow: 8px 0 10px rgba(219, 226, 228, 0.95) !important;
+}
+
+/* 最右表头恢复圆角和右侧阴影。 */
+.peopleTableHeader > :last-child {
+  border-radius: 0 8px 8px 0 !important;
+  box-shadow: -2px 0 8px rgba(219, 226, 228, 0.22),
+               8px 0 10px rgba(219, 226, 228, 0.95) !important;
+}
+
+/* 数据区姓名列左右冻结。 */
+.peopleNameCell {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 20 !important;
+  transform: none !important;
+  backface-visibility: hidden;
+  background: rgba(248, 250, 249, 1) !important;
+  box-shadow: 8px 0 10px rgba(245, 248, 247, 0.92) !important;
+}
+
+.peopleTableRow {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+@media (max-width: 900px) {
+  .peopleTableCard {
+    display: block !important;
+  }
+
+  .peopleTableScroll {
+    overscroll-behavior: none !important;
+  }
+}
+
+/* ======================================================
+   V1.1｜人间数据表表头纯色终版
+   保留灰色深底与左右圆角，彻底去除表头下方及左右阴影。
+   ====================================================== */
+.peopleTableHeader {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.peopleTableHeader > button:first-child {
+  border-radius: 8px 0 0 8px !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.peopleTableHeader > :last-child {
+  border-radius: 0 8px 8px 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}

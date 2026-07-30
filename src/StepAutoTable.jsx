@@ -22,7 +22,7 @@ export default function StepAutoTable({ records = [], onBack }) {
         <button type="button" className="stepAutoBack" onClick={onBack} aria-label="返回日常数据">&lt;</button>
         <div>
           <h2>步数自动获取表</h2>
-          <p>只读诊断表。每日来源优先；无每日来源时按累计值推算。</p>
+          <p>只读诊断表。每日来源优先；无每日来源时按23:50累计与登录累计容错推算。</p>
         </div>
       </div>
 
@@ -31,7 +31,7 @@ export default function StepAutoTable({ records = [], onBack }) {
           <div className="stepAutoRow stepAutoHeader">
             <span>日期</span><span>当日步数</span><span>计算来源</span>
             <span>Health Connect</span><span>Huawei Health Kit</span><span>Apple Health Kit</span>
-            <span>首次累计</span><span>末次累计</span><span>19:30后台累计</span><span>后台执行时间/状态</span><span>登录次数</span>
+            <span>首次累计</span><span>末次累计</span><span>23:50自动累计</span><span>后台执行时间/状态</span><span>登录次数</span>
             <span>前次登录日</span><span>累计差值</span><span>说明</span><span>更新时间</span>
           </div>
           {rows.map((row, index) => (

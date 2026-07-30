@@ -681,7 +681,7 @@ export default function Footprint({
                 </div>
               ) : (
                 <div className="yearsCard footprintEditorCard footprintBrowseListCard">
-                  <p className="footprintTip">点图钉或记录查看详情；拖行李箱拉杆、点纸条写计划。</p>
+                  <p className="footprintTip">点图钉或记录看详情；拖行李箱拉杆、点纸条写计划。</p>
                   <div className="footprintFullList compactFootprintList">
                     {footprints.filter(item => item.type === footprintView).length === 0 && <p>这里还没有足迹。</p>}
                     {footprints.filter(item => item.type === footprintView).map(item => {

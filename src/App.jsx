@@ -790,7 +790,7 @@ const TASTE_GROUPS = [
   { key: 'normal', label: '正常口味', options: ['清淡', '常规', '正常口味', '寻常', '生吃', '一般口味',
      '空气炸锅', '烤箱', '普通','家常','新鲜', '凉拌', '淡', '清炒', '素', '少油', '少盐',
      '糖醋','普通','随意', '家常','平常',  '蒸', '炒',  '清炒', '爆炒', '拌', '酱油', 
-      '椒盐',  '蒜蓉',  '耗油', '清蒸', '小炒', '煎', '煮', '水煮', 
+      '椒盐',  '蒜蓉',  '耗油', '清蒸', '小炒', '煎', '煮', '水煮', '烧', '烤', 
       '慢炖', '小火炖', '炖', '炸','炖','红烧','正常'] },
 
   { key: 'heavy', label: '过重口味', options: ['重油','油炸', '油淋', '香烟', '奶油', '黄油', '猪油', '牛油', 
@@ -809,20 +809,22 @@ const HEAVY_TASTE_OPTIONS = TASTE_GROUPS.find(group => group.key === 'heavy')?.o
 const MOOD_GROUPS = [
   { key: 'positive', label: '正面', options: ['开心', '愉快', '平静', '爽快', '踏实',  '清醒', '还好', 
     '没问题',  '积极', '松了一口气',  '还可以', '可以','好得很', '狂喜', '搞定', '潇洒', '激动', '淡定', 
-    '庆祝', '圆满', '预料之中','收获', '光荣','自豪','被关注','被爱','温暖',  '感动', '骄傲', 
-    '还行', '安心','荣誉','尊重','省心','保护','安全感','放心','正常','美滋滋','喜滋滋',
-    '正能量','鼓舞','笑', '乐', '美', '满意',  '好', '挺好','放松','兴致','乐趣','雅兴',
-    '不错','爽','上头','同情','共情','共鸣','心动','理解','懂得','幸福','高兴','静好','舒服',
-    '得意','兴奋','喜悦','欣慰','宁静','期待','欢','浪漫','幸','喜','欣','安慰','平和','舒心',
+    '庆祝', '圆满', '预料之中','收获', '光荣','自豪','被关注','被爱','温暖',  '感动', '骄傲', '顺心',
+    '还行', '安心','荣誉','尊重','省心','保护','安全感','放心','正常','美滋滋','喜滋滋','舒坦','嗨',
+    '正能量','鼓舞','笑', '乐', '美', '满意',  '好', '挺好','放松','兴致','乐趣','雅兴','舒畅','过瘾',
+    '不错','爽','上头','同情','共情','共鸣','心动','理解','懂得','幸福','高兴','静好','舒服','痛快',
+    '还不错','挺好的',
+    '得意','兴奋','喜悦','欣慰','宁静','期待','欢','浪漫','幸','喜','欣','安慰','平和','舒心','畅快',
     '解脱','享受','松弛','稳定','云淡风轻','成就','正面'] },
 
   { key: 'negative', label: '负面', options: ['疲惫', '焦虑', '失望','绝望','恐惧','强迫','膨胀','脆弱',
-    '惊吓','没面子','嫉妒','消极', '负能量', '忧心', '害怕','难过', '厌倦', '乏味', '不舒服', 
-    '坏','生气','糟糕','怒','害怕', '担心','不放心','放心不下','不安','惭愧','羞愧','不是滋味',
+    '惊吓','没面子','嫉妒','消极', '负能量', '忧心', '害怕','难过', '厌倦', '乏味', '不舒服', '不爽', 
+    '坏','生气','糟糕','怒','害怕', '担心','不放心','放心不下','不安','惭愧','羞愧','不是滋味','没成功',
     '不省心','恶心','心疼','揪心','下头','怜悯','痛心','纠结','抓狂','被气到','被刺激','受刺激','警惕',
     '反感','讨厌','急','郁闷','紧张', '抑郁', '担忧','低落','疯狂','沦陷','堕落','后悔','懊悔','懊恼',
-    '不开心', '不好', '内疚','后悔','不高兴', '不满意', '没兴致', '没心情', '疲倦', '懒', '懈怠', 
-    '不行', '不甘', '委屈', '烦', '恼', '不咋地', '不得劲', '沉重',  '炫耀',  '虚荣',  '空虚', 
+    '不开心', '不好', '内疚','后悔','不高兴', '不满意', '没兴致', '没心情', '疲倦', '懒', 
+    '懈怠', '不顺心', '不好意思', '不太好意思', '不太好', '不怎么样', '愧疚', 
+    '不行', '不甘', '委屈', '烦', '恼', '不咋地', '不得劲', '沉重',  '炫耀',  '虚荣',  '空虚', '不顺利',
     '寂寞', '没劲', '无聊', '痛苦','孤独', '悲哀', '压抑', '负面'] },
 ]
 
@@ -1123,10 +1125,16 @@ const FOOD_ALIAS = {
   其它主食: ['其它主食', '鸡蛋饼', '饼干',  '馅饼', '水晶饺', '烧卖', '燕饺','韭菜盒子', '发糕','窝窝头',  '饼', '鸡蛋灌饼','汤饭','菜饭','皮带面','粉丝','宽粉','鸭血粉丝','肉夹馍','手擀面','手撕饼'],
   蛋: ['鸡蛋', '蛋', '鸭蛋', '鹌鹑蛋', '蒸鸡蛋','炖蛋','鹌鹑蛋','煮鸡蛋', '水煮蛋', '煎蛋', '炒蛋', '番茄炒蛋', '番茄炒鸡蛋','辣椒炒鸡蛋','煎鸡蛋', '荷包蛋'],
   奶制品: ['牛奶', '奶', '鲜奶', '酸奶', '起司', '椰奶','豆奶','奶酪', '椰奶', '芝士', '乳酪', '奶昔'],
-  豆制品: ['豆浆', '豆奶', '豆腐', '老豆腐', '冻豆腐', '豆腐皮', '豆腐丝', '嫩豆腐', '麻婆豆腐', '家常豆腐', '油豆腐', '豆皮' ],
+  豆制品: ['豆浆', '豆奶', '豆腐', '老豆腐', '冻豆腐', '豆腐皮', '豆腐脑', '嫩豆腐', '麻婆豆腐', '家常豆腐', 
+    '油豆腐', '豆腐丝','兰花豆腐干','豆腐干','兰花香干','素鸡','素鸭','香干','豆皮' ],
   鸡鸭鹅: ['鸡鸭鹅', '鸡', '鸡肉', '炸鸡', '鸡汤','鸡胗','母鸡汤','鸡丝','鸡丁','宫保鸡丁','童子鸡','鸡公煲','鸡腿', '鸡翅', '鸡块', '鸡排', '鸡爪', '鸡胸脯', '油鸡', '鸡柳','熏鸡',  '烤鸡', '鸭', '烧鸭','烧鹅','鸭肉', '烤鸭'],
-  牛羊肉: ['牛肉', '煎牛排', '牛排','牛里脊','牛腩','牛肉汤','羊肉汤','罗宋汤','牛骨汤','牛腿肉','牛柳','牛腱子','牛肉丝','牛肉丸','烤牛排','和牛','牛肚','百叶','羊排','烤羊排','羊','羊肉','涮羊肉','牛蹄筋','羊蝎子','肥羊'],
-  猪肉: ['猪肉','蛋饺', '炒肉', '肉','炖肉','里脊','里脊肉','肋条','梅头','肉末','红烧肉','狮子头','红烧狮子头','酱肘子','炒肉丝','辣椒炒肉','青椒炒肉','肉片','猪柳', '蹄膀', '猪皮冻', '红烧排骨', '肉汤',  '排骨汤',  '骨头汤',  '蹄膀汤', '猪脚', '猪耳朵', '夫妻肺片', '猪肚', '大排', '小排', '唐排', '回锅肉', '肉丝','肉糜','炒肉','五花肉', '肉丸'],
+  牛羊肉: ['牛肉', '煎牛排', '牛排','牛里脊','牛腩','牛肉干','红烧牛肉','牛肉汤','羊肉汤','罗宋汤','牛骨汤','牛腿肉','牛柳',
+    '牛腱子','牛肉丝','牛肉丸','烤牛排','和牛','牛肚','百叶','羊排','烤羊排','羊','羊肉','涮羊肉',
+    '牛蹄筋','羊蝎子','烤全羊'],
+  猪肉: ['猪肉','蛋饺', '炒肉', '肉','咕咾肉','红烧大排','肉米','炖肉','里脊','里脊肉','肋条','梅头','肉末','红烧肉',
+    '狮子头','红烧狮子头','酱肘子','炒肉丝','辣椒炒肉','青椒炒肉','肉片','猪柳', '蹄膀', '猪皮冻', 
+    '红烧排骨', '肉汤',  '排骨汤',  '骨头汤',  '蹄膀汤', '猪脚', '猪耳朵', '夫妻肺片', '猪肚', '大排', '小排', '唐排',
+     '回锅肉', '肉丝','肉糜','炒肉','五花肉', '肉丸'],
   香肠: ['香肠', '火腿肠', '午餐肉', '腊肠'],
   鱼虾蟹贝: ['虾蟹', '虾', '虾饺',  '鱼','老虎虾', '基围虾', '香蕉虾', '蛤蜊', '田螺', '淡菜', '鱿鱼', '墨鱼', '小河虾','明虾', '斑节虾',  '琵琶虾', '桂鱼', '鲈鱼', '生蚝', '扇贝', '泥蟹', '青蟹', '蟹', '鱼', '草鱼', '黑鱼', '鳊鱼', '多宝鱼', '鸦片鱼', '大闸蟹', '海鲜', '鲫鱼', '三文鱼','黄鱼', '带鱼', '鳕鱼', '海鱼', '鲍鱼', '胖头鱼', '河鱼',  '活鱼','鱼片', '鱼丸', '水煮鱼', '烤鱼', '小龙虾',  '金枪鱼', '螃蟹', '龙虾'],
   其它蛋白: ['其它蛋白'],
@@ -1532,7 +1540,6 @@ function nutritionStatsFromRecords(records = [], range = 'today') {
 
     const topFoods = Object.entries(foodCounts)
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh-CN'))
-      .slice(0, 4)
       .map(([name]) => name)
       .join('、')
 
@@ -1546,25 +1553,6 @@ function nutritionStatsFromRecords(records = [], range = 'today') {
       score: Math.min(100, Math.round(value * 34)),
     }
   })
-}
-
-function nutritionMotionReady(stats = [], tasteStats = {}) {
-  const carb = Number(stats.find(item => item.key === 'carbs')?.value || 0)
-
-  // 除碳水外，其余四类都必须达到彩色标准（每类>=2种）。
-  const othersColorful = stats
-    .filter(item => item.key !== 'carbs')
-    .every(item => Number(item.value || 0) >= 2)
-
-  // 碳水平均种类数必须位于0.5到1之间（含边界）。
-  const carbsBalanced = carb >= 0.5 && carb <= 1
-
-  // 必须有口味记录，并且完全没有偏重口味。
-  const tasteCompletelyNormal =
-    Number(tasteStats?.total || 0) > 0 &&
-    Number(tasteStats?.heavy || 0) === 0
-
-  return othersColorful && carbsBalanced && tasteCompletelyNormal
 }
 
 function nutritionTasteSentence(tasteStats = {}) {
@@ -2362,7 +2350,6 @@ function App() {
   const homeInteractionRunRef = useRef(0)
   const [rewardFrame, setRewardFrame] = useState(1)
   const [dailyModal, setDailyModal] = useState(null)
-  const [nutritionMotionNoticeKey, setNutritionMotionNoticeKey] = useState('')
   const [dailyDateModal, setDailyDateModal] = useState(null)
   const [usageModal, setUsageModal] = useState(false)
   const [versionTapCount, setVersionTapCount] = useState(0)
@@ -3069,7 +3056,6 @@ function App() {
   const dailyScreenEntries = useMemo(() => buildScreenEntries(data.screenRecords || [], latestRecords), [data.screenRecords, latestRecords])
   const dailyNutritionStats = useMemo(() => nutritionStatsFromRecords(latestRecords, dailyStatRange), [latestRecords, dailyStatRange])
   const dailyTasteStats = useMemo(() => tasteStatsFromRecords(latestRecords, dailyStatRange), [latestRecords, dailyStatRange])
-  const nutritionMotionOn = useMemo(() => nutritionMotionReady(dailyNutritionStats, dailyTasteStats), [dailyNutritionStats, dailyTasteStats])
   const nutritionTasteLine = useMemo(() => nutritionTasteSentence(dailyTasteStats), [dailyTasteStats])
   const dailyAppStats = useMemo(() => appStatsFromEntries(dailyScreenEntries, dailyStatRange, latestRecords), [dailyScreenEntries, dailyStatRange, latestRecords])
   const dailyTrainRows = useMemo(() => (dailyAppStats || [])
@@ -3096,17 +3082,6 @@ function App() {
     })
     setExpandedDailyMonths(next)
   }, [showDataPanel, dailyMode, dailyViewTab, dailyMonthKeys])
-
-  useEffect(() => {
-    if (dailyMode !== 'nutrition' || !nutritionMotionOn) return
-    const key = `${dailyStatRange}-${dailyNutritionStats.map(item => Math.round(Number(item.value || 0) * 10)).join('-')}-${Math.round(Number(dailyTasteStats.heavyRatio || 0) * 100)}`
-    if (nutritionMotionNoticeKey === key) return
-    setNutritionMotionNoticeKey(key)
-    setDailyModal({
-      title: '动态',
-      text: '你的饮食种类丰富、碳水类较少，雪粒变得活泼。',
-    })
-  }, [dailyMode, nutritionMotionOn, dailyStatRange, dailyNutritionStats, dailyTasteStats, nutritionMotionNoticeKey])
 
   useEffect(() => {
     if (dailyMode !== 'train') return
@@ -4763,12 +4738,14 @@ const homeFloatingFootprintMemory = ''
               PngSequence={PngSequence}
               dailyTasteStats={dailyTasteStats}
               dailyNutritionStats={dailyNutritionStats}
-              nutritionMotionOn={nutritionMotionOn}
               nutritionTasteLine={nutritionTasteLine}
               dailyStatRange={dailyStatRange}
               setDailyStatRange={setDailyStatRange}
               dailyRangeTabs={DAILY_RANGE_TABS}
-              openDailyDetail={openDailyDetail}
+              records={latestRecords}
+              foodAliasMap={FOOD_ALIAS}
+              foodNutritionMap={FOOD_NUTRITION_MAP}
+              heavyTasteOptions={HEAVY_TASTE_OPTIONS}
               onBackHome={() => setShowDataPanel(false)}
             />
           ) : dailyMode === 'train' ? (

@@ -2,9 +2,10 @@ const STEP_SOURCE_LABELS = {
   healthConnect: 'Health Connect',
   huaweiHealthKit: 'Huawei Health Kit',
   appleHealthKit: 'Apple Health Kit',
-  dailyCumulative: '当日累计',
-  catchUpCumulative: '跨日累计赋予昨日',
-  noLogin: '未登录记零',
+  nightlyCumulative: '23:50累计推算',
+  dailyCumulative: '登录累计推算',
+  catchUpCumulative: '跨日累计补算',
+  noData: '暂无可计算数据',
   unavailable: '暂无来源',
 }
 
@@ -18,9 +19,7 @@ function finiteStep(value) {
 function localDateKey(value) {
   const raw = String(value || '').trim()
   const match = raw.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/)
-  if (match) {
-    return `${match[1]}-${String(Number(match[2])).padStart(2, '0')}-${String(Number(match[3])).padStart(2, '0')}`
-  }
+  if (match) return `${match[1]}-${String(Number(match[2])).padStart(2, '0')}-${String(Number(match[3])).padStart(2, '0')}`
   const date = value instanceof Date ? value : new Date(value || Date.now())
   if (Number.isNaN(date.getTime())) return ''
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -31,68 +30,36 @@ function displayDate(key) {
   return match ? `${match[1]}/${Number(match[2])}/${Number(match[3])}` : String(key || '')
 }
 
-function dateBefore(value, days = 1) {
+function shiftDate(value, days) {
   const key = localDateKey(value)
   const match = key.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (!match) return ''
   const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
-  date.setDate(date.getDate() - days)
+  date.setDate(date.getDate() + days)
   return localDateKey(date)
 }
 
 function sourceFieldsForDay(day = {}, platform = '') {
-  const explicitHealthConnect = finiteStep(
-    day.healthConnectSteps ?? day.healthConnect ?? day.healthConnectDailySteps
-  )
-  const explicitHuawei = finiteStep(
-    day.huaweiHealthSteps ?? day.huaweiHealthKitSteps ?? day.huaweiSteps
-  )
-  const explicitApple = finiteStep(
-    day.appleHealthSteps ?? day.appleHealthKitSteps ?? day.healthKitSteps
-  )
+  const explicitHealthConnect = finiteStep(day.healthConnectSteps ?? day.healthConnect ?? day.healthConnectDailySteps)
+  const explicitHuawei = finiteStep(day.huaweiHealthSteps ?? day.huaweiHealthKitSteps ?? day.huaweiSteps)
+  const explicitApple = finiteStep(day.appleHealthSteps ?? day.appleHealthKitSteps ?? day.healthKitSteps)
   const generic = finiteStep(day.steps)
-
   return {
-    healthConnectSteps:
-      explicitHealthConnect ?? (platform === 'android' && !explicitHuawei ? generic : null),
-    huaweiHealthKitSteps:
-      explicitHuawei,
-    appleHealthKitSteps:
-      explicitApple ?? (platform === 'ios' ? generic : null),
+    // Android的generic steps不能再自动冒充Health Connect；只有明确字段才算每日来源。
+    healthConnectSteps: explicitHealthConnect,
+    huaweiHealthKitSteps: explicitHuawei,
+    appleHealthKitSteps: explicitApple ?? (platform === 'ios' ? generic : null),
   }
 }
 
 function cumulativeFieldsForDay(day = {}, payload = {}) {
-  const backgroundCumulativeSteps = finiteStep(
-    day.backgroundCumulativeSteps ?? payload.backgroundCumulativeSteps
-  )
-  const backgroundCapturedAt =
-    Number(day.backgroundCapturedAt ?? payload.backgroundCapturedAt) || null
-  const backgroundScheduledFor =
-    Number(day.backgroundScheduledFor ?? payload.backgroundScheduledFor) || null
-  const backgroundStepTestStatus =
-    String(day.backgroundStepTestStatus ?? payload.backgroundStepTestStatus ?? '')
-
   return {
-    backgroundCumulativeSteps,
-    backgroundCapturedAt,
-    backgroundScheduledFor,
-    backgroundStepTestStatus,
-    firstCumulativeSteps: finiteStep(
-      day.firstCumulativeSteps ??
-      day.firstStepCounter ??
-      day.cumulativeStepsFirst ??
-      payload.firstCumulativeSteps
-    ),
-    lastCumulativeSteps: finiteStep(
-      day.lastCumulativeSteps ??
-      day.lastStepCounter ??
-      day.cumulativeStepsLast ??
-      day.cumulativeSteps ??
-      day.stepCounter ??
-      payload.lastCumulativeSteps ??
-      payload.cumulativeSteps
-    ),
+    backgroundCumulativeSteps: finiteStep(day.backgroundCumulativeSteps),
+    backgroundCapturedAt: Number(day.backgroundCapturedAt) || null,
+    backgroundScheduledFor: Number(day.backgroundScheduledFor) || null,
+    backgroundStepTestStatus: String(day.backgroundStepTestStatus || ''),
+    firstCumulativeSteps: finiteStep(day.firstCumulativeSteps ?? day.firstStepCounter ?? day.cumulativeStepsFirst ?? payload.firstCumulativeSteps),
+    lastCumulativeSteps: finiteStep(day.lastCumulativeSteps ?? day.lastStepCounter ?? day.cumulativeStepsLast ?? day.cumulativeSteps ?? day.stepCounter ?? payload.lastCumulativeSteps ?? payload.cumulativeSteps),
   }
 }
 
@@ -109,6 +76,134 @@ function chooseExactSource(record = {}) {
   return null
 }
 
+function ownEndpoint(record = {}) {
+  return finiteStep(record.backgroundCumulativeSteps) ?? finiteStep(record.lastCumulativeSteps)
+}
+
+function ownStart(record = {}) {
+  return finiteStep(record.firstCumulativeSteps)
+}
+
+function setZero(record, note) {
+  return {
+    ...record,
+    calculatedSteps: 0,
+    cumulativeDelta: 0,
+    calculatedSource: 'noData',
+    calculationStatus: 'zero',
+    calculationNote: note,
+  }
+}
+
+/**
+ * 累计值容错原则：
+ * 1. Health Connect / Apple HealthKit / Huawei HealthKit每日值永远优先。
+ * 2. 无每日来源时，首选23:50后台累计边界；缺失时可用当日末次登录累计。
+ * 3. 单独漏掉一天时，可用第二天首次累计作为该日结束边界，允许少量跨日偏移。
+ * 4. 连续漏掉多天时，中间日保持0；重新登录日从最近一次可靠旧边界一次性catch up，
+ *    因此该日可能很大，但总步数最终不会永久丢失。
+ * 5. 累计值因重启变小则本段按0，避免负数。
+ */
+function recalculateCumulative(records = [], currentDate = '') {
+  const sorted = [...records].sort((a, b) => localDateKey(a.date).localeCompare(localDateKey(b.date)))
+  const currentKey = localDateKey(currentDate || new Date())
+  const indexByKey = new Map(sorted.map((item, index) => [localDateKey(item.date), index]))
+  const ownEnds = sorted.map(ownEndpoint)
+  const starts = sorted.map(ownStart)
+
+  // 只为“孤立缺失的一天”建立第二天首次累计替代边界。
+  const resolvedEnds = [...ownEnds]
+  for (let i = 0; i < sorted.length; i += 1) {
+    if (resolvedEnds[i] !== null) continue
+    const nextKey = shiftDate(sorted[i].date, 1)
+    const nextIndex = indexByKey.get(nextKey)
+    if (nextIndex === undefined || starts[nextIndex] === null) continue
+    const previousKey = shiftDate(sorted[i].date, -1)
+    const previousIndex = indexByKey.get(previousKey)
+    const previousHasBoundary = previousIndex !== undefined && ownEnds[previousIndex] !== null
+    if (previousHasBoundary) resolvedEnds[i] = starts[nextIndex]
+  }
+
+  let lastReliableBoundary = null
+  let lastReliableDate = ''
+  let missingRun = 0
+
+  return sorted.map((record, index) => {
+    const exact = chooseExactSource(record)
+    const key = localDateKey(record.date)
+    const end = resolvedEnds[index]
+    const ownEnd = ownEnds[index]
+    const start = starts[index]
+
+    if (exact) {
+      if (ownEnd !== null) {
+        lastReliableBoundary = ownEnd
+        lastReliableDate = key
+        missingRun = 0
+      }
+      return {
+        ...record,
+        calculatedSteps: exact.value,
+        calculatedSource: exact.source,
+        calculationStatus: 'exact',
+        calculationNote: `${STEP_SOURCE_LABELS[exact.source]}每日步数，优先于累计推算`,
+      }
+    }
+
+    if (end === null) {
+      missingRun += 1
+      return setZero(record, '没有当日结束累计；只允许顺推到第二天，仍无数据则暂记0')
+    }
+
+    const previousKey = shiftDate(key, -1)
+    const previousIndex = indexByKey.get(previousKey)
+    let previousBoundary = previousIndex === undefined ? null : resolvedEnds[previousIndex]
+    let source = finiteStep(record.backgroundCumulativeSteps) !== null ? 'nightlyCumulative' : 'dailyCumulative'
+    let note = finiteStep(record.backgroundCumulativeSteps) !== null
+      ? '当日23:50累计减去前一日结束累计'
+      : '当日末次登录累计减去前一日结束累计'
+
+    if (previousBoundary === null && start !== null && missingRun <= 1) {
+      previousBoundary = start
+      note = '前一日结束边界缺失，使用当日首次累计作为起点'
+    }
+
+    // 连续缺失多日后重新登录：不把总差值塞给中间某一天，而是在重新登录日一次catch up。
+    if (previousBoundary === null && lastReliableBoundary !== null && (key === currentKey || Number(record.loginCount || 0) > 0)) {
+      previousBoundary = lastReliableBoundary
+      source = 'catchUpCumulative'
+      note = `连续缺失后，从${displayDate(lastReliableDate)}最近可靠累计一次性补算；本日可能偏大`
+    }
+
+    if (previousBoundary === null) {
+      // 数据库最早一天若有当天首次值，仍可计算当天内部增量。
+      if (start !== null) {
+        previousBoundary = start
+        note = '缺少更早累计边界，按当日首次至结束累计计算'
+      } else {
+        missingRun += 1
+        return setZero(record, '缺少可用的前一累计边界，暂记0')
+      }
+    }
+
+    const resetDetected = end < previousBoundary
+    const delta = resetDetected ? 0 : Math.max(0, end - previousBoundary)
+    const catchUpFromDate = source === 'catchUpCumulative' ? lastReliableDate : ''
+    lastReliableBoundary = ownEnd ?? end
+    lastReliableDate = key
+    missingRun = 0
+    return {
+      ...record,
+      cumulativeDelta: delta,
+      calculatedSteps: delta,
+      calculatedSource: source,
+      calculationStatus: resetDetected ? 'estimated-reset' : (source === 'catchUpCumulative' ? 'estimated-catchup' : 'estimated'),
+      calculationNote: resetDetected ? '累计值小于前一边界，疑似手机重启，本段按0' : note,
+      previousLoginDate: catchUpFromDate ? displayDate(catchUpFromDate) : record.previousLoginDate,
+    }
+  })
+}
+
 export function calculateStepAutoRecord(record = {}) {
   const exact = chooseExactSource(record)
   if (exact) {
@@ -117,91 +212,10 @@ export function calculateStepAutoRecord(record = {}) {
       calculatedSteps: exact.value,
       calculatedSource: exact.source,
       calculationStatus: 'exact',
-      calculationNote: `${STEP_SOURCE_LABELS[exact.source]} 每日步数`,
+      calculationNote: `${STEP_SOURCE_LABELS[exact.source]}每日步数`,
     }
   }
-
-  const first = finiteStep(record.firstCumulativeSteps)
-  const last = finiteStep(record.lastCumulativeSteps)
-  if (first !== null || last !== null) {
-    const safeFirst = first ?? last ?? 0
-    const safeLast = last ?? first ?? 0
-    const resetDetected = safeLast < safeFirst
-    const delta = resetDetected ? 0 : Math.max(0, safeLast - safeFirst)
-    return {
-      ...record,
-      firstCumulativeSteps: safeFirst,
-      lastCumulativeSteps: safeLast,
-      cumulativeDelta: delta,
-      calculatedSteps: delta,
-      calculatedSource: 'dailyCumulative',
-      calculationStatus: resetDetected ? 'estimated-reset' : 'estimated',
-      calculationNote: resetDetected ? '累计值疑似因重启归零，本日按0计算' : '末次累计减首次累计',
-    }
-  }
-
-  return {
-    ...record,
-    calculatedSteps: 0,
-    calculatedSource: 'noLogin',
-    calculationStatus: 'zero',
-    calculationNote: '没有每日来源，也没有登录累计读数',
-  }
-}
-
-function settleCatchUp(records = [], currentDate = '') {
-  const sorted = [...records].sort((a, b) => localDateKey(a.date).localeCompare(localDateKey(b.date)))
-  const currentKey = localDateKey(currentDate)
-  const currentIndex = sorted.findIndex(item => localDateKey(item.date) === currentKey)
-  if (currentIndex <= 0) return sorted
-
-  const current = sorted[currentIndex]
-  const currentFirst = finiteStep(current.firstCumulativeSteps)
-  if (currentFirst === null) return sorted
-
-  let previousIndex = currentIndex - 1
-  while (previousIndex >= 0 && finiteStep(sorted[previousIndex].firstCumulativeSteps) === null) previousIndex -= 1
-  if (previousIndex < 0) return sorted
-
-  const previous = sorted[previousIndex]
-  const previousFirst = finiteStep(previous.firstCumulativeSteps)
-  if (previousFirst === null) return sorted
-
-  const targetKey = dateBefore(currentKey, 1)
-  const targetIndex = sorted.findIndex(item => localDateKey(item.date) === targetKey)
-  if (targetIndex < 0) return sorted
-
-  const target = sorted[targetIndex]
-  if (chooseExactSource(target)) return sorted
-
-  const resetDetected = currentFirst < previousFirst
-  const delta = resetDetected ? 0 : Math.max(0, currentFirst - previousFirst)
-  sorted[targetIndex] = {
-    ...target,
-    previousLoginDate: displayDate(localDateKey(previous.date)),
-    cumulativeDelta: delta,
-    calculatedSteps: delta,
-    calculatedSource: 'catchUpCumulative',
-    calculationStatus: resetDetected ? 'estimated-reset' : 'estimated-catchup',
-    calculationNote: resetDetected
-      ? '跨日累计疑似因重启归零，赋予昨日0步'
-      : `从${displayDate(localDateKey(previous.date))}首次累计推算并赋予昨日`,
-    updatedAt: Date.now(),
-  }
-
-  // 未登录的中间日期明确保留为0；以后若每日健康来源出现，会自动改正。
-  for (let index = previousIndex + 1; index < targetIndex; index += 1) {
-    if (!chooseExactSource(sorted[index])) {
-      sorted[index] = {
-        ...sorted[index],
-        calculatedSteps: 0,
-        calculatedSource: 'noLogin',
-        calculationStatus: 'zero',
-        calculationNote: '未登录日期记0，等待每日健康来源补录',
-      }
-    }
-  }
-  return sorted
+  return { ...record }
 }
 
 export function ingestStepPayload(existingRecords = [], payload = {}, {
@@ -218,58 +232,39 @@ export function ingestStepPayload(existingRecords = [], payload = {}, {
     const previous = map.get(key) || { date: displayDate(key), loginCount: 0 }
     const sources = sourceFieldsForDay(day, platform)
     const cumulative = cumulativeFieldsForDay(day, payload)
-    const hasCumulative = cumulative.firstCumulativeSteps !== null || cumulative.lastCumulativeSteps !== null
+    const hasLiveCumulative = cumulative.firstCumulativeSteps !== null || cumulative.lastCumulativeSteps !== null
+    const isLiveDay = liveToday && key === localDateKey(days[0]?.date)
 
-    const firstCumulative =
-      finiteStep(previous.firstCumulativeSteps) ??
-      cumulative.firstCumulativeSteps ??
-      cumulative.lastCumulativeSteps
-    const lastCumulative =
-      cumulative.lastCumulativeSteps ??
-      cumulative.firstCumulativeSteps ??
-      finiteStep(previous.lastCumulativeSteps)
+    const firstCumulative = finiteStep(previous.firstCumulativeSteps)
+      ?? cumulative.firstCumulativeSteps
+      ?? cumulative.lastCumulativeSteps
+    const lastCumulative = cumulative.lastCumulativeSteps
+      ?? cumulative.firstCumulativeSteps
+      ?? finiteStep(previous.lastCumulativeSteps)
 
-    const merged = calculateStepAutoRecord({
+    map.set(key, {
       ...previous,
       date: displayDate(key),
-      ...Object.fromEntries(
-        Object.entries(sources).map(([field, value]) => [field, value ?? previous[field] ?? null])
-      ),
+      ...Object.fromEntries(Object.entries(sources).map(([field, value]) => [field, value ?? previous[field] ?? null])),
       firstCumulativeSteps: firstCumulative,
       lastCumulativeSteps: lastCumulative,
-      backgroundCumulativeSteps:
-        cumulative.backgroundCumulativeSteps ??
-        previous.backgroundCumulativeSteps ??
-        null,
-      backgroundCapturedAt:
-        cumulative.backgroundCapturedAt ??
-        previous.backgroundCapturedAt ??
-        null,
-      backgroundScheduledFor:
-        cumulative.backgroundScheduledFor ??
-        previous.backgroundScheduledFor ??
-        null,
-      backgroundStepTestStatus:
-        cumulative.backgroundStepTestStatus ||
-        previous.backgroundStepTestStatus ||
-        '',
-      firstCapturedAt: previous.firstCapturedAt || (hasCumulative ? capturedAt : null),
-      lastCapturedAt: hasCumulative ? capturedAt : previous.lastCapturedAt || null,
-      loginCount: liveToday && hasCumulative
+      backgroundCumulativeSteps: cumulative.backgroundCumulativeSteps ?? previous.backgroundCumulativeSteps ?? null,
+      backgroundCapturedAt: cumulative.backgroundCapturedAt ?? previous.backgroundCapturedAt ?? null,
+      backgroundScheduledFor: cumulative.backgroundScheduledFor ?? previous.backgroundScheduledFor ?? null,
+      backgroundStepTestStatus: cumulative.backgroundStepTestStatus || previous.backgroundStepTestStatus || '',
+      firstCapturedAt: previous.firstCapturedAt || (hasLiveCumulative ? capturedAt : null),
+      lastCapturedAt: hasLiveCumulative ? capturedAt : previous.lastCapturedAt || null,
+      loginCount: isLiveDay && hasLiveCumulative
         ? Math.max(1, Number(previous.loginCount || 0) + 1)
         : Number(previous.loginCount || 0),
       updatedAt: capturedAt,
       rawPlatform: platform,
     })
-    map.set(key, merged)
   })
 
-  let result = [...map.values()].sort((a, b) => localDateKey(b.date).localeCompare(localDateKey(a.date)))
-  if (liveToday && days[0]?.date) {
-    result = settleCatchUp(result, days[0].date)
-      .sort((a, b) => localDateKey(b.date).localeCompare(localDateKey(a.date)))
-  }
-  return result
+  const currentDate = days[0]?.date || new Date()
+  return recalculateCumulative([...map.values()], currentDate)
+    .sort((a, b) => localDateKey(b.date).localeCompare(localDateKey(a.date)))
 }
 
 export function stepAutoRecordForDate(records = [], date = '') {

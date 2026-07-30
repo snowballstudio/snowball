@@ -1946,3 +1946,169 @@ top: 2px;
   }
 }
 
+
+
+/* ======================================================
+   V1 HOME｜营养入口蓝金彩虹图标 + 屏幕时间空缺短横线
+   ====================================================== */
+.homeBottomNav .homeNutritionNavIcon {
+  position: relative;
+  width: 32px;
+  height: 24px;
+  display: block;
+  overflow: hidden;
+}
+
+.homeBottomNav .homeNutritionNavIcon i {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: block;
+  border-style: solid;
+  border-bottom: 0;
+  border-left-color: transparent !important;
+  border-right-color: transparent !important;
+  border-radius: 999px 999px 0 0;
+  box-sizing: border-box;
+}
+
+.homeBottomNav .homeNutritionNavIcon i:nth-child(1) {
+  width: 32px;
+  height: 18px;
+  border-width: 3px;
+  border-color: #658a9a;
+}
+
+.homeBottomNav .homeNutritionNavIcon i:nth-child(2) {
+  width: 26px;
+  height: 15px;
+  border-width: 3px;
+  border-color: #82a8db;
+}
+
+.homeBottomNav .homeNutritionNavIcon i:nth-child(3) {
+  width: 20px;
+  height: 12px;
+  border-width: 3px;
+  border-color: #bda06e;
+}
+
+.homeBottomNav .homeNutritionNavIcon i:nth-child(4) {
+  width: 14px;
+  height: 9px;
+  border-width: 3px;
+  border-color: #74a1bd;
+}
+
+.homeBottomNav .homeNutritionNavIcon i:nth-child(5) {
+  width: 8px;
+  height: 6px;
+  border-width: 3px;
+  border-color: #8867c9;
+}
+
+.homeTraceText .homeScreenPendingLine {
+  display: inline-block;
+  width: 0.62em;
+  height: 3px;
+  margin: 0 0.42em 2px 0.42em;
+  border-radius: 999px;
+  vertical-align: middle;
+  background: var(--m-home-snow-number-color);
+  box-shadow: var(--m-home-snow-number-shadow);
+}
+
+@media (max-width: 900px) {
+  .homeBottomNav .homeNutritionNavIcon {
+    width: 32px !important;
+    height: 24px !important;
+    font-size: 0 !important;
+  }
+}
+
+/* 首个导航按钮的通用 span 规则不能覆盖营养图标尺寸。 */
+.homeBottomNav button:first-child .homeNutritionNavIcon {
+  position: relative !important;
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  display: block !important;
+  overflow: hidden !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-size: 0 !important;
+}
+
+/* ======================================================
+   营养入口｜整体位置与彩虹尺寸独立控制
+   以后只修改这里
+   ====================================================== */
+@media (max-width: 900px) {
+  :root {
+    /* ① “彩虹图标＋营养文字”整体位置
+       负数向上，正数向下 */
+    --home-nutrition-button-y: -2px;
+
+    /* ② 彩虹图案单独放大
+       X 控制宽度，Y 控制高度 */
+    --home-nutrition-rainbow-scale-x: 1.12;
+    --home-nutrition-rainbow-scale-y: 1.22;
+
+    /* ③ 彩虹相对“营养”文字单独上下移动
+       负数向上，正数向下 */
+    --home-nutrition-rainbow-y: 1px;
+  }
+
+  /* 第一层：
+     彩虹和“营养”二字整体一起上移 */
+  .homeBottomNav button:first-child {
+    transform: translateY(var(--home-nutrition-button-y)) !important;
+  }
+
+  /* 保持原来的图标占位尺寸。
+     不扩大这个高度，否则会把“营养”二字往下推。 */
+  .homeBottomNav button:first-child .homeNutritionNavIcon {
+    position: relative !important;
+
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+
+    display: block !important;
+    overflow: visible !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    font-size: 0 !important;
+  }
+
+  /* 第二层：
+     只放大、拉高五层彩虹图案；
+     不改变图标占位，也不推动“营养”文字。 */
+  .homeBottomNav button:first-child .homeNutritionNavIcon i {
+    bottom: 0 !important;
+
+    transform:
+      translateX(-50%)
+      translateY(var(--home-nutrition-rainbow-y))
+      scaleX(var(--home-nutrition-rainbow-scale-x))
+      scaleY(var(--home-nutrition-rainbow-scale-y)) !important;
+
+    transform-origin: center bottom !important;
+  }
+
+  /* “营养”文字本身不再单独移动 */
+  .homeBottomNav button:first-child em {
+    position: static !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+}

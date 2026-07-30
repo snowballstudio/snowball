@@ -132,6 +132,7 @@ export default function Home({
   openThings,
 }) {
   const avgScreenText = String(homeTraceStats?.avgScreen || '0小时')
+  const avgScreenPending = avgScreenText.trim() === '待记录'
   const avgScreenMatch = avgScreenText.match(/^([0-9.]+)\s*(.*)$/)
   const avgScreenNumber = avgScreenMatch ? avgScreenMatch[1] : avgScreenText
   const avgScreenUnit = avgScreenMatch && avgScreenMatch[2] ? avgScreenMatch[2] : ''
@@ -466,7 +467,7 @@ export default function Home({
         <div className="homeSnowTrace">
           <img className="homeSnowBg" src="/refine/snow_background.png" alt="雪地留痕" />
           <div className="homeTraceText">
-            <p>七日屏幕时间 <button type="button" className="homeTraceLink" onClick={() => openDailyDetail('screen')}><strong>{avgScreenNumber}</strong></button><span className="homeSnowUnit">{avgScreenUnit}</span></p>
+            <p>七日屏幕时间 <button type="button" className="homeTraceLink" onClick={() => openDailyDetail('screen')}>{avgScreenPending ? <><span className="homeScreenPendingLine" aria-label="屏幕时间暂无统计" /><span className="homeSnowUnit">小时</span></> : <><strong>{avgScreenNumber}</strong><span className="homeSnowUnit">{avgScreenUnit}</span></>}</button></p>
             <p>去过 <button type="button" className="homeTraceLink" onClick={() => openFootprintPage('world', 'browseFull')}><strong>{homeTraceStats.worldCount}</strong></button> 个国家 ，<button type="button" className="homeTraceLink" onClick={() => openFootprintPage('china', 'browseFull')}><strong>{homeTraceStats.chinaCount}</strong></button> 个省市</p>
             <p>物馆收录 <button type="button" className="homeTraceLink" onClick={() => openThingPage('overview')}><strong>{homeTraceStats.thingsCount}</strong></button> 件物品</p>
             <p>在人间记着 <button type="button" className="homeTraceLink" onClick={openPeoplePage}><strong>{homeTraceStats.peopleCount}</strong></button> 人</p>
@@ -548,7 +549,7 @@ export default function Home({
       {isHomeVisible && (
       <nav className="homeBottomNav" aria-label="雪粒主页功能">
         <button type="button" onClick={() => openNutritionPage('today')}>
-          <span>🌈</span>
+          <span className="homeNutritionNavIcon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
           <em>营养</em>
         </button>
         <button type="button" onClick={() => openTrainPage('yesterday')}>

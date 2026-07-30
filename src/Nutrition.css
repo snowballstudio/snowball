@@ -93,7 +93,7 @@
     --nutrition-col-3: 1.85fr;
     --nutrition-row-label-size: 12px;
     --nutrition-row-value-size: 12px;
-    --nutrition-row-food-size: 11px;
+    --nutrition-row-food-size: 10px;
     --nutrition-row-value-color: #e0c369;
     --nutrition-row-food-color: rgba(255,255,255,.84);
 
@@ -247,7 +247,7 @@
     clip-path: inset(0 calc(100% - var(--rainbow-visible, 100%)) 0 0) !important;
   }
 
-  .dailyNutritionPage .rainbowArc1 { width: var(--nutrition-arc1-w) !important; height: var(--nutrition-arc1-h) !important; border-width: var(--nutrition-arc1-b) !important; border-color: rgba(200,80,80,.90) !important; }
+  .dailyNutritionPage .rainbowArc1 { width: var(--nutrition-arc1-w) !important; height: var(--nutrition-arc1-h) !important; border-width: var(--nutrition-arc1-b) !important; border-color: rgba(200,80,80,.70) !important; }
   .dailyNutritionPage .rainbowArc2 { width: var(--nutrition-arc2-w) !important; height: var(--nutrition-arc2-h) !important; border-width: var(--nutrition-arc2-b) !important; border-color: rgba(236, 194, 86, 0.7) !important; }
   .dailyNutritionPage .rainbowArc3 { width: var(--nutrition-arc3-w) !important; height: var(--nutrition-arc3-h) !important; border-width: var(--nutrition-arc3-b) !important; border-color: rgba(67, 204, 131, 0.68) !important; }
   .dailyNutritionPage .rainbowArc4 { width: var(--nutrition-arc4-w) !important; height: var(--nutrition-arc4-h) !important; border-width: var(--nutrition-arc4-b) !important; border-color: rgba(29, 119, 209, 0.66) !important; }
@@ -627,3 +627,351 @@
   }
 }
 
+
+
+/* ======================================================
+   V1.3｜每日营养数据详情表
+   详情页由 Nutrition.jsx 内部打开，不改变日常表，也不另存数据。
+   ====================================================== */
+.nutritionDetailPage {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  overflow: hidden !important;
+  background: linear-gradient(180deg, #152432 0%, #0d1822 100%) !important;
+  color: rgba(255,255,255,.94);
+  z-index: 140;
+}
+
+.nutritionDetailTop {
+  position: relative;
+  height: 88px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 20px 18px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  background: rgba(10,20,29,.82);
+  box-sizing: border-box;
+}
+
+.nutritionDetailTop .nutritionBackBtn {
+  position: absolute !important;
+  left: 20px !important;
+  top: 30px !important;
+  width: 34px !important;
+  height: 42px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #fff !important;
+  font-size: 36px !important;
+  line-height: 1 !important;
+}
+
+.nutritionDetailTop h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: 1px;
+}
+
+.nutritionDetailTop > span {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  color: rgba(255,255,255,.58);
+  font-size: 12px;
+}
+
+.nutritionDetailIntro {
+  min-height: 42px;
+  padding: 11px 18px;
+  box-sizing: border-box;
+  color: rgba(255,255,255,.66);
+  font-size: 12px;
+  line-height: 1.55;
+  background: rgba(255,255,255,.035);
+}
+
+.nutritionDetailTableWrap {
+  width: 100%;
+  height: calc(100dvh - 130px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 12px 24px;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+}
+
+.nutritionDetailTable {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+
+.nutritionDetailTable th,
+.nutritionDetailTable td {
+  min-width: 88px;
+  max-width: 180px;
+  padding: 11px 10px;
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  border-right: 1px solid rgba(255,255,255,.07);
+  border-bottom: 1px solid rgba(255,255,255,.09);
+}
+
+.nutritionDetailTable th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  color: #e4c86e;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #172a39;
+}
+
+.nutritionDetailTable th:first-child,
+.nutritionDetailTable td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 86px;
+  background: #132431;
+}
+
+.nutritionDetailTable th:first-child {
+  z-index: 4;
+  background: #172a39;
+}
+.nutritionDetailTable th:first-child,
+.nutritionDetailTable td:first-child {
+  width: 96px;
+  min-width: 96px;
+  max-width: 96px;
+  white-space: nowrap;
+}
+
+.nutritionDetailTable th:nth-child(2),
+.nutritionDetailTable td:nth-child(2) {
+  position: sticky;
+  left: 96px;
+  z-index: 2;
+  width: 94px;
+  min-width: 94px;
+  max-width: 94px;
+  background: #132431;
+  box-shadow: 8px 0 12px -10px rgba(0,0,0,.9);
+}
+
+.nutritionDetailTable th:nth-child(2) {
+  z-index: 4;
+  background: #172a39;
+}
+
+.nutritionDetailTable tbody tr:nth-child(even) td {
+  background-color: rgba(255,255,255,.025);
+}
+
+.nutritionDetailTable tbody tr:nth-child(even) td:first-child {
+  background: #162733;
+}
+.nutritionDetailTable tbody tr:nth-child(even) td:nth-child(2) {
+  background: #162733;
+}
+
+.nutritionDetailFoodName {
+  color: #fff;
+  font-weight: 700;
+}
+
+.nutritionDetailEmpty {
+  height: 180px;
+  text-align: center !important;
+  vertical-align: middle !important;
+  color: rgba(255,255,255,.55);
+}
+
+@media (max-width: 900px) {
+  .nutritionDetailTop {
+    padding-top: env(safe-area-inset-top);
+    height: calc(82px + env(safe-area-inset-top));
+  }
+
+  .nutritionDetailTop .nutritionBackBtn {
+    top: calc(24px + env(safe-area-inset-top)) !important;
+  }
+
+  .nutritionDetailTableWrap {
+    height: calc(100dvh - 124px - env(safe-area-inset-top));
+  }
+
+  .nutritionDetailTable th,
+  .nutritionDetailTable td {
+    min-width: 84px;
+    padding: 10px 9px;
+    font-size: 11px;
+  }
+
+  .nutritionDetailTable th:first-child,
+  .nutritionDetailTable td:first-child {
+    width: 92px;
+    min-width: 92px;
+    max-width: 92px;
+  }
+
+  .nutritionDetailTable th:nth-child(2),
+  .nutritionDetailTable td:nth-child(2) {
+    left: 92px;
+    width: 88px;
+    min-width: 88px;
+    max-width: 88px;
+  }
+}
+
+
+/* ======================================================
+   11. 彩虹标签隐藏 + 表格图例
+   ====================================================== */
+@media (max-width: 900px) {
+  /* 标签暂时保留在 JSX 中，只隐藏显示。 */
+  .dailyNutritionPage .rainbowLabelStack {
+    display: none !important;
+  }
+
+  /* 营养不足时使用更清楚的亮灰色。 */
+  .dailyNutritionPage .rainbowArc.dim {
+    border-color: rgba(160, 160, 162, 0.7) !important;
+    opacity: 0.8 !important;
+    filter: grayscale(1) saturate(0) brightness(1.14) !important;
+  }
+
+  /* 第一列内部放置图例，不改变三列原有宽度。 */
+  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow .nutritionRowLabel {
+    display: flex !important;
+    align-items: center !important;
+    min-width: 0 !important;
+    gap: 5px !important;
+    font-size: calc(var(--nutrition-row-label-size) - 1px) !important;
+  }
+
+  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow .nutritionRowLabel b {
+    min-width: 0 !important;
+    font: inherit !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+  }
+
+  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow strong {
+    font-size: calc(var(--nutrition-row-value-size) - 1px) !important;
+  }
+
+  .dailyNutritionPage .nutritionLegend {
+    flex: 0 0 6px !important;
+    width: 6px !important;
+    height: 10px !important;
+    display: block !important;
+    border-radius: 3px !important;
+    background: transparent !important;
+  }
+
+  .dailyNutritionPage .nutritionLegend-protein { background: rgba(200,80,80,.70) !important; }
+  .dailyNutritionPage .nutritionLegend-carbs { background: rgba(236,194,86,.70) !important; }
+  .dailyNutritionPage .nutritionLegend-fiber { background: rgba(67,204,131,.68) !important; }
+  .dailyNutritionPage .nutritionLegend-vitamins { background: rgba(29,119,209,.66) !important; }
+  .dailyNutritionPage .nutritionLegend-minerals { background: rgba(178,105,202,.62) !important; }
+
+  /* 灰色彩虹对应亮灰图例；空缺时保留位置但不显示色块。 */
+  .dailyNutritionPage .nutritionLevel-dim .nutritionLegend {
+    background: rgba(160, 160, 162, 0.7) !important;
+  }
+
+  .dailyNutritionPage .nutritionLevel-empty .nutritionLegend {
+    background: transparent !important;
+  }
+}
+
+
+/* ======================================================
+   V1.4｜每日营养详情表稳定滚动
+   只允许详情表滚动；触摸方向由 JSX 锁定，避免 iPhone 斜向拖动时
+   横向与纵向同时漂移。冻结 HEADER 和左两列继续使用同一原生滚动层。
+   ====================================================== */
+.nutritionDetailPage {
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+  contain: layout paint size !important;
+}
+
+.nutritionDetailTop,
+.nutritionDetailIntro {
+  position: relative !important;
+  z-index: 20 !important;
+  flex: 0 0 auto !important;
+}
+
+.nutritionDetailTableWrap {
+  position: relative !important;
+  overflow: auto !important;
+  overflow-anchor: none !important;
+  overscroll-behavior: none !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y !important;
+  scrollbar-gutter: stable both-edges;
+  isolation: isolate !important;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+}
+
+.nutritionDetailTable {
+  table-layout: fixed !important;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+}
+
+.nutritionDetailTable th,
+.nutritionDetailTable td {
+  box-sizing: border-box !important;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+}
+
+.nutritionDetailTable th {
+  z-index: 5 !important;
+}
+
+.nutritionDetailTable th:first-child,
+.nutritionDetailTable th:nth-child(2) {
+  z-index: 8 !important;
+}
+
+.nutritionDetailTable td:first-child,
+.nutritionDetailTable td:nth-child(2) {
+  z-index: 4 !important;
+}
+
+.nutritionDetailTable th:nth-child(2),
+.nutritionDetailTable td:nth-child(2) {
+  box-shadow: none !important;
+  border-right: 1px solid rgba(255,255,255,.14) !important;
+}
+
+@media (max-width: 900px) {
+  .nutritionDetailPage {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .nutritionDetailTableWrap {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
+  }
+}
