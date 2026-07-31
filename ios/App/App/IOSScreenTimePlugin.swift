@@ -371,11 +371,20 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             repeats: false
         )
 
-        let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
-            eventName: DeviceActivityEvent(
+        let testEvent: DeviceActivityEvent
+        if #available(iOS 17.4, *) {
+            testEvent = DeviceActivityEvent(
                 threshold: DateComponents(minute: 1),
                 includesPastActivity: false
             )
+        } else {
+            testEvent = DeviceActivityEvent(
+                threshold: DateComponents(minute: 1)
+            )
+        }
+
+        let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
+            eventName: testEvent
         ]
 
         do {
