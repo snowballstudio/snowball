@@ -369,10 +369,6 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 "systemActivities": systemActivities.map(\.rawValue),
                 "eventCount": storedEvents.count,
                 "scheduleExists": storedSchedule != nil,
-                "nextIntervalStart": storedSchedule?.nextInterval?.start
-                    .map { ISO8601DateFormatter().string(from: $0) } ?? "",
-                "nextIntervalEnd": storedSchedule?.nextInterval?.end
-                    .map { ISO8601DateFormatter().string(from: $0) } ?? "",
                 "message": registered
                     ? "苹果系统已确认登记：1个Activity、1个Event。请正常使用手机至少1分钟，然后读取回调。"
                     : "startMonitoring未报错，但系统反查不完整，请查看系统状态。"
@@ -400,11 +396,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             "intervalStartHour": schedule?.intervalStart.hour ?? -1,
             "intervalStartMinute": schedule?.intervalStart.minute ?? -1,
             "intervalEndHour": schedule?.intervalEnd.hour ?? -1,
-            "intervalEndMinute": schedule?.intervalEnd.minute ?? -1,
-            "nextIntervalStart": schedule?.nextInterval?.start
-                .map { ISO8601DateFormatter().string(from: $0) } ?? "",
-            "nextIntervalEnd": schedule?.nextInterval?.end
-                .map { ISO8601DateFormatter().string(from: $0) } ?? ""
+            "intervalEndMinute": schedule?.intervalEnd.minute ?? -1
         ]
 
         let eventPayload = events.map { name, event in
