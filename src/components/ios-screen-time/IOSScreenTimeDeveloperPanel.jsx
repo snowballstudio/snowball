@@ -23,201 +23,241 @@ function errorText(error) {
   return String(error?.message || error || '未知错误')
 }
 
-function JsonPreview({ value }) {
+function CompactResult({ title, value }) {
   if (!value) return null
+
   return (
-    <pre
-      className="iosScreenTimeDeveloperMessage"
-      style={{ whiteSpace: 'pre-wrap', maxHeight: '360px', overflow: 'auto' }}
-    >
-      {JSON.stringify(value, null, 2)}
-    </pre>
+    <div style={{
+      marginTop: '10px',
+      padding: '10px 12px',
+      border: '1px solid rgba(80, 100, 120, 0.18)',
+      borderRadius: '10px',
+      background: 'rgba(245, 248, 250, 0.96)',
+    }}>
+      <strong style={{ display: 'block', marginBottom: '6px' }}>{title}</strong>
+      <pre style={{
+        margin: 0,
+        whiteSpace: 'pre-wrap',
+        overflowWrap: 'anywhere',
+        maxHeight: '180px',
+        overflowY: 'auto',
+        fontSize: '12px',
+        lineHeight: 1.45,
+      }}>
+        {JSON.stringify(value, null, 2)}
+      </pre>
+    </div>
   )
 }
 
 export default function IOSScreenTimeDeveloperPanel({ date }) {
   const [status, setStatus] = useState(EMPTY_STATUS)
-  const [busy, setBusy] = useState(false)
+  const [runningAction, setRunningAction] = useState('')
   const [message, setMessage] = useState('')
-  const [preview, setPreview] = useState(null)
+  const [reportPreview, setReportPreview] = useState(null)
   const [monitorPreview, setMonitorPreview] = useState(null)
 
-  const refreshStatus = useCallback(async () => {
-    setBusy(true)
-    setMessage('')
-    try {
-      const result = await getIOSScreenTimeStatus()
-      setStatus({ ...EMPTY_STATUS, ...(result || {}) })
-    } catch (error) {
-      setStatus({
-        available: isIOSScreenTimeAvailable(),
-        status: 'error',
-        statusLabel: '检查失败',
-      })
-      setMessage(errorText(error))
-    } finally {
-      setBusy(false)
-    }
-  }, [])
+  const runAction = useCallback(async (name, action, onSuccess) => {
+    setRunningAction(name)
+    setMessage('正在处理，请稍候……')
 
-  useEffect(() => {
-    refreshStatus()
-  }, [refreshStatus])
-
-  async function run(action, successText = '') {
-    setBusy(true)
-    setMessage('')
     try {
       const result = await action()
-      setMonitorPreview(result)
-      setMessage(successText || result?.message || '操作完成。')
+      if (typeof onSuccess === 'function') onSuccess(result)
+      setMessage(result?.message || '操作完成。')
       return result
     } catch (error) {
       setMessage(errorText(error))
       return null
     } finally {
-      setBusy(false)
+      setRunningAction('')
     }
-  }
+  }, [])
 
-  async function authorize() {
-    setBusy(true)
-    setMessage('')
-    try {
-      const result = await requestIOSScreenTimeAuthorization()
+  const refreshStatus = useCallback(async () => {
+    await runAction('status', async () => {
+      const result = await getIOSScreenTimeStatus()
       setStatus({ ...EMPTY_STATUS, ...(result || {}) })
-      setMessage(result?.status === 'approved' ? '授权成功。' : '系统没有批准授权。')
-    } catch (error) {
-      setMessage(errorText(error))
-    } finally {
-      setBusy(false)
-    }
-  }
+      return result
+    })
+  }, [runAction])
 
-  async function openReport() {
-    setBusy(true)
-    setMessage('')
-    try {
-      await openIOSScreenTimeReport(date)
-    } catch (error) {
-      setMessage(errorText(error))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function readData() {
-    setBusy(true)
-    setMessage('')
-    setPreview(null)
-    try {
-      const result = await readIOSScreenTimeData({
-        startDate: date,
-        days: 1,
-        cutoffHour: 5,
-        minimumActivitySeconds: 10,
-      })
-      const normalized = normalizeIOSScreenTimePayload(result)
-      setPreview(normalized)
-      setMessage(normalized?.days?.length ? '当天正式数据读取成功。' : '当天没有返回数据。')
-    } catch (error) {
-      setMessage(errorText(error))
-    } finally {
-      setBusy(false)
-    }
-  }
+  useEffect(() => {
+    refreshStatus()
+  }, [refreshStatus])
 
   if (!isIOSScreenTimeAvailable()) return null
 
   const approved = status.status === 'approved'
+  const loading = name => runningAction === name
+
+  const buttonStyle = {
+    width: '100%',
+    minHeight: '44px',
+    padding: '9px 8px',
+    borderRadius: '11px',
+    fontSize: '15px',
+    lineHeight: 1.25,
+    whiteSpace: 'normal',
+  }
 
   return (
-    <section className="iosScreenTimeDeveloperPanel" aria-label="苹果屏幕时间数据">
-      <div className="iosScreenTimeDeveloperHead">
+    <section
+      className="iosScreenTimeDeveloperPanel"
+      aria-label="苹果屏幕时间数据"
+      style={{
+        boxSizing: 'border-box',
+        width: '100%',
+        overflow: 'visible',
+      }}
+    >
+      <div className="iosScreenTimeDeveloperHead" style={{ marginBottom: '8px' }}>
         <div>
-          <h3>苹果屏幕时间数据</h3>
-          <p>Report与Monitor分开验证；Monitor状态直接从苹果系统反查。</p>
+          <h3 style={{ marginBottom: '4px' }}>苹果屏幕时间测试</h3>
+          <p style={{ margin: 0 }}>Report 与 Monitor 分开验证。</p>
         </div>
-        <button type="button" onClick={refreshStatus} disabled={busy}>刷新授权</button>
       </div>
 
-      <div className="iosScreenTimeStatusGrid">
+      <div className="iosScreenTimeStatusGrid" style={{ marginBottom: '10px' }}>
         <span>日期</span><strong>{date || '—'}</strong>
-        <span>授权状态</span><strong>{status.statusLabel || status.status || '—'}</strong>
-        <span>Monitor测试</span><strong>1 Activity / 1 Event / 1分钟</strong>
+        <span>授权</span><strong>{status.statusLabel || status.status || '—'}</strong>
+        <span>Monitor</span><strong>1 Activity / 1 Event / 1分钟</strong>
       </div>
 
-      <div className="iosScreenTimeDeveloperActions">
-        {!approved && (
-          <button type="button" onClick={authorize} disabled={busy}>
-            {busy ? '处理中…' : '授权苹果屏幕时间'}
+      {/* 所有关键按钮放在最前面，保证一屏内可见。 */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+        gap: '8px',
+      }}>
+        {!approved ? (
+          <button
+            type="button"
+            style={buttonStyle}
+            disabled={loading('authorize')}
+            onClick={() => runAction(
+              'authorize',
+              requestIOSScreenTimeAuthorization,
+              result => setStatus({ ...EMPTY_STATUS, ...(result || {}) }),
+            )}
+          >
+            {loading('authorize') ? '授权中…' : '授权屏幕时间'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            style={buttonStyle}
+            disabled={loading('status')}
+            onClick={refreshStatus}
+          >
+            {loading('status') ? '刷新中…' : '刷新授权状态'}
           </button>
         )}
-        <button type="button" onClick={openReport} disabled={busy || !approved}>
-          打开当天系统报告
-        </button>
-        <button type="button" onClick={readData} disabled={busy || !approved}>
-          读取当天正式数据
-        </button>
-      </div>
 
-      <div className="iosScreenTimeDeveloperHead" style={{ marginTop: '18px' }}>
-        <div>
-          <h3>Monitor最小测试</h3>
-          <p>不再依赖Xcode Console。注册后立即读取系统Activities、Schedule和Events。</p>
-        </div>
-      </div>
-
-      <div className="iosScreenTimeDeveloperActions">
         <button
           type="button"
-          disabled={busy || !approved}
-          onClick={() => run(
+          style={buttonStyle}
+          disabled={!approved || loading('monitorStart')}
+          onClick={() => runAction(
+            'monitorStart',
             startIOSMonitorMiniTest,
-            '已执行最小注册，并完成苹果系统反查。',
+            result => setMonitorPreview(result),
           )}
         >
-          ① 注册1分钟Monitor
+          {loading('monitorStart') ? '注册中…' : '① 注册 Monitor'}
         </button>
 
         <button
           type="button"
-          disabled={busy || !approved}
-          onClick={() => run(
+          style={buttonStyle}
+          disabled={!approved || loading('monitorStatus')}
+          onClick={() => runAction(
+            'monitorStatus',
             readIOSMonitorMiniStatus,
-            '已读取苹果系统真实注册状态。',
+            result => setMonitorPreview(result),
           )}
         >
-          ② 读取系统注册状态
+          {loading('monitorStatus') ? '读取中…' : '② 读取注册状态'}
         </button>
 
         <button
           type="button"
-          disabled={busy || !approved}
-          onClick={() => run(readIOSMonitorMiniCallbacks)}
+          style={buttonStyle}
+          disabled={!approved || loading('monitorCallbacks')}
+          onClick={() => runAction(
+            'monitorCallbacks',
+            readIOSMonitorMiniCallbacks,
+            result => setMonitorPreview(result),
+          )}
         >
-          ③ 读取Monitor回调
+          {loading('monitorCallbacks') ? '读取中…' : '③ 读取回调'}
         </button>
 
         <button
           type="button"
-          disabled={busy}
-          onClick={() => run(
+          style={buttonStyle}
+          disabled={loading('monitorStop')}
+          onClick={() => runAction(
+            'monitorStop',
             stopIOSMonitorMiniTest,
-            '已停止最小Monitor测试。',
+            result => setMonitorPreview(result),
           )}
         >
-          ④ 停止最小测试
+          {loading('monitorStop') ? '停止中…' : '④ 停止测试'}
+        </button>
+
+        <button
+          type="button"
+          style={buttonStyle}
+          disabled={!approved || loading('openReport')}
+          onClick={() => runAction(
+            'openReport',
+            () => openIOSScreenTimeReport(date),
+          )}
+        >
+          {loading('openReport') ? '打开中…' : '打开当天系统报告'}
+        </button>
+
+        <button
+          type="button"
+          style={buttonStyle}
+          disabled={!approved || loading('readReport')}
+          onClick={() => runAction(
+            'readReport',
+            async () => {
+              const result = await readIOSScreenTimeData({
+                startDate: date,
+                days: 1,
+                cutoffHour: 5,
+                minimumActivitySeconds: 10,
+              })
+              return normalizeIOSScreenTimePayload(result)
+            },
+            result => setReportPreview(result),
+          )}
+        >
+          {loading('readReport') ? '读取中…' : '读取当天正式数据'}
         </button>
       </div>
 
-      {message && <p className="iosScreenTimeDeveloperMessage">{message}</p>}
-      <JsonPreview value={monitorPreview} />
-      <JsonPreview value={preview} />
+      <p
+        className="iosScreenTimeDeveloperMessage"
+        style={{
+          margin: '10px 0 0',
+          minHeight: '22px',
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {message || '请先注册，再读取系统状态；使用手机1分钟后读取回调。'}
+      </p>
 
-      <p className="iosScreenTimeDeveloperNote">
-        判定标准：systemConfirmed=true 表示苹果系统确实保存了Activity、Schedule和Event；
-        callbacks出现 eventDidReachThreshold 表示Monitor Extension整条链已打通。
+      {/* 结果紧跟按钮，不再藏到页面最下方。 */}
+      <CompactResult title="Monitor 结果" value={monitorPreview} />
+      <CompactResult title="正式报告结果" value={reportPreview} />
+
+      <p className="iosScreenTimeDeveloperNote" style={{ marginBottom: 0 }}>
+        成功标准：systemConfirmed=true；最终 callbacks 中出现
+        eventDidReachThreshold。
       </p>
     </section>
   )
