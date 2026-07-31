@@ -371,20 +371,10 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             repeats: false
         )
 
-        let testEvent: DeviceActivityEvent
-        if #available(iOS 17.4, *) {
-            testEvent = DeviceActivityEvent(
-                threshold: DateComponents(minute: 1),
-                includesPastActivity: false
-            )
-        } else {
-            testEvent = DeviceActivityEvent(
+        let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
+            eventName: DeviceActivityEvent(
                 threshold: DateComponents(minute: 1)
             )
-        }
-
-        let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
-            eventName: testEvent
         ]
 
         do {
@@ -435,7 +425,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 "eventCount": storedEvents.count,
                 "scheduleExists": storedSchedule != nil,
                 "repeats": false,
-                "includesPastActivity": false,
+                "pastActivityIncluded": false,
                 "scheduledStart": ISO8601DateFormatter().string(
                     from: startDate
                 ),
@@ -514,7 +504,6 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 "thresholdHour": event.threshold.hour ?? 0,
                 "thresholdMinute": event.threshold.minute ?? 0,
                 "thresholdSecond": event.threshold.second ?? 0,
-                "includesPastActivity": event.includesPastActivity,
                 "includesAllActivity": event.includesAllActivity
             ] as [String: Any]
         }.sorted {
