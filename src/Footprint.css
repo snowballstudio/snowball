@@ -2027,6 +2027,17 @@ margin-right: 4px !important;
 }
 
 @media (max-width: 900px) {
+  /* 查看时保持秀气的 13px；真正进入输入状态后临时升到 16px，
+     避免 iPhone 自动放大并移动页面。失焦后自动恢复 13px。 */
+  .futureFootprintNotePaper textarea {
+    font-size: 13px !important;
+  }
+
+  .futureFootprintNotePaper textarea.isInputActive,
+  .futureFootprintNotePaper textarea:focus {
+    font-size: 16px !important;
+  }
+
   .futureFootprintLuggage {
     width: 58px !important;
     height: 76px !important;

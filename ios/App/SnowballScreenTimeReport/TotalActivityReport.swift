@@ -67,6 +67,7 @@ private enum SnowballScreenTimeSharedStore {
         devices: [ScreenTimeDeviceRow]
     ) {
         diagnostic("进入 save")
+        diagnostic("准备写入 AppGroup：\(appGroupIdentifier)，cacheKey=\(cacheKey)")
         diagnostic(
             "原始数据：totalDuration=\(totalDuration)秒，" +
             "segments=\(segments.count)，" +
@@ -95,7 +96,9 @@ private enum SnowballScreenTimeSharedStore {
             segments: segments,
             applications: applications
         ) else {
-            diagnostic("失败：没有可用于确定日期的数据")
+            diagnostic(
+                "致命诊断：reportDate 失败；segments=\(segments.count)，applications=\(applications.count)，缓存不会写入"
+            )
             return
         }
 
@@ -337,15 +340,26 @@ struct TotalActivityReport: DeviceActivityReportScene {
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> TotalActivityConfiguration {
         Self.logger.notice("SNOWBALL_SCREEN_TIME: makeConfiguration 开始")
+        Self.logger.notice("SNOWBALL_SCREEN_TIME: 开始遍历 DeviceActivityResults")
         var totalDuration: TimeInterval = 0
         var segments: [ScreenTimeSegmentRow] = []
         var applications: [ScreenTimeApplicationRow] = []
         var devices: [ScreenTimeDeviceRow] = []
+        var deviceCount = 0
+        var segmentCount = 0
+        var categoryCount = 0
+        var applicationCount = 0
 
         for await deviceData in data {
+            deviceCount += 1
+            Self.logger.notice("SNOWBALL_SCREEN_TIME: 收到 DeviceData #\(deviceCount, privacy: .public)")
             let deviceName = deviceData.device.name ?? "未命名设备"
             let deviceModel = String(describing: deviceData.device.model)
             let deviceID = deviceName + "-" + deviceModel
+
+            Self.logger.notice(
+                "SNOWBALL_SCREEN_TIME: Device name=\(deviceName, privacy: .public), model=\(deviceModel, privacy: .public), lastUpdated=\(deviceData.lastUpdatedDate.description, privacy: .public)"
+            )
 
             devices.append(
                 ScreenTimeDeviceRow(
@@ -357,6 +371,10 @@ struct TotalActivityReport: DeviceActivityReportScene {
             )
 
             for await segment in deviceData.activitySegments {
+                segmentCount += 1
+                Self.logger.notice(
+                    "SNOWBALL_SCREEN_TIME: 收到 Segment #\(segmentCount, privacy: .public), start=\(segment.dateInterval.start.description, privacy: .public), end=\(segment.dateInterval.end.description, privacy: .public), duration=\(segment.totalActivityDuration, privacy: .public)"
+                )
                 totalDuration += segment.totalActivityDuration
 
                 let start = segment.dateInterval.start
@@ -385,6 +403,7 @@ struct TotalActivityReport: DeviceActivityReportScene {
                 )
 
                 for await categoryActivity in segment.categories {
+                    categoryCount += 1
                     let rawCategoryName =
                         categoryActivity.category.localizedDisplayName
                     let categoryName =
@@ -394,6 +413,7 @@ struct TotalActivityReport: DeviceActivityReportScene {
 
                     for await applicationActivity
                         in categoryActivity.applications {
+                        applicationCount += 1
                         let application =
                             applicationActivity.application
 
@@ -408,6 +428,10 @@ struct TotalActivityReport: DeviceActivityReportScene {
                             rawDisplayName?.isEmpty == false
                             ? rawDisplayName!
                             : bundleIdentifier
+
+                        Self.logger.notice(
+                            "SNOWBALL_SCREEN_TIME: App #\(applicationCount, privacy: .public), name=\(displayName, privacy: .public), bundle=\(bundleIdentifier, privacy: .public), duration=\(applicationActivity.totalActivityDuration, privacy: .public)"
+                        )
 
                         let rowID =
                             segmentID +
@@ -460,8 +484,16 @@ struct TotalActivityReport: DeviceActivityReportScene {
         }
 
         Self.logger.notice(
-            "SNOWBALL_SCREEN_TIME: makeConfiguration 汇总完成，segments=\(segments.count, privacy: .public)，applications=\(applications.count, privacy: .public)，devices=\(devices.count, privacy: .public)"
+            "SNOWBALL_SCREEN_TIME: makeConfiguration 汇总完成，deviceCount=\(deviceCount, privacy: .public)，segmentCount=\(segmentCount, privacy: .public)，categoryCount=\(categoryCount, privacy: .public)，applicationCount=\(applicationCount, privacy: .public)，segments=\(segments.count, privacy: .public)，applications=\(applications.count, privacy: .public)，devices=\(devices.count, privacy: .public)，totalSeconds=\(totalDuration, privacy: .public)"
         )
+
+        if deviceCount == 0 {
+            Self.logger.error("SNOWBALL_SCREEN_TIME: 致命诊断：DeviceActivityResults 没有返回任何 DeviceData")
+        } else if segmentCount == 0 {
+            Self.logger.error("SNOWBALL_SCREEN_TIME: 致命诊断：收到 DeviceData，但没有任何 activitySegments")
+        } else {
+            Self.logger.notice("SNOWBALL_SCREEN_TIME: 数据遍历正常，准备写入 App Group")
+        }
 
         SnowballScreenTimeSharedStore.save(
             totalDuration: totalDuration,

@@ -59,6 +59,8 @@ export default function Footprint({
   const [openYears, setOpenYears] = useState({})
   const [popupVisitIndex, setPopupVisitIndex] = useState(0)
   const [openFuturePlanType, setOpenFuturePlanType] = useState(null)
+  const [futurePlanInputActive, setFuturePlanInputActive] = useState(false)
+  const futurePlanTextareaRef = useRef(null)
   const futurePlanLayerRef = useRef(null)
   const futurePlanDragRef = useRef(null)
 
@@ -70,7 +72,10 @@ export default function Footprint({
 
 
   useEffect(() => {
-    if (!openFuturePlanType) return undefined
+    if (!openFuturePlanType) {
+      setFuturePlanInputActive(false)
+      return undefined
+    }
 
     const html = document.documentElement
     const body = document.body
@@ -115,6 +120,44 @@ export default function Footprint({
       window.scrollTo(scrollX, scrollY)
     }
   }, [openFuturePlanType])
+
+  function focusFuturePlanWithoutMovingPage(event) {
+    const textarea = futurePlanTextareaRef.current
+    if (!textarea || document.activeElement === textarea) return
+
+    setFuturePlanInputActive(true)
+
+    // 阻止 iPhone 先执行原生“把输入框滚进可视区”的默认动作。
+    event.preventDefault()
+    event.stopPropagation()
+
+    const phoneShell = textarea.closest('.phoneShell')
+    const fullPage = textarea.closest('.footprintFullPage')
+    const shellScrollTop = phoneShell?.scrollTop || 0
+    const pageScrollTop = fullPage?.scrollTop || 0
+    const windowScrollX = window.scrollX || 0
+    const windowScrollY = window.scrollY || 0
+
+    try {
+      textarea.focus({ preventScroll: true })
+    } catch {
+      textarea.focus()
+    }
+
+    const restorePosition = () => {
+      if (phoneShell) phoneShell.scrollTop = shellScrollTop
+      if (fullPage) fullPage.scrollTop = pageScrollTop
+      window.scrollTo(windowScrollX, windowScrollY)
+    }
+
+    // iOS 会在键盘动画开始后再次尝试调整视口，因此分三次恢复原位。
+    restorePosition()
+    window.requestAnimationFrame(restorePosition)
+    window.setTimeout(restorePosition, 80)
+
+    const end = textarea.value.length
+    textarea.setSelectionRange?.(end, end)
+  }
 
   function currentFuturePlan(type = footprintView) {
     const saved = data?.futureFootprintPlans?.[type] || {}
@@ -681,7 +724,7 @@ export default function Footprint({
                 </div>
               ) : (
                 <div className="yearsCard footprintEditorCard footprintBrowseListCard">
-                  <p className="footprintTip">点图钉或记录看详情；拖行李箱拉杆、点纸条写计划。</p>
+                  <p className="footprintTip">点图钉或记录看详情；拖行李箱、点纸条写计划。</p>
                   <div className="footprintFullList compactFootprintList">
                     {footprints.filter(item => item.type === footprintView).length === 0 && <p>这里还没有足迹。</p>}
                     {footprints.filter(item => item.type === footprintView).map(item => {
@@ -903,11 +946,14 @@ export default function Footprint({
               >×</button>
               <h2>行程计划</h2>
               <textarea
+                ref={futurePlanTextareaRef}
+                className={futurePlanInputActive ? 'isInputActive' : ''}
                 value={plan.text}
                 onChange={event => updateFuturePlan(openFuturePlanType, { text: event.target.value })}
-                placeholder="写下未来想去的地方和计划……"
+                onPointerDown={focusFuturePlanWithoutMovingPage}
+                onBlur={() => setFuturePlanInputActive(false)}
+                placeholder="在这里写出行计划...拖行李箱拉杆，可移至任何位置。"
                 aria-label="未来足迹计划内容"
-                autoFocus
               />
             </section>
           </div>

@@ -674,17 +674,28 @@ export default function Nutrition({
               </div>
               <button type="button" className="dailyTextLinkBtn nutritionDetailLink" onClick={() => setShowNutritionDetail(true)}>详情</button>
             </div>
-            <div className="dailyMiniTable nutritionMiniTable nutritionMiniTableThreeCol">
-              {displayedNutritionStats.map(item => (
-                <div className={`dailyMiniRow nutritionLevel-${item.level}`} key={item.key}>
-                  <span className="nutritionRowLabel">
-                    <i className={`nutritionLegend nutritionLegend-${item.key}`} aria-hidden="true" />
-                    <b>{item.label}</b>
-                  </span>
-                  <strong>{item.display}</strong>
-                  <em title={item.topFoods}>{item.topFoods}</em>
+            <div className="dailyMiniTable nutritionMiniTable nutritionMiniTableSplit">
+              <div className="nutritionFixedColumn" aria-hidden="true">
+                {displayedNutritionStats.map(item => (
+                  <div className={`nutritionFixedRow nutritionLevel-${item.level}`} key={`fixed-${item.key}`}>
+                    <span className="nutritionRowLabel">
+                      <i className={`nutritionLegend nutritionLegend-${item.key}`} aria-hidden="true" />
+                      <b>{item.label}</b>
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="nutritionScrollViewport">
+                <div className="nutritionScrollContent">
+                  {displayedNutritionStats.map(item => (
+                    <div className={`nutritionScrollRow nutritionLevel-${item.level}`} key={`scroll-${item.key}`}>
+                      <strong>{item.display}</strong>
+                      <em title={item.topFoods}>{item.topFoods}</em>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         </div>

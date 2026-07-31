@@ -444,9 +444,18 @@
 }
 
 /* ======================================================
-   7. 营养成分表
+   7. 营养成分表｜唯一布局控制区
+   结构不再使用 sticky：
+   左侧是独立固定列，右侧是独立横向滚动区。
+   因此不会发生底色叠加、固定列漂移或各行列宽变化。
    ====================================================== */
 @media (max-width: 900px) {
+  :root {
+    --nutrition-fixed-col-width: 66px;
+    --nutrition-value-col-width: 50px;
+    --nutrition-note-col-width: 3600px;
+  }
+
   .dailyNutritionPage .nutritionTablePanel,
   .dailyNutritionPage .dailyCornerTableRight {
     position: absolute !important;
@@ -462,51 +471,151 @@
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
+    overflow: hidden !important;
   }
 
-  .dailyNutritionPage .nutritionMiniTable {
+  .dailyNutritionPage .nutritionMiniTableSplit {
+    display: grid !important;
+    grid-template-columns: var(--nutrition-fixed-col-width) minmax(0, 1fr) !important;
     width: 100% !important;
     overflow: hidden !important;
     border-radius: var(--nutrition-table-radius) !important;
     background: var(--nutrition-table-bg) !important;
     border: 1px solid var(--nutrition-table-border) !important;
+    box-shadow: none !important;
     backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    box-sizing: border-box !important;
   }
 
-  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow {
-    display: grid !important;
-    grid-template-columns: var(--nutrition-col-1) var(--nutrition-col-2) var(--nutrition-col-3) !important;
-    gap: var(--nutrition-table-col-gap) !important;
-    align-items: center !important;
+  /* 左列是独立区域，不参与滚动，也不额外添加底色。 */
+  .dailyNutritionPage .nutritionFixedColumn {
+    width: var(--nutrition-fixed-col-width) !important;
+    min-width: var(--nutrition-fixed-col-width) !important;
+    background: transparent !important;
+    border-right: none !important;
+    box-shadow: none !important;
+    z-index: 2 !important;
+  }
+
+  .dailyNutritionPage .nutritionFixedRow,
+  .dailyNutritionPage .nutritionScrollRow {
+    height: var(--nutrition-row-height) !important;
     min-height: var(--nutrition-row-height) !important;
-    padding: 0 var(--nutrition-table-padding-x) !important;
     border-bottom: 1px solid var(--nutrition-table-line) !important;
-    color: rgba(255,255,255,.92) !important;
+    box-sizing: border-box !important;
   }
 
-  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow:last-child {
+  .dailyNutritionPage .nutritionFixedRow:last-child,
+  .dailyNutritionPage .nutritionScrollRow:last-child {
     border-bottom: none !important;
   }
 
-  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow span {
-    font-size: var(--nutrition-row-label-size) !important;
+  .dailyNutritionPage .nutritionFixedRow {
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 10px !important;
+    background: transparent !important;
+  }
+
+  .dailyNutritionPage .nutritionFixedRow .nutritionRowLabel {
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    font-size: calc(var(--nutrition-row-label-size) - 1px) !important;
     font-weight: 700 !important;
     white-space: nowrap !important;
   }
 
-  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow strong {
-    font-size: var(--nutrition-row-value-size) !important;
-    color: var(--nutrition-row-value-color) !important;
+  .dailyNutritionPage .nutritionFixedRow .nutritionRowLabel b {
+    min-width: 0 !important;
+    font: inherit !important;
+    font-weight: 700 !important;
     white-space: nowrap !important;
   }
 
-  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow em {
+  /* 右侧只有这一层可以横向滚动。 */
+  .dailyNutritionPage .nutritionScrollViewport {
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-x: contain !important;
+    overscroll-behavior-y: none !important;
+    touch-action: pan-x !important;
+    scrollbar-width: none !important;
+  }
+
+  .dailyNutritionPage .nutritionScrollViewport::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .dailyNutritionPage .nutritionScrollContent {
+    width: calc(var(--nutrition-value-col-width) + var(--nutrition-note-col-width)) !important;
+    min-width: calc(var(--nutrition-value-col-width) + var(--nutrition-note-col-width)) !important;
+  }
+
+  .dailyNutritionPage .nutritionScrollRow {
+    display: grid !important;
+    grid-template-columns: var(--nutrition-value-col-width) var(--nutrition-note-col-width) !important;
+    align-items: center !important;
+    width: 100% !important;
+    background:
+      linear-gradient(
+        to bottom,
+        transparent calc(100% - 1px),
+        var(--nutrition-table-line) calc(100% - 1px),
+        var(--nutrition-table-line) 100%
+      ) !important;
+    border-bottom: none !important;
+  }
+
+  .dailyNutritionPage .nutritionScrollRow:last-child {
+    background: transparent !important;
+  }
+
+  .dailyNutritionPage .nutritionScrollRow > strong {
+    width: var(--nutrition-value-col-width) !important;
+    min-width: var(--nutrition-value-col-width) !important;
+    max-width: var(--nutrition-value-col-width) !important;
+    padding: 0 10px 0 14px !important;
+    box-sizing: border-box !important;
+    font-size: calc(var(--nutrition-row-value-size) - 1px) !important;
+    line-height: 1.2 !important;
+    color: var(--nutrition-row-value-color) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+  }
+
+  .dailyNutritionPage .nutritionScrollRow > em {
+    width: var(--nutrition-note-col-width) !important;
+    min-width: var(--nutrition-note-col-width) !important;
+    max-width: var(--nutrition-note-col-width) !important;
+    padding: 0 12px 0 4px !important;
+    box-sizing: border-box !important;
+    font-family: inherit !important;
     font-size: var(--nutrition-row-food-size) !important;
+    font-weight: 400 !important;
+    line-height: 1.25 !important;
     font-style: normal !important;
     color: var(--nutrition-row-food-color) !important;
     white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+
+  /* 整个页面不参与横向拖动。 */
+  .dailyNutritionPage,
+  .dailyNutritionPage .nutritionSpectrumCard,
+  .dailyNutritionPage .nutritionInsightContent,
+  .dailyNutritionPage .dailyInsightContent {
+    overflow-x: hidden !important;
+    overscroll-behavior-x: none !important;
   }
 }
 
@@ -605,25 +714,6 @@
   .dailyNutritionPage .nutritionInsightContent,
   .dailyNutritionPage .dailyInsightContent {
     background: transparent !important;
-  }
-}
-
-/* ======================================================
-   V1.2｜营养表 TOP4 与第三列左移
-   第三列继续单行显示，TOP4 放不下时使用省略号。
-   列宽仍由上方三个变量统一控制。
-   ====================================================== */
-@media (max-width: 900px) {
-  .dailyNutritionPage
-  .nutritionMiniTableThreeCol
-  .dailyMiniRow
-  em {
-    display: block !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
   }
 }
 
@@ -852,25 +942,6 @@
     filter: grayscale(1) saturate(0) brightness(1.14) !important;
   }
 
-  /* 第一列内部放置图例，不改变三列原有宽度。 */
-  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow .nutritionRowLabel {
-    display: flex !important;
-    align-items: center !important;
-    min-width: 0 !important;
-    gap: 5px !important;
-    font-size: calc(var(--nutrition-row-label-size) - 1px) !important;
-  }
-
-  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow .nutritionRowLabel b {
-    min-width: 0 !important;
-    font: inherit !important;
-    font-weight: 700 !important;
-    white-space: nowrap !important;
-  }
-
-  .dailyNutritionPage .nutritionMiniTableThreeCol .dailyMiniRow strong {
-    font-size: calc(var(--nutrition-row-value-size) - 1px) !important;
-  }
 
   .dailyNutritionPage .nutritionLegend {
     flex: 0 0 6px !important;
@@ -975,3 +1046,5 @@
     padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
   }
 }
+
+
