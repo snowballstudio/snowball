@@ -23,7 +23,7 @@ function errorText(error) {
   return String(error?.message || error || '未知错误')
 }
 
-function CompactResult({ title, value, maxHeight = '180px' }) {
+function CompactResult({ title, value, height = '180px' }) {
   if (!value) return null
 
   return (
@@ -33,24 +33,39 @@ function CompactResult({ title, value, maxHeight = '180px' }) {
       border: '1px solid rgba(80, 100, 120, 0.18)',
       borderRadius: '10px',
       background: 'rgba(245, 248, 250, 0.96)',
+      overflow: 'hidden',
     }}>
       <strong style={{ display: 'block', marginBottom: '6px' }}>{title}</strong>
-      <pre style={{
-        margin: 0,
-        whiteSpace: 'pre-wrap',
-        overflowWrap: 'anywhere',
-        maxHeight,
-        overflowY: 'scroll',
-        overflowX: 'hidden',
-        WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'contain',
-        touchAction: 'pan-y',
-        minHeight: 0,
-        fontSize: '12px',
-        lineHeight: 1.45,
-      }}>
-        {JSON.stringify(value, null, 2)}
-      </pre>
+      <textarea
+        value={JSON.stringify(value, null, 2)}
+        readOnly
+        aria-label={title}
+        spellCheck={false}
+        style={{
+          display: 'block',
+          boxSizing: 'border-box',
+          width: '100%',
+          height,
+          minHeight: height,
+          margin: 0,
+          padding: '8px',
+          border: '1px solid rgba(80, 100, 120, 0.14)',
+          borderRadius: '8px',
+          background: '#ffffff',
+          color: '#39424c',
+          resize: 'none',
+          overflowY: 'scroll',
+          overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+          overscrollBehavior: 'contain',
+          whiteSpace: 'pre-wrap',
+          overflowWrap: 'anywhere',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontSize: '12px',
+          lineHeight: 1.45,
+        }}
+      />
     </div>
   )
 }
@@ -126,7 +141,7 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
       <div className="iosScreenTimeStatusGrid" style={{ marginBottom: '10px' }}>
         <span>日期</span><strong>{date || '—'}</strong>
         <span>授权</span><strong>{status.statusLabel || status.status || '—'}</strong>
-        <span>Monitor</span><strong>1 Activity / 1 Event / 1分钟</strong>
+        <span>Monitor</span><strong>一次性 / 2分钟后开始 / 1分钟阈值</strong>
       </div>
 
       {/* 所有关键按钮放在最前面，保证一屏内可见。 */}
@@ -253,11 +268,11 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
           overflowWrap: 'anywhere',
         }}
       >
-        {message || '请先注册，再读取系统状态；使用手机1分钟后读取回调。'}
+        {message || '点注册后等待2分钟进入新区间；区间开始后使用手机1分钟，再读取回调。'}
       </p>
 
       {/* 结果紧跟按钮，不再藏到页面最下方。 */}
-      <CompactResult title="Monitor 结果" value={monitorPreview} maxHeight="42vh" />
+      <CompactResult title="Monitor 结果" value={monitorPreview} height="42vh" />
       <CompactResult title="正式报告结果" value={reportPreview} />
 
       <p className="iosScreenTimeDeveloperNote" style={{ marginBottom: 0 }}>

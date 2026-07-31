@@ -321,16 +321,60 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         let center = DeviceActivityCenter()
-        let activity = SnowballMonitorMiniDefinition.activity
-        let eventName = SnowballMonitorMiniDefinition.event
+        let defaults = UserDefaults(
+            suiteName: SnowballMonitorMiniDefinition.appGroup
+        )
 
-        // 只停止最小测试，不影响正式三组离机监控。
-        center.stopMonitoring([activity])
+        if let previousActivityText = defaults?.string(
+            forKey: SnowballMonitorMiniDefinition.lastActivityKey
+        ),
+           !previousActivityText.isEmpty {
+            center.stopMonitoring([
+                DeviceActivityName(previousActivityText)
+            ])
+        }
 
-        let schedule = SnowballMonitorMiniDefinition.schedule()
+        let now = Date()
+        let calendar = Calendar.autoupdatingCurrent
+
+        guard let startDate = calendar.date(
+            byAdding: .minute,
+            value: 2,
+            to: now
+        ),
+        let endDate = calendar.date(
+            byAdding: .minute,
+            value: 15,
+            to: startDate
+        ) else {
+            call.reject("无法计算最小测试时间段。")
+            return
+        }
+
+        let token = SnowballMonitorMiniDefinition.token(for: now)
+        let activity = DeviceActivityName(
+            "snowball.monitor.mini.\(token)"
+        )
+        let eventName = DeviceActivityEvent.Name(
+            "snowball.monitor.mini.one-minute.\(token)"
+        )
+
+        let schedule = DeviceActivitySchedule(
+            intervalStart: calendar.dateComponents(
+                [.calendar, .timeZone, .year, .month, .day, .hour, .minute],
+                from: startDate
+            ),
+            intervalEnd: calendar.dateComponents(
+                [.calendar, .timeZone, .year, .month, .day, .hour, .minute],
+                from: endDate
+            ),
+            repeats: false
+        )
+
         let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
             eventName: DeviceActivityEvent(
-                threshold: DateComponents(minute: 1)
+                threshold: DateComponents(minute: 1),
+                includesPastActivity: false
             )
         ]
 
@@ -341,7 +385,6 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 events: events
             )
 
-            // startMonitoring 没抛错后，立即从系统反向读取确认。
             let systemActivities = center.activities
             let storedSchedule = center.schedule(for: activity)
             let storedEvents = center.events(for: activity)
@@ -349,15 +392,28 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 && storedSchedule != nil
                 && storedEvents[eventName] != nil
 
-            let defaults = UserDefaults(
-                suiteName: SnowballMonitorMiniDefinition.appGroup
-            )
             defaults?.removeObject(
                 forKey: SnowballMonitorMiniDefinition.callbackLogKey
             )
             defaults?.set(
-                ISO8601DateFormatter().string(from: Date()),
+                ISO8601DateFormatter().string(from: now),
                 forKey: SnowballMonitorMiniDefinition.registeredAtKey
+            )
+            defaults?.set(
+                activity.rawValue,
+                forKey: SnowballMonitorMiniDefinition.lastActivityKey
+            )
+            defaults?.set(
+                eventName.rawValue,
+                forKey: SnowballMonitorMiniDefinition.lastEventKey
+            )
+            defaults?.set(
+                ISO8601DateFormatter().string(from: startDate),
+                forKey: SnowballMonitorMiniDefinition.lastStartKey
+            )
+            defaults?.set(
+                ISO8601DateFormatter().string(from: endDate),
+                forKey: SnowballMonitorMiniDefinition.lastEndKey
             )
 
             call.resolve([
@@ -369,9 +425,17 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 "systemActivities": systemActivities.map(\.rawValue),
                 "eventCount": storedEvents.count,
                 "scheduleExists": storedSchedule != nil,
+                "repeats": false,
+                "includesPastActivity": false,
+                "scheduledStart": ISO8601DateFormatter().string(
+                    from: startDate
+                ),
+                "scheduledEnd": ISO8601DateFormatter().string(
+                    from: endDate
+                ),
                 "message": registered
-                    ? "苹果系统已确认登记：1个Activity、1个Event。请正常使用手机至少1分钟，然后读取回调。"
-                    : "startMonitoring未报错，但系统反查不完整，请查看系统状态。"
+                    ? "系统已登记一次性测试：2分钟后开始，持续15分钟。开始后正常使用手机1分钟，再读取回调。"
+                    : "startMonitoring未报错，但系统反查不完整，请读取注册状态。"
             ])
         } catch {
             call.reject(
@@ -384,8 +448,32 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc public func readMonitorMiniStatus(_ call: CAPPluginCall) {
         let center = DeviceActivityCenter()
-        let activity = SnowballMonitorMiniDefinition.activity
-        let eventName = SnowballMonitorMiniDefinition.event
+
+        guard let defaults = UserDefaults(
+            suiteName: SnowballMonitorMiniDefinition.appGroup
+        ) else {
+            call.reject("无法打开Monitor测试的App Group。")
+            return
+        }
+
+        let activityText = defaults.string(
+            forKey: SnowballMonitorMiniDefinition.lastActivityKey
+        ) ?? ""
+        let eventText = defaults.string(
+            forKey: SnowballMonitorMiniDefinition.lastEventKey
+        ) ?? ""
+
+        guard !activityText.isEmpty, !eventText.isEmpty else {
+            call.resolve([
+                "registered": false,
+                "systemConfirmed": false,
+                "message": "还没有登记本轮最小测试，请先点①注册 Monitor。"
+            ])
+            return
+        }
+
+        let activity = DeviceActivityName(activityText)
+        let eventName = DeviceActivityEvent.Name(eventText)
         let activities = center.activities
         let schedule = center.schedule(for: activity)
         let events = center.events(for: activity)
@@ -393,10 +481,22 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         let schedulePayload: [String: Any] = [
             "exists": schedule != nil,
             "repeats": schedule?.repeats ?? false,
+            "intervalStartYear": schedule?.intervalStart.year ?? -1,
+            "intervalStartMonth": schedule?.intervalStart.month ?? -1,
+            "intervalStartDay": schedule?.intervalStart.day ?? -1,
             "intervalStartHour": schedule?.intervalStart.hour ?? -1,
             "intervalStartMinute": schedule?.intervalStart.minute ?? -1,
+            "intervalEndYear": schedule?.intervalEnd.year ?? -1,
+            "intervalEndMonth": schedule?.intervalEnd.month ?? -1,
+            "intervalEndDay": schedule?.intervalEnd.day ?? -1,
             "intervalEndHour": schedule?.intervalEnd.hour ?? -1,
-            "intervalEndMinute": schedule?.intervalEnd.minute ?? -1
+            "intervalEndMinute": schedule?.intervalEnd.minute ?? -1,
+            "scheduledStart": defaults.string(
+                forKey: SnowballMonitorMiniDefinition.lastStartKey
+            ) ?? "",
+            "scheduledEnd": defaults.string(
+                forKey: SnowballMonitorMiniDefinition.lastEndKey
+            ) ?? ""
         ]
 
         let eventPayload = events.map { name, event in
@@ -405,6 +505,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 "thresholdHour": event.threshold.hour ?? 0,
                 "thresholdMinute": event.threshold.minute ?? 0,
                 "thresholdSecond": event.threshold.second ?? 0,
+                "includesPastActivity": event.includesPastActivity,
                 "includesAllActivity": event.includesAllActivity
             ] as [String: Any]
         }.sorted {
@@ -472,14 +573,27 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc public func stopMonitorMiniTest(_ call: CAPPluginCall) {
         let center = DeviceActivityCenter()
-        center.stopMonitoring([SnowballMonitorMiniDefinition.activity])
+        let defaults = UserDefaults(
+            suiteName: SnowballMonitorMiniDefinition.appGroup
+        )
+        let activityText = defaults?.string(
+            forKey: SnowballMonitorMiniDefinition.lastActivityKey
+        ) ?? ""
+
+        if !activityText.isEmpty {
+            center.stopMonitoring([
+                DeviceActivityName(activityText)
+            ])
+        }
 
         let remaining = center.activities
         call.resolve([
             "stopped": true,
-            "stillRegistered": remaining.contains(
-                SnowballMonitorMiniDefinition.activity
-            ),
+            "activityName": activityText,
+            "stillRegistered": !activityText.isEmpty
+                && remaining.contains(
+                    DeviceActivityName(activityText)
+                ),
             "systemActivities": remaining.map(\.rawValue)
         ])
     }
@@ -573,23 +687,26 @@ private struct IOSScreenTimeReportContainer: View {
 
 private enum SnowballMonitorMiniDefinition {
     static let appGroup = "group.com.snowball.health"
-    static let activity =
-        DeviceActivityName("snowball.monitor.mini.v1")
-    static let event =
-        DeviceActivityEvent.Name("snowball.monitor.mini.one-minute")
     static let callbackLogKey =
         "snowball.monitor.mini.callbacks.v1"
     static let registeredAtKey =
         "snowball.monitor.mini.registeredAt"
+    static let lastActivityKey =
+        "snowball.monitor.mini.lastActivity.v2"
+    static let lastEventKey =
+        "snowball.monitor.mini.lastEvent.v2"
+    static let lastStartKey =
+        "snowball.monitor.mini.lastStart.v2"
+    static let lastEndKey =
+        "snowball.monitor.mini.lastEnd.v2"
 
-    // 全天重复，远大于苹果要求的15分钟最短区间。
-    // 注册时当前通常就在有效区间内。
-    static func schedule() -> DeviceActivitySchedule {
-        DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: 0, minute: 0),
-            intervalEnd: DateComponents(hour: 23, minute: 59),
-            repeats: true
-        )
+    static func token(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.autoupdatingCurrent
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = Calendar.autoupdatingCurrent.timeZone
+        formatter.dateFormat = "yyyyMMddHHmmss"
+        return formatter.string(from: date)
     }
 }
 
