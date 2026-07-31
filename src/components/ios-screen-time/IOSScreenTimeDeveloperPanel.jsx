@@ -23,7 +23,7 @@ function errorText(error) {
   return String(error?.message || error || '未知错误')
 }
 
-function CompactResult({ title, value }) {
+function CompactResult({ title, value, maxHeight = '180px' }) {
   if (!value) return null
 
   return (
@@ -39,8 +39,13 @@ function CompactResult({ title, value }) {
         margin: 0,
         whiteSpace: 'pre-wrap',
         overflowWrap: 'anywhere',
-        maxHeight: '180px',
-        overflowY: 'auto',
+        maxHeight,
+        overflowY: 'scroll',
+        overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain',
+        touchAction: 'pan-y',
+        minHeight: 0,
         fontSize: '12px',
         lineHeight: 1.45,
       }}>
@@ -252,7 +257,7 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
       </p>
 
       {/* 结果紧跟按钮，不再藏到页面最下方。 */}
-      <CompactResult title="Monitor 结果" value={monitorPreview} />
+      <CompactResult title="Monitor 结果" value={monitorPreview} maxHeight="42vh" />
       <CompactResult title="正式报告结果" value={reportPreview} />
 
       <p className="iosScreenTimeDeveloperNote" style={{ marginBottom: 0 }}>
