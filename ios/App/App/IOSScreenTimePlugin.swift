@@ -17,7 +17,11 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "readActivityData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startOffscreenMonitoring", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readOffscreenMonitoringData", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "stopOffscreenMonitoring", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "stopOffscreenMonitoring", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startMonitorMiniTest", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readMonitorMiniStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readMonitorMiniCallbacks", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stopMonitorMiniTest", returnType: CAPPluginReturnPromise)
     ]
 
     @objc public func getAuthorizationStatus(_ call: CAPPluginCall) {
@@ -307,6 +311,187 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+
+    // MARK: - DeviceActivity Monitor 最小验证
+
+    @objc public func startMonitorMiniTest(_ call: CAPPluginCall) {
+        guard AuthorizationCenter.shared.authorizationStatus == .approved else {
+            call.reject("请先授权苹果屏幕时间。")
+            return
+        }
+
+        let center = DeviceActivityCenter()
+        let activity = SnowballMonitorMiniDefinition.activity
+        let eventName = SnowballMonitorMiniDefinition.event
+
+        // 只停止最小测试，不影响正式三组离机监控。
+        center.stopMonitoring([activity])
+
+        let schedule = SnowballMonitorMiniDefinition.schedule()
+        let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
+            eventName: DeviceActivityEvent(
+                threshold: DateComponents(minute: 1)
+            )
+        ]
+
+        do {
+            try center.startMonitoring(
+                activity,
+                during: schedule,
+                events: events
+            )
+
+            // startMonitoring 没抛错后，立即从系统反向读取确认。
+            let systemActivities = center.activities
+            let storedSchedule = center.schedule(for: activity)
+            let storedEvents = center.events(for: activity)
+            let registered = systemActivities.contains(activity)
+                && storedSchedule != nil
+                && storedEvents[eventName] != nil
+
+            let defaults = UserDefaults(
+                suiteName: SnowballMonitorMiniDefinition.appGroup
+            )
+            defaults?.removeObject(
+                forKey: SnowballMonitorMiniDefinition.callbackLogKey
+            )
+            defaults?.set(
+                ISO8601DateFormatter().string(from: Date()),
+                forKey: SnowballMonitorMiniDefinition.registeredAtKey
+            )
+
+            call.resolve([
+                "started": true,
+                "systemConfirmed": registered,
+                "activityName": activity.rawValue,
+                "eventName": eventName.rawValue,
+                "activityCount": systemActivities.count,
+                "systemActivities": systemActivities.map(\.rawValue),
+                "eventCount": storedEvents.count,
+                "scheduleExists": storedSchedule != nil,
+                "nextIntervalStart": storedSchedule?.nextInterval?.start
+                    .map { ISO8601DateFormatter().string(from: $0) } ?? "",
+                "nextIntervalEnd": storedSchedule?.nextInterval?.end
+                    .map { ISO8601DateFormatter().string(from: $0) } ?? "",
+                "message": registered
+                    ? "苹果系统已确认登记：1个Activity、1个Event。请正常使用手机至少1分钟，然后读取回调。"
+                    : "startMonitoring未报错，但系统反查不完整，请查看系统状态。"
+            ])
+        } catch {
+            call.reject(
+                "最小Monitor注册失败：\(error.localizedDescription)",
+                nil,
+                error
+            )
+        }
+    }
+
+    @objc public func readMonitorMiniStatus(_ call: CAPPluginCall) {
+        let center = DeviceActivityCenter()
+        let activity = SnowballMonitorMiniDefinition.activity
+        let eventName = SnowballMonitorMiniDefinition.event
+        let activities = center.activities
+        let schedule = center.schedule(for: activity)
+        let events = center.events(for: activity)
+
+        let schedulePayload: [String: Any] = [
+            "exists": schedule != nil,
+            "repeats": schedule?.repeats ?? false,
+            "intervalStartHour": schedule?.intervalStart.hour ?? -1,
+            "intervalStartMinute": schedule?.intervalStart.minute ?? -1,
+            "intervalEndHour": schedule?.intervalEnd.hour ?? -1,
+            "intervalEndMinute": schedule?.intervalEnd.minute ?? -1,
+            "nextIntervalStart": schedule?.nextInterval?.start
+                .map { ISO8601DateFormatter().string(from: $0) } ?? "",
+            "nextIntervalEnd": schedule?.nextInterval?.end
+                .map { ISO8601DateFormatter().string(from: $0) } ?? ""
+        ]
+
+        let eventPayload = events.map { name, event in
+            [
+                "name": name.rawValue,
+                "thresholdHour": event.threshold.hour ?? 0,
+                "thresholdMinute": event.threshold.minute ?? 0,
+                "thresholdSecond": event.threshold.second ?? 0,
+                "includesAllActivity": event.includesAllActivity
+            ] as [String: Any]
+        }.sorted {
+            ($0["name"] as? String ?? "") < ($1["name"] as? String ?? "")
+        }
+
+        call.resolve([
+            "authorization": self.statusPayload(),
+            "registered": activities.contains(activity),
+            "systemActivities": activities.map(\.rawValue),
+            "activityName": activity.rawValue,
+            "expectedEventName": eventName.rawValue,
+            "schedule": schedulePayload,
+            "events": eventPayload,
+            "systemConfirmed":
+                activities.contains(activity)
+                && schedule != nil
+                && events[eventName] != nil
+        ])
+    }
+
+    @objc public func readMonitorMiniCallbacks(_ call: CAPPluginCall) {
+        guard let defaults = UserDefaults(
+            suiteName: SnowballMonitorMiniDefinition.appGroup
+        ) else {
+            call.reject("无法打开Monitor测试的App Group。")
+            return
+        }
+
+        let registeredAt = defaults.string(
+            forKey: SnowballMonitorMiniDefinition.registeredAtKey
+        ) ?? ""
+
+        guard let data = defaults.data(
+            forKey: SnowballMonitorMiniDefinition.callbackLogKey
+        ) else {
+            call.resolve([
+                "registeredAt": registeredAt,
+                "callbacks": [],
+                "callbackCount": 0,
+                "message": "系统登记状态可以单独读取；目前共享容器中还没有Monitor回调。"
+            ])
+            return
+        }
+
+        do {
+            let object = try JSONSerialization.jsonObject(with: data)
+            let callbacks = object as? [[String: Any]] ?? []
+            call.resolve([
+                "registeredAt": registeredAt,
+                "callbacks": callbacks,
+                "callbackCount": callbacks.count,
+                "message": callbacks.isEmpty
+                    ? "目前还没有Monitor回调。"
+                    : "已收到Monitor Extension回调。"
+            ])
+        } catch {
+            call.reject(
+                "读取Monitor最小测试回调失败：\(error.localizedDescription)",
+                nil,
+                error
+            )
+        }
+    }
+
+    @objc public func stopMonitorMiniTest(_ call: CAPPluginCall) {
+        let center = DeviceActivityCenter()
+        center.stopMonitoring([SnowballMonitorMiniDefinition.activity])
+
+        let remaining = center.activities
+        call.resolve([
+            "stopped": true,
+            "stillRegistered": remaining.contains(
+                SnowballMonitorMiniDefinition.activity
+            ),
+            "systemActivities": remaining.map(\.rawValue)
+        ])
+    }
+
     private func statusPayload() -> [String: Any] {
         let status = AuthorizationCenter.shared.authorizationStatus
 
@@ -392,6 +577,29 @@ private struct IOSScreenTimeReportContainer: View {
     }
 }
 
+
+
+private enum SnowballMonitorMiniDefinition {
+    static let appGroup = "group.com.snowball.health"
+    static let activity =
+        DeviceActivityName("snowball.monitor.mini.v1")
+    static let event =
+        DeviceActivityEvent.Name("snowball.monitor.mini.one-minute")
+    static let callbackLogKey =
+        "snowball.monitor.mini.callbacks.v1"
+    static let registeredAtKey =
+        "snowball.monitor.mini.registeredAt"
+
+    // 全天重复，远大于苹果要求的15分钟最短区间。
+    // 注册时当前通常就在有效区间内。
+    static func schedule() -> DeviceActivitySchedule {
+        DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: 0, minute: 0),
+            intervalEnd: DateComponents(hour: 23, minute: 59),
+            repeats: true
+        )
+    }
+}
 
 private enum SnowballOffscreenMonitorDefinition {
     static let appGroup = "group.com.snowball.health"

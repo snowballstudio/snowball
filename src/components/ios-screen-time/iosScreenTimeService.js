@@ -364,3 +364,34 @@ export async function readIOSScreenTimeData({
     })),
   }
 }
+
+
+// MARK: - DeviceActivity Monitor 最小验证
+
+export async function startIOSMonitorMiniTest() {
+  if (!isIOSScreenTimeAvailable()) {
+    throw new Error('Monitor最小测试只能在iPhone真机运行。')
+  }
+  return IOSScreenTime.startMonitorMiniTest()
+}
+
+export async function readIOSMonitorMiniStatus() {
+  if (!isIOSScreenTimeAvailable()) {
+    throw new Error('Monitor系统状态只能在iPhone真机读取。')
+  }
+  return IOSScreenTime.readMonitorMiniStatus()
+}
+
+export async function readIOSMonitorMiniCallbacks() {
+  if (!isIOSScreenTimeAvailable()) {
+    throw new Error('Monitor回调只能在iPhone真机读取。')
+  }
+  return IOSScreenTime.readMonitorMiniCallbacks()
+}
+
+export async function stopIOSMonitorMiniTest() {
+  if (!isIOSScreenTimeAvailable()) {
+    throw new Error('Monitor最小测试只能在iPhone真机停止。')
+  }
+  return IOSScreenTime.stopMonitorMiniTest()
+}
