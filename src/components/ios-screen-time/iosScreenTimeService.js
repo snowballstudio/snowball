@@ -56,9 +56,10 @@ export async function refreshIOSSevenDaySummary({
 
   sevenDaySummaryRefreshPromise =
     IOSScreenTime.refreshSevenDaySummary()
-      .catch(error => {
+      .finally(() => {
+        // 每次刷新结束后释放 Promise，后续重新打开主页或回到前台时
+        // 才能再次触发苹果七日报告，而不是永久复用第一次结果。
         sevenDaySummaryRefreshPromise = null
-        throw error
       })
 
   return sevenDaySummaryRefreshPromise

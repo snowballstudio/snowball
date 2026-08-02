@@ -2947,13 +2947,24 @@ function App() {
           snowballAppNameFor,
         )
 
-        if (alive && todayPayload?.days?.length) {
+        if (alive) {
           setData(prev => {
+            const averageValue = Number(
+              todayRawPayload?.sevenDayAverageMinutes
+              ?? prev.iosSevenDayAverageMinutes
+              ?? 0
+            )
+
             let next = {
               ...prev,
               iosSevenDayAverageMinutes:
-                Number(todayRawPayload?.sevenDayAverageMinutes ?? prev.iosSevenDayAverageMinutes),
+                Number.isFinite(averageValue) ? averageValue : 0,
             }
+
+            // 七日平均只包含昨天及之前的完整自然日，因此读取“今天”时
+            // days 可能为空；平均值仍然必须先写入主页。
+            if (!todayPayload?.days?.length) return next
+
             next = mergeNativeScreenDays(next, todayPayload, {
               liveToday: true,
               refreshDates: [today],
@@ -3018,25 +3029,43 @@ function App() {
           snowballAppNameFor,
         )
 
-        if (!alive || !historyPayload?.days?.length) return
+        if (!alive) return
 
         setData(prev => {
-          let next = mergeNativeScreenDays(prev, historyPayload, {
-            refreshDates,
-          })
-          next = mergeNativeOffscreenDays(next, historyPayload, {
-            refreshDates,
-          })
-          next = mergeNativeDailyDays(next, historyPayload, {
-            refreshDates,
-          })
+          const averageValue = Number(
+            historyRawPayload?.sevenDayAverageMinutes
+            ?? prev.iosSevenDayAverageMinutes
+            ?? 0
+          )
+
+          let next = {
+            ...prev,
+            iosSevenDayAverageMinutes:
+              Number.isFinite(averageValue) ? averageValue : 0,
+          }
+
+          if (historyPayload?.days?.length) {
+            next = mergeNativeScreenDays(next, historyPayload, {
+              refreshDates,
+            })
+            next = mergeNativeOffscreenDays(next, historyPayload, {
+              refreshDates,
+            })
+            next = mergeNativeDailyDays(next, historyPayload, {
+              refreshDates,
+            })
+          }
 
           return {
             ...next,
-            iosSevenDayAverageMinutes:
-              Number(historyRawPayload?.sevenDayAverageMinutes ?? next.iosSevenDayAverageMinutes),
-            deviceScreenInitialImportDone: true,
-            lastDeviceScreenAutoSyncDate: todayKey,
+            deviceScreenInitialImportDone:
+              historyPayload?.days?.length
+                ? true
+                : prev.deviceScreenInitialImportDone,
+            lastDeviceScreenAutoSyncDate:
+              historyPayload?.days?.length
+                ? todayKey
+                : prev.lastDeviceScreenAutoSyncDate,
             lastDeviceAutoSyncAt: Date.now(),
           }
         })
@@ -3183,7 +3212,14 @@ function App() {
       avgSteps,
       avgScreen,
     }
-  }, [data.records, data.footprints, data.things, data.people, data.yesterdaySteps])
+  }, [
+    data.records,
+    data.footprints,
+    data.things,
+    data.people,
+    data.yesterdaySteps,
+    data.iosSevenDayAverageMinutes,
+  ])
 
   const last3Healthy = useMemo(
     () => dailyRewardWindow(latestRecords, {

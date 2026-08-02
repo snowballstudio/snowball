@@ -163,21 +163,29 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             let host = UIHostingController(rootView: report)
 
             presenter.addChild(host)
+
+            // DeviceActivityReport 必须拥有位于可见窗口内、非零尺寸的承载视图，
+            // 系统才会稳定启动 Report Extension 的 makeConfiguration。
+            // 这里保持几乎透明且不接收触控，不影响雪球页面操作。
+            let containerBounds = presenter.view.bounds
+            let reportWidth = max(240, min(containerBounds.width, 420))
+            let reportHeight = max(180, min(containerBounds.height, 320))
             host.view.frame = CGRect(
-                x: -4,
-                y: -4,
-                width: 2,
-                height: 2
+                x: 0,
+                y: 0,
+                width: reportWidth,
+                height: reportHeight
             )
             host.view.alpha = 0.01
             host.view.isUserInteractionEnabled = false
+            host.view.backgroundColor = .clear
             presenter.view.addSubview(host.view)
             host.didMove(toParent: presenter)
 
             let startedAt = Date()
             self.waitForSevenDaySummary(
                 newerThan: startedAt,
-                attemptsRemaining: 24
+                attemptsRemaining: 40
             ) { payload in
                 DispatchQueue.main.async {
                     host.willMove(toParent: nil)
