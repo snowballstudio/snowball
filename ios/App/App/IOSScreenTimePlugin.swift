@@ -14,7 +14,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getAuthorizationStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestAuthorization", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "presentReport", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "presentSevenDayAverage", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "refreshSevenDaySummary", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readActivityData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startOffscreenMonitoring", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readOffscreenMonitoringData", returnType: CAPPluginReturnPromise),
@@ -106,43 +106,46 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
 
-    @objc public func presentSevenDayAverage(_ call: CAPPluginCall) {
-        guard AuthorizationCenter.shared.authorizationStatus == .approved else {
+    @objc public func refreshSevenDaySummary(
+        _ call: CAPPluginCall
+    ) {
+        guard AuthorizationCenter.shared.authorizationStatus
+                == .approved else {
             call.reject("请先授权苹果屏幕时间。")
             return
         }
 
         let calendar = Calendar.autoupdatingCurrent
-        let todayStart = calendar.startOfDay(for: Date())
+        let today = calendar.startOfDay(for: Date())
 
         guard
-            let end = calendar.date(
+            let yesterday = calendar.date(
                 byAdding: .day,
                 value: -1,
-                to: todayStart
+                to: today
             ),
             let start = calendar.date(
                 byAdding: .day,
                 value: -6,
-                to: end
+                to: yesterday
             ),
-            let intervalEnd = calendar.date(
+            let end = calendar.date(
                 byAdding: .day,
                 value: 1,
-                to: end
+                to: yesterday
             )
         else {
-            call.reject("无法计算七日平均屏幕时间区间。")
+            call.reject("无法计算七日屏幕时间区间。")
             return
         }
 
-        let interval = DateInterval(
-            start: start,
-            end: intervalEnd
-        )
-
         let filter = DeviceActivityFilter(
-            segment: .daily(during: interval),
+            segment: .daily(
+                during: DateInterval(
+                    start: start,
+                    end: end
+                )
+            ),
             users: .all,
             devices: .all
         )
@@ -153,30 +156,42 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
 
-            let reportView = IOSSevenDayAverageContainer(
-                context: .init("Snowball Seven Day Average"),
-                filter: filter,
-                onClose: {
-                    presenter.dismiss(animated: true)
-                }
+            let report = DeviceActivityReport(
+                .init("Snowball Seven Day Average"),
+                filter: filter
             )
+            let host = UIHostingController(rootView: report)
 
-            let host = UIHostingController(rootView: reportView)
-            host.modalPresentationStyle = .formSheet
-            host.preferredContentSize = CGSize(width: 340, height: 240)
+            presenter.addChild(host)
+            host.view.frame = CGRect(
+                x: -4,
+                y: -4,
+                width: 2,
+                height: 2
+            )
+            host.view.alpha = 0.01
+            host.view.isUserInteractionEnabled = false
+            presenter.view.addSubview(host.view)
+            host.didMove(toParent: presenter)
 
-            if let sheet = host.sheetPresentationController {
-                sheet.detents = [.medium()]
-                sheet.prefersGrabberVisible = true
-            }
+            let startedAt = Date()
+            self.waitForSevenDaySummary(
+                newerThan: startedAt,
+                attemptsRemaining: 24
+            ) { payload in
+                DispatchQueue.main.async {
+                    host.willMove(toParent: nil)
+                    host.view.removeFromSuperview()
+                    host.removeFromParent()
 
-            presenter.present(host, animated: true) {
-                call.resolve([
-                    "opened": true,
-                    "startDate": self.formatSnowballDate(start),
-                    "endDate": self.formatSnowballDate(end),
-                    "dayCount": 7
-                ])
+                    if let payload {
+                        call.resolve(payload)
+                    } else {
+                        call.reject(
+                            "苹果七日屏幕时间仍在准备，请稍后重新打开雪球。"
+                        )
+                    }
+                }
             }
         }
     }
@@ -196,26 +211,71 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        guard let data = defaults.data(
+        let detailData = defaults.data(
             forKey: "snowball.ios-screen-time.days.v1"
-        ) else {
-            call.resolve([
-                "days": [],
-                "message":
-                    "共享容器中还没有报告数据，请先打开一次对应日期的苹果系统报告。"
-            ])
-            return
-        }
+        )
+        let summaryData = defaults.data(
+            forKey:
+                "snowball.ios-screen-time.seven-day-summary.v1"
+        )
 
         do {
-            guard let cache = try JSONSerialization
-                .jsonObject(with: data) as? [String: Any] else {
-                call.reject("苹果屏幕时间共享数据格式无效。")
-                return
+            let detailCache: [String: Any] = {
+                guard let detailData,
+                      let object = try? JSONSerialization
+                        .jsonObject(with: detailData)
+                        as? [String: Any] else {
+                    return [:]
+                }
+                return object
+            }()
+
+            let summaryCache: [String: Any] = {
+                guard let summaryData,
+                      let object = try? JSONSerialization
+                        .jsonObject(with: summaryData)
+                        as? [String: Any] else {
+                    return [:]
+                }
+                return object
+            }()
+
+            var daysByDate: [String: [String: Any]] = [:]
+
+            for day in (
+                detailCache["days"] as? [[String: Any]] ?? []
+            ) {
+                if let date = day["date"] as? String {
+                    daysByDate[date] = day
+                }
             }
 
-            let allDays =
-                cache["days"] as? [[String: Any]] ?? []
+            // 七日汇总包含完整的每日总时长与 App TOP 数据，
+            // 应覆盖旧的空数据；已有分时详情仍保留在 detail cache。
+            for summaryDay in (
+                summaryCache["days"] as? [[String: Any]] ?? []
+            ) {
+                guard let date =
+                    summaryDay["date"] as? String else {
+                    continue
+                }
+
+                if var detailed = daysByDate[date] {
+                    detailed["screenMinutes"] =
+                        summaryDay["screenMinutes"]
+                    detailed["totalActivitySeconds"] =
+                        summaryDay["totalActivitySeconds"]
+                    detailed["apps"] = summaryDay["apps"]
+                    daysByDate[date] = detailed
+                } else {
+                    daysByDate[date] = summaryDay
+                }
+            }
+
+            let allDays = daysByDate.values.sorted {
+                ($0["date"] as? String ?? "")
+                    < ($1["date"] as? String ?? "")
+            }
             let requestedEndDate =
                 parseSnowballDate(call.getString("startDate"))
                 ?? Date()
@@ -249,9 +309,20 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
             call.resolve([
                 "days": filteredDays,
-                "updatedAt": cache["updatedAt"] ?? "",
-                "version": cache["version"] ?? 1,
-                "source": "ios-device-activity-report-cache"
+                "sevenDayAverageMinutes":
+                    summaryCache["averageMinutes"] ?? 0,
+                "sevenDayCount":
+                    summaryCache["dayCount"] ?? 7,
+                "updatedAt":
+                    summaryCache["updatedAt"]
+                    ?? detailCache["updatedAt"]
+                    ?? "",
+                "version":
+                    summaryCache["version"]
+                    ?? detailCache["version"]
+                    ?? 1,
+                "source":
+                    "ios-device-activity-report-cache"
             ])
         } catch {
             call.reject(
@@ -809,6 +880,54 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         ])
     }
 
+    private func waitForSevenDaySummary(
+        newerThan startedAt: Date,
+        attemptsRemaining: Int,
+        completion: @escaping ([String: Any]?) -> Void
+    ) {
+        let defaults = UserDefaults(
+            suiteName: "group.com.snowball.health"
+        )
+
+        if let data = defaults?.data(
+            forKey:
+                "snowball.ios-screen-time.seven-day-summary.v1"
+        ),
+        let object = try? JSONSerialization
+            .jsonObject(with: data) as? [String: Any],
+        let updatedText = object["updatedAt"] as? String,
+        let updatedDate =
+            ISO8601DateFormatter().date(from: updatedText),
+        updatedDate >= startedAt.addingTimeInterval(-1) {
+            completion([
+                "refreshed": true,
+                "days": object["days"] ?? [],
+                "sevenDayAverageMinutes":
+                    object["averageMinutes"] ?? 0,
+                "sevenDayCount":
+                    object["dayCount"] ?? 7,
+                "updatedAt": updatedText
+            ])
+            return
+        }
+
+        guard attemptsRemaining > 0 else {
+            completion(nil)
+            return
+        }
+
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + 0.25
+        ) {
+            self.waitForSevenDaySummary(
+                newerThan: startedAt,
+                attemptsRemaining:
+                    attemptsRemaining - 1,
+                completion: completion
+            )
+        }
+    }
+
     private func statusPayload() -> [String: Any] {
         let status = AuthorizationCenter.shared.authorizationStatus
 
@@ -873,26 +992,6 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         return formatter.string(from: date)
     }
 }
-
-private struct IOSSevenDayAverageContainer: View {
-    let context: DeviceActivityReport.Context
-    let filter: DeviceActivityFilter
-    let onClose: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            DeviceActivityReport(context, filter: filter)
-                .navigationTitle("七日平均屏时")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("关闭", action: onClose)
-                    }
-                }
-        }
-    }
-}
-
 
 private struct IOSScreenTimeReportContainer: View {
     let context: DeviceActivityReport.Context

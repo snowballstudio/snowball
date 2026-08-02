@@ -25,7 +25,7 @@ import {
   recalculateIOSOffscreenRecord,
   getIOSScreenTimeStatus,
   readIOSScreenTimeData,
-  openIOSSevenDayAverage,
+  openIOSScreenTimeReport,
 } from './components/ios-screen-time/iosScreenTimeService.js'
 import { restoreIOSPlaybackAudioSession } from './components/audio/iosAudioSessionService.js'
 import { isPhotoIndexAvailable, pickPhotoIndexes, presentIndexedPhoto } from './components/photo-index/photoIndexService.js'
@@ -315,6 +315,7 @@ const DEFAULT = {
   lastDeviceScreenAutoSyncDate: '',
   lastSavedAt: 0,
   developerMode: false,
+  iosSevenDayAverageMinutes: null,
   }
 
 
@@ -2948,7 +2949,12 @@ function App() {
 
         if (alive && todayPayload?.days?.length) {
           setData(prev => {
-            let next = mergeNativeScreenDays(prev, todayPayload, {
+            let next = {
+              ...prev,
+              iosSevenDayAverageMinutes:
+                Number(todayRawPayload?.sevenDayAverageMinutes ?? prev.iosSevenDayAverageMinutes),
+            }
+            next = mergeNativeScreenDays(next, todayPayload, {
               liveToday: true,
               refreshDates: [today],
             })
@@ -3027,6 +3033,8 @@ function App() {
 
           return {
             ...next,
+            iosSevenDayAverageMinutes:
+              Number(historyRawPayload?.sevenDayAverageMinutes ?? next.iosSevenDayAverageMinutes),
             deviceScreenInitialImportDone: true,
             lastDeviceScreenAutoSyncDate: todayKey,
             lastDeviceAutoSyncAt: Date.now(),
@@ -3152,9 +3160,20 @@ function App() {
     const screenValues = records
       .map(item => recordScreenMinutes(item))
       .filter(n => n > 0)
-    const avgScreen = screenValues.length
-      ? formatDurationFromMinutes(screenValues.reduce((sum, n) => sum + n, 0) / screenValues.length)
-      : '待记录'
+    const iosAverageMinutes =
+      Number(data.iosSevenDayAverageMinutes)
+
+    const avgScreen =
+      Capacitor.getPlatform() === 'ios' &&
+      Number.isFinite(iosAverageMinutes) &&
+      iosAverageMinutes >= 0
+        ? `${(iosAverageMinutes / 60).toFixed(1)}小时`
+        : screenValues.length
+          ? formatDurationFromMinutes(
+              screenValues.reduce((sum, n) => sum + n, 0)
+              / screenValues.length
+            )
+          : '待记录'
 
     return {
       worldCount,
@@ -3594,26 +3613,33 @@ function App() {
     setShowDataPanel(true)
   }
 
-  async function openScreenTimeSummary() {
+  function openScreenTimeSummary() {
+    setDailyMode('screen-summary')
+    setShowDataPanel(true)
+  }
+
+  async function openScreenDetailFromSummary(date) {
+    const selectedDate =
+      formatDateForDaily(date || todayText())
+
     if (Capacitor.getPlatform() === 'ios') {
       try {
-        await openIOSSevenDayAverage()
+        await openIOSScreenTimeReport(selectedDate)
       } catch (error) {
         setDailyNotice({
-          title: '七日平均屏时无法打开',
-          text: String(error?.message || error || '请确认已经授权苹果屏幕时间。'),
+          title: '苹果分时报告无法打开',
+          text: String(
+            error?.message
+            || error
+            || '请确认已经授权苹果屏幕时间。'
+          ),
         })
       }
       return
     }
 
-    setDailyMode('screen-summary')
-    setShowDataPanel(true)
-  }
-
-  function openScreenDetailFromSummary(date) {
     if (!data.developerMode) return
-    setSelectedScreenDate(formatDateForDaily(date || todayText()))
+    setSelectedScreenDate(selectedDate)
     setScreenReturnMode('screen-summary')
     setDailyMode('screen-detail')
     setShowDataPanel(true)
@@ -4874,7 +4900,13 @@ max-width:78px !important;
             <ScreenTimeDataPanel
               mode="summary"
               screenRecords={data.screenRecords || []}
-              developerMode={data.developerMode}
+              developerMode={
+                data.developerMode
+                || Capacitor.getPlatform() === 'ios'
+              }
+              showTrainLink={
+                Capacitor.getPlatform() !== 'ios'
+              }
               onBackHome={() => setShowDataPanel(false)}
               onOpenTrain={() => openTrainPage('yesterday')}
               onOpenDetailDate={openScreenDetailFromSummary}

@@ -48,6 +48,28 @@ struct TotalActivityConfiguration: Sendable {
 }
 
 
+struct SevenDayApplicationSummary: Sendable {
+    let displayName: String
+    let bundleIdentifier: String
+    let categoryName: String
+    let duration: TimeInterval
+    let pickups: Int
+}
+
+struct SevenDayScreenSummary: Sendable {
+    let date: Date
+    let totalDuration: TimeInterval
+    let applications: [SevenDayApplicationSummary]
+}
+
+struct SevenDayAverageConfiguration: Sendable {
+    let averageDuration: TimeInterval
+    let totalDuration: TimeInterval
+    let dayCount: Int
+    let days: [SevenDayScreenSummary]
+}
+
+
 private enum SnowballScreenTimeSharedStore {
     private static let logger = Logger(
         subsystem: "com.snowball.health.SnowballScreenTimeReport",
@@ -60,6 +82,8 @@ private enum SnowballScreenTimeSharedStore {
 
     static let appGroupIdentifier = "group.com.snowball.health"
     static let cacheKey = "snowball.ios-screen-time.days.v1"
+    static let sevenDaySummaryCacheKey =
+        "snowball.ios-screen-time.seven-day-summary.v1"
 
     static func save(
         totalDuration: TimeInterval,
@@ -294,6 +318,88 @@ private enum SnowballScreenTimeSharedStore {
         }
     }
 
+    static func saveSevenDaySummary(
+        days: [SevenDayScreenSummary],
+        averageDuration: TimeInterval
+    ) {
+        guard let defaults = UserDefaults(
+            suiteName: appGroupIdentifier
+        ) else {
+            diagnostic("七日汇总失败：无法打开 App Group")
+            return
+        }
+
+        let payloadDays: [[String: Any]] = days.map { day in
+            let apps = day.applications
+                .map { app in
+                    [
+                        "realAppName": app.displayName,
+                        "packageName": app.bundleIdentifier,
+                        "categoryName": app.categoryName,
+                        "minutes": max(
+                            0,
+                            Int((app.duration / 60.0).rounded())
+                        ),
+                        "pickups": max(0, app.pickups)
+                    ] as [String: Any]
+                }
+                .sorted { left, right in
+                    let leftMinutes = left["minutes"] as? Int ?? 0
+                    let rightMinutes = right["minutes"] as? Int ?? 0
+                    if leftMinutes != rightMinutes {
+                        return leftMinutes > rightMinutes
+                    }
+                    return (left["realAppName"] as? String ?? "")
+                        .localizedCompare(
+                            right["realAppName"] as? String ?? ""
+                        ) == .orderedAscending
+                }
+
+            return [
+                "date": dateFormatter.string(from: day.date),
+                "screenMinutes": max(
+                    0,
+                    Int((day.totalDuration / 60.0).rounded())
+                ),
+                "totalActivitySeconds": max(
+                    0,
+                    Int(day.totalDuration.rounded())
+                ),
+                "apps": apps,
+                "hourlyActivity": [],
+                "devices": [],
+                "sourcePlatform": "ios",
+                "generatedAt": isoFormatter.string(from: Date())
+            ]
+        }
+
+        let payload: [String: Any] = [
+            "days": payloadDays,
+            "averageMinutes": max(
+                0,
+                Int((averageDuration / 60.0).rounded())
+            ),
+            "dayCount": 7,
+            "updatedAt": isoFormatter.string(from: Date()),
+            "version": 1,
+            "source": "ios-device-activity-seven-day-summary"
+        ]
+
+        guard JSONSerialization.isValidJSONObject(payload),
+              let data = try? JSONSerialization.data(
+                withJSONObject: payload
+              ) else {
+            diagnostic("七日汇总失败：JSON 无效")
+            return
+        }
+
+        defaults.set(data, forKey: sevenDaySummaryCacheKey)
+        defaults.synchronize()
+        diagnostic(
+            "七日汇总写入完成：days=\(payloadDays.count)，averageMinutes=\(Int((averageDuration / 60.0).rounded()))"
+        )
+    }
+
     private static func reportDate(
         segments: [ScreenTimeSegmentRow],
         applications: [ScreenTimeApplicationRow]
@@ -514,14 +620,6 @@ struct TotalActivityReport: DeviceActivityReportScene {
     }
 }
 
-struct SevenDayAverageConfiguration: Sendable {
-    let averageDuration: TimeInterval
-    let totalDuration: TimeInterval
-    let dayCount: Int
-    let periodStart: Date?
-    let periodEnd: Date?
-}
-
 struct SevenDayAverageReport: DeviceActivityReportScene {
     let context: DeviceActivityReport.Context = .sevenDayAverage
     let content: (SevenDayAverageConfiguration) -> SevenDayAverageView
@@ -529,38 +627,132 @@ struct SevenDayAverageReport: DeviceActivityReportScene {
     func makeConfiguration(
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> SevenDayAverageConfiguration {
-        var totalDuration: TimeInterval = 0
-        var earliestStart: Date?
-        var latestEnd: Date?
+        let calendar = Calendar.autoupdatingCurrent
+
+        struct MutableAppBucket {
+            var displayName: String
+            var bundleIdentifier: String
+            var categoryName: String
+            var duration: TimeInterval
+            var pickups: Int
+        }
+
+        var totalsByDate: [Date: TimeInterval] = [:]
+        var appsByDate: [Date: [String: MutableAppBucket]] = [:]
 
         for await deviceData in data {
             for await segment in deviceData.activitySegments {
-                totalDuration += segment.totalActivityDuration
+                let day = calendar.startOfDay(
+                    for: segment.dateInterval.start
+                )
+                totalsByDate[day, default: 0] +=
+                    segment.totalActivityDuration
 
-                let start = segment.dateInterval.start
-                let end = segment.dateInterval.end
+                for await categoryActivity in segment.categories {
+                    let rawCategory =
+                        categoryActivity.category.localizedDisplayName
+                    let categoryName =
+                        rawCategory?.isEmpty == false
+                        ? rawCategory!
+                        : "其它"
 
-                if earliestStart == nil || start < earliestStart! {
-                    earliestStart = start
-                }
+                    for await applicationActivity
+                        in categoryActivity.applications {
+                        let application =
+                            applicationActivity.application
+                        let bundle =
+                            application.bundleIdentifier
+                            ?? "Apple 未返回 Bundle ID"
+                        let rawName =
+                            application.localizedDisplayName
+                        let name =
+                            rawName?.isEmpty == false
+                            ? rawName!
+                            : bundle
+                        let key = bundle + "|" + name
 
-                if latestEnd == nil || end > latestEnd! {
-                    latestEnd = end
+                        var bucket = appsByDate[day]?[key]
+                            ?? MutableAppBucket(
+                                displayName: name,
+                                bundleIdentifier: bundle,
+                                categoryName: categoryName,
+                                duration: 0,
+                                pickups: 0
+                            )
+
+                        bucket.duration +=
+                            applicationActivity.totalActivityDuration
+                        bucket.pickups +=
+                            applicationActivity.numberOfPickups
+
+                        var dayBuckets = appsByDate[day] ?? [:]
+                        dayBuckets[key] = bucket
+                        appsByDate[day] = dayBuckets
+                    }
                 }
             }
         }
 
-        // Filter 始终请求昨日及之前的七个完整自然日。
-        // 即使某一天完全没有屏幕活动，也应作为 0 分钟计入平均值。
-        let fixedDayCount = 7
-        let averageDuration = totalDuration / Double(fixedDayCount)
+        let today = calendar.startOfDay(for: Date())
+        let yesterday = calendar.date(
+            byAdding: .day,
+            value: -1,
+            to: today
+        ) ?? today
+
+        var days: [SevenDayScreenSummary] = []
+
+        for offset in stride(from: 6, through: 0, by: -1) {
+            let date = calendar.date(
+                byAdding: .day,
+                value: -offset,
+                to: yesterday
+            ) ?? yesterday
+
+            let normalized = calendar.startOfDay(for: date)
+            let apps = (appsByDate[normalized] ?? [:])
+                .values
+                .map { bucket in
+                    SevenDayApplicationSummary(
+                        displayName: bucket.displayName,
+                        bundleIdentifier: bucket.bundleIdentifier,
+                        categoryName: bucket.categoryName,
+                        duration: bucket.duration,
+                        pickups: bucket.pickups
+                    )
+                }
+                .sorted { left, right in
+                    if left.duration != right.duration {
+                        return left.duration > right.duration
+                    }
+                    return left.displayName < right.displayName
+                }
+
+            days.append(
+                SevenDayScreenSummary(
+                    date: normalized,
+                    totalDuration:
+                        totalsByDate[normalized] ?? 0,
+                    applications: apps
+                )
+            )
+        }
+
+        let totalDuration = days.reduce(0) {
+            $0 + $1.totalDuration
+        }
+        let averageDuration = totalDuration / 7.0
+
+        SnowballScreenTimeSharedStore.saveSevenDaySummary(
+            days: days,
+            averageDuration: averageDuration
+        )
 
         return SevenDayAverageConfiguration(
             averageDuration: averageDuration,
             totalDuration: totalDuration,
-            dayCount: fixedDayCount,
-            periodStart: earliestStart,
-            periodEnd: latestEnd
+            dayCount: 7,
+            days: days
         )
     }
 }

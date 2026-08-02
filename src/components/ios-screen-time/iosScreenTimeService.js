@@ -3,6 +3,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core'
 const IOSScreenTime = registerPlugin('IOSScreenTime')
 const DEFAULT_CUTOFF_HOUR = 5
 const DEFAULT_MINIMUM_ACTIVITY_SECONDS = 10
+let sevenDaySummaryRefreshPromise = null
 
 export function isIOSScreenTimeAvailable() {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios'
@@ -37,12 +38,30 @@ export async function openIOSScreenTimeReport(date) {
   return IOSScreenTime.presentReport({ date: String(date || '') })
 }
 
-export async function openIOSSevenDayAverage() {
+
+export async function refreshIOSSevenDaySummary({
+  force = false,
+} = {}) {
   if (!isIOSScreenTimeAvailable()) {
-    throw new Error('苹果七日平均屏时只能在 iPhone 真机打开。')
+    return {
+      refreshed: false,
+      sevenDayAverageMinutes: 0,
+      days: [],
+    }
   }
 
-  return IOSScreenTime.presentSevenDayAverage()
+  if (!force && sevenDaySummaryRefreshPromise) {
+    return sevenDaySummaryRefreshPromise
+  }
+
+  sevenDaySummaryRefreshPromise =
+    IOSScreenTime.refreshSevenDaySummary()
+      .catch(error => {
+        sevenDaySummaryRefreshPromise = null
+        throw error
+      })
+
+  return sevenDaySummaryRefreshPromise
 }
 
 function dateKey(value) {
@@ -354,6 +373,15 @@ export async function readIOSScreenTimeData({
 
   if (typeof IOSScreenTime.readActivityData !== 'function') {
     throw new Error('当前 iOS 原生插件尚未实现 readActivityData。')
+  }
+
+  // 主页面打开后的正式同步会先触发一个不可见的七日 Report，
+  // 让 Extension 自动计算并写入昨日及之前七个完整自然日。
+  try {
+    await refreshIOSSevenDaySummary()
+  } catch (error) {
+    // 刷新稍慢时仍继续读取上一次缓存，不阻塞雪球主页。
+    console.warn('苹果七日屏时刷新暂未完成。', error)
   }
 
   const payload = await IOSScreenTime.readActivityData({

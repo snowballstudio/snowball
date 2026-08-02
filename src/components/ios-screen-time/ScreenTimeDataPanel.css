@@ -158,325 +158,413 @@
 }
 
 /* =========================================================
-   屏幕时间每日汇总表｜固定左列 + 原生同层表头
-   右侧 HEADER 与数据位于同一个双向滚动容器，
-   横向移动由浏览器一次完成，不再用 JavaScript 追随。
+   屏幕时间每日汇总表｜TOP10 + 其他（最终固定版）
+   页面不晃动；只让表格数据区上下、左右滚动。
+   HEADER 固定顶部；日期与总时长固定左侧。
    ========================================================= */
-
 .screenSummaryPage {
-  --screen-date-width: 70px;
-  --screen-total-width: 50px;
-  --screen-frozen-width: calc(var(--screen-date-width) + var(--screen-total-width));
-  --screen-app-width: 85px;
-  --screen-header-height: 44px;
-  --screen-row-height: 56px;
-  --screen-header-font: 12px;
-  --screen-cell-font: 11px;
-  --screen-sub-font: 11px;
-  --screen-gold: #f1dfb1;
-  --screen-page-bg: #071524;
-  --screen-card-bg: #111f30;
-  --screen-header-bg: #192b40;
-  --screen-frozen-bg: #132236;
-  --screen-grid-line: rgba(255, 255, 255, 0.08);
-
-  position: fixed;
-  inset: 0;
-  z-index: 12000;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  width: 100vw;
-  height: 100dvh;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 12000 !important;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
   background:
     linear-gradient(180deg, rgba(6, 17, 30, 0.96), rgba(5, 15, 27, 0.98)),
-    var(--screen-page-bg);
-  color: #eef3f7;
+    #071524 !important;
+  color: #eef3f7 !important;
 }
 
 .screenSummaryTopBar {
-  min-height: 62px;
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 118px;
-  align-items: center;
+  min-height: 62px !important;
+  display: grid !important;
+  grid-template-columns: 48px minmax(0, 1fr) 118px !important;
+  align-items: center !important;
   padding:
     calc(env(safe-area-inset-top, 0px) + 6px)
     12px
-    7px;
-  box-sizing: border-box;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(7, 20, 35, 0.98);
+    7px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.10) !important;
+  background: rgba(7, 20, 35, 0.98) !important;
+  box-sizing: border-box !important;
 }
 
 .screenSummaryTopBar h1 {
-  margin: 0;
-  text-align: center;
-  font-size: 19px;
-  font-weight: 500;
-  letter-spacing: 1px;
+  margin: 0 !important;
+  text-align: center !important;
+  font-size: 19px !important;
+  font-weight: 500 !important;
+  letter-spacing: 1px !important;
 }
 
 .screenSummaryBack {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: #eef3f7;
-  font-size: 36px;
-  line-height: 1;
-  font-weight: 300;
+  width: 42px !important;
+  height: 42px !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: #eef3f7 !important;
+  font-size: 36px !important;
+  line-height: 1 !important;
+  font-weight: 300 !important;
 }
 
 .screenSummaryTrainLink {
-  justify-self: end;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 2px;
-  border: 0;
-  background: transparent;
-  color: #d8b85c;
-  font-size: 11px;
-  white-space: nowrap;
+  justify-self: end !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 5px 2px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #d8b85c !important;
+  font-size: 11px !important;
+  white-space: nowrap !important;
 }
 
 .screenSummaryTrainLink span {
-  font-size: 14px;
+  font-size: 14px !important;
 }
 
 .screenSummaryTrainLink em {
-  font-style: normal;
+  font-style: normal !important;
 }
 
 .screenSummaryCard {
-  min-width: 0;
-  min-height: 0;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  overflow: hidden;
-  padding: 10px 10px calc(env(safe-area-inset-bottom, 0px) + 8px);
-  box-sizing: border-box;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-rows: minmax(0, 1fr) auto !important;
+  overflow: hidden !important;
+  padding: 10px 10px calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+  box-sizing: border-box !important;
 }
 
-.screenSummaryMatrix {
-  min-width: 0;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: var(--screen-frozen-width) minmax(0, 1fr);
-  grid-template-rows: var(--screen-header-height) minmax(0, 1fr);
-  overflow: hidden;
-  border: 1px solid rgba(220, 231, 239, 0.14);
-  border-radius: 14px;
-  background: var(--screen-card-bg);
+.screenSummaryScroller {
+  position: relative !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-x pan-y !important;
+  border: 1px solid rgba(220, 231, 239, 0.14) !important;
+  border-radius: 14px !important;
+  background: rgba(17, 31, 48, 0.88) !important;
+  contain: strict !important;
 }
 
-.screenSummaryCorner {
-  grid-column: 1;
-  grid-row: 1;
-  display: grid;
-  grid-template-columns: var(--screen-date-width) var(--screen-total-width);
-  height: var(--screen-header-height);
-  overflow: hidden;
-  background: var(--screen-header-bg);
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+.screenSummaryTable {
+  position: relative !important;
+  width: max-content !important;
+  min-width: 100% !important;
 }
 
-.screenSummaryCorner span,
-.screenSummaryHeaderTrack span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  min-width: 0;
-  box-sizing: border-box;
-  border-right: 1px solid var(--screen-grid-line);
-  color: rgba(238, 244, 249, 0.78);
-  font-size: var(--screen-header-font);
-  white-space: nowrap;
+.screenSummaryGrid {
+  display: grid !important;
+  grid-template-columns:
+    90px
+    74px
+    repeat(10, 92px)
+    92px !important;
+  min-width: 1096px !important;
 }
 
-.screenSummaryFrozenViewport {
-  grid-column: 1;
-  grid-row: 2;
-  overflow: hidden;
-  background: var(--screen-frozen-bg);
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
+.screenSummaryHeader {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 30 !important;
+  min-height: 44px !important;
+  align-items: stretch !important;
+  background: #15263a !important;
+  border-bottom: 1px solid rgba(255,255,255,0.14) !important;
 }
 
-.screenSummaryFrozenTrack {
-  width: var(--screen-frozen-width);
+.screenSummaryHeader > span {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 7px 5px !important;
+  border-right: 1px solid rgba(255,255,255,0.08) !important;
+  color: rgba(238, 244, 249, 0.78) !important;
+  font-size: 10px !important;
+  white-space: nowrap !important;
 }
 
-.screenSummaryFrozenRow {
-  display: grid;
-  grid-template-columns: var(--screen-date-width) var(--screen-total-width);
-  height: var(--screen-row-height);
-  border-bottom: 1px solid var(--screen-grid-line);
-  background: var(--screen-frozen-bg);
+.screenSummaryBody {
+  min-width: 1096px !important;
 }
 
-.screenSummaryFrozenRow > span,
-.screenSummaryFrozenRow > button {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  box-sizing: border-box;
-  border: 0;
-  border-right: 1px solid var(--screen-grid-line);
-  background: var(--screen-frozen-bg);
-  color: #eef3f7;
-  font: inherit;
+.screenSummaryRow {
+  min-height: 56px !important;
+  align-items: stretch !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
 }
 
-.screenSummaryDateCell {
-  justify-content: flex-start;
-  padding: 0 8px;
+.screenSummaryRow:last-child {
+  border-bottom: 0 !important;
+}
+
+.screenSummaryRow > span,
+.screenSummaryRow > button {
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 6px !important;
+  box-sizing: border-box !important;
+  border: none !important;
+  border-right: 1px solid rgba(255,255,255,0.06) !important;
+  background: transparent !important;
+  color: #eef3f7 !important;
+  font: inherit !important;
+}
+
+.screenSummaryStickyDate,
+.screenSummaryStickyTotal {
+  position: sticky !important;
+  z-index: 18 !important;
+  background: #132236 !important;
+}
+
+.screenSummaryStickyDate {
+  left: 0 !important;
+}
+
+.screenSummaryStickyTotal {
+  left: 90px !important;
+  box-shadow: 7px 0 10px rgba(2, 9, 17, 0.18) !important;
+}
+
+.screenSummaryHeader .screenSummaryStickyDate,
+.screenSummaryHeader .screenSummaryStickyTotal {
+  z-index: 40 !important;
+  background: #192b40 !important;
+}
+
+.screenSummaryRow .screenSummaryStickyDate {
+  justify-content: flex-start !important;
+  padding-left: 8px !important;
   color: rgba(238, 244, 249, 0.84) !important;
-  font-size: var(--screen-cell-font) !important;
-  white-space: nowrap;
+  font-size: 10px !important;
+  white-space: nowrap !important;
 }
 
-.screenSummaryTotalCell {
-  justify-content: center;
-  padding: 0 6px;
-  color: var(--screen-gold) !important;
-  -webkit-text-fill-color: var(--screen-gold);
-  font-size: var(--screen-cell-font) !important;
+.screenSummaryTotal,
+.screenSummaryTotalButton {
+  color: #f1dfb1 !important;
+  font-size: 11px !important;
   font-weight: 600 !important;
-  white-space: nowrap;
+  white-space: nowrap !important;
 }
 
 .screenSummaryTotalButton {
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: rgba(241, 223, 177, 0.38);
-  text-underline-offset: 3px;
-}
-
-/*
- * 唯一的右侧双向滚动容器。
- * HEADER 与数据在同一滚动层中，所以横向移动永远同步。
- */
-.screenSummaryRightScroller {
-  grid-column: 2;
-  grid-row: 1 / 3;
-  min-width: 0;
-  min-height: 0;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  touch-action: pan-x pan-y;
-  background: var(--screen-card-bg);
-}
-
-.screenSummaryRightTrack {
-  width: calc(11 * var(--screen-app-width));
-  min-height: 100%;
-}
-
-.screenSummaryHeaderTrack {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: repeat(11, var(--screen-app-width));
-  width: calc(11 * var(--screen-app-width));
-  height: var(--screen-header-height);
-  background: var(--screen-header-bg);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.screenSummaryBodyTrack {
-  width: calc(11 * var(--screen-app-width));
-}
-
-.screenSummaryBodyRow {
-  display: grid;
-  grid-template-columns: repeat(11, var(--screen-app-width));
-  width: calc(11 * var(--screen-app-width));
-  height: var(--screen-row-height);
-  border-bottom: 1px solid var(--screen-grid-line);
-}
-
-.screenSummaryBodyRow > span {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  box-sizing: border-box;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  background: transparent;
-  color: #eef3f7;
+  cursor: pointer !important;
+  text-decoration: underline !important;
+  text-decoration-color: rgba(241, 223, 177, 0.38) !important;
+  text-underline-offset: 3px !important;
 }
 
 .screenSummaryAppCell {
-  flex-direction: column;
+  flex-direction: column !important;
   align-items: flex-start !important;
   justify-content: center !important;
-  gap: 3px;
-  overflow: hidden;
+  gap: 3px !important;
+  overflow: hidden !important;
 }
 
 .screenSummaryAppCell strong {
-  width: 100%;
-  overflow: hidden;
-  color: #f2f5f7;
-  font-size: var(--screen-cell-font);
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  width: 100% !important;
+  overflow: hidden !important;
+  color: #f2f5f7 !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
 .screenSummaryAppCell small {
-  color: rgba(215, 225, 233, 0.66);
-  font-size: var(--screen-sub-font);
-  white-space: nowrap;
+  color: rgba(215, 225, 233, 0.66) !important;
+  font-size: 8px !important;
+  white-space: nowrap !important;
 }
 
 .screenSummaryEmpty {
-  color: rgba(215, 225, 233, 0.34);
-  font-size: var(--screen-cell-font);
+  color: rgba(215, 225, 233, 0.34) !important;
+  font-size: 10px !important;
 }
 
 .screenSummaryEmptyState {
-  width: min(420px, calc(100vw - var(--screen-frozen-width) - 24px));
-  padding: 26px 14px;
-  color: rgba(225, 233, 239, 0.64);
-  font-size: 12px;
+  position: sticky !important;
+  left: 0 !important;
+  width: min(420px, calc(100vw - 24px)) !important;
+  padding: 26px 14px !important;
+  color: rgba(225, 233, 239, 0.64) !important;
+  font-size: 12px !important;
 }
 
 .screenSummaryHint {
-  margin: 7px 3px 0;
-  color: rgba(218, 227, 234, 0.55);
-  font-size: 10px;
-  line-height: 1.4;
+  margin: 7px 3px 0 !important;
+  color: rgba(218, 227, 234, 0.55) !important;
+  font-size: 10px !important;
+  line-height: 1.4 !important;
 }
 
 @media (max-width: 600px) {
   .screenSummaryTopBar {
-    grid-template-columns: 42px minmax(0, 1fr) 106px;
-    padding-left: 7px;
-    padding-right: 7px;
+    grid-template-columns: 42px minmax(0, 1fr) 106px !important;
+    padding-left: 7px !important;
+    padding-right: 7px !important;
   }
 
   .screenSummaryTopBar h1 {
-    font-size: 17px;
+    font-size: 17px !important;
   }
 
   .screenSummaryTrainLink {
-    font-size: 12px;
+    font-size: 10px !important;
   }
 
   .screenSummaryCard {
-    padding-left: 6px;
-    padding-right: 6px;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+}
+
+
+/* =========================================================
+   2026-08-01｜屏幕时间表 Excel 式冻结最终修复
+   只修复冻结与遮挡，不再改列宽和普通字体。
+   ========================================================= */
+
+/* 外层绝不参与横向滚动，只有 scroller 是唯一滚动容器。 */
+.screenSummaryPage,
+.screenSummaryCard {
+  overflow: hidden !important;
+  max-width: 100vw !important;
+}
+
+.screenSummaryScroller {
+  position: relative !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  contain: none !important;
+  isolation: isolate !important;
+  transform: none !important;
+  perspective: none !important;
+}
+
+/* 表格自身建立稳定层叠上下文。 */
+.screenSummaryTable {
+  position: relative !important;
+  isolation: isolate !important;
+  transform: none !important;
+}
+
+/* 普通数据单元格始终在冻结列之下。 */
+.screenSummaryRow > span:not(.screenSummaryStickyDate):not(.screenSummaryStickyTotal),
+.screenSummaryRow > button:not(.screenSummaryStickyDate):not(.screenSummaryStickyTotal) {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* HEADER 固定顶部，但普通 HEADER 单元格低于左上角交叉冻结区。 */
+.screenSummaryHeader {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 200 !important;
+}
+
+.screenSummaryHeader > span:not(.screenSummaryStickyDate):not(.screenSummaryStickyTotal) {
+  position: relative !important;
+  z-index: 201 !important;
+  background-color: #15263a !important;
+}
+
+/* 日期列：完全不透明，冻结在最左边。 */
+.screenSummaryStickyDate {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 300 !important;
+  opacity: 1 !important;
+  background: #132236 !important;
+  background-color: #132236 !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  isolation: isolate !important;
+}
+
+/* 总时长列：完全不透明，紧接日期列冻结。 */
+.screenSummaryStickyTotal {
+  position: sticky !important;
+  left: 90px !important;
+  z-index: 310 !important;
+  opacity: 1 !important;
+  background: #132236 !important;
+  background-color: #132236 !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  isolation: isolate !important;
+  box-shadow:
+    1px 0 0 rgba(255,255,255,0.08) inset,
+    10px 0 14px rgba(2, 9, 17, 0.34) !important;
+}
+
+/* 左上角两格同时冻结：必须高于横向列和纵向 HEADER。 */
+.screenSummaryHeader .screenSummaryStickyDate {
+  z-index: 410 !important;
+  background: #192b40 !important;
+  background-color: #192b40 !important;
+}
+
+.screenSummaryHeader .screenSummaryStickyTotal {
+  z-index: 420 !important;
+  background: #192b40 !important;
+  background-color: #192b40 !important;
+}
+
+/* 为冻结区域补一层实色遮罩，彻底阻止右侧文字透入。 */
+.screenSummaryStickyDate::before,
+.screenSummaryStickyTotal::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  background: inherit !important;
+}
+
+/* 总时长恢复金色，避免被通用按钮文字颜色覆盖。 */
+.screenSummaryRow .screenSummaryStickyTotal,
+.screenSummaryRow button.screenSummaryStickyTotal,
+.screenSummaryTotal,
+.screenSummaryTotalButton {
+  color: #f1dfb1 !important;
+  -webkit-text-fill-color: #f1dfb1 !important;
+}
+
+/* iOS 惯性滚动下避免整张表被橡皮筋带动。 */
+.screenSummaryScroller {
+  overscroll-behavior-x: contain !important;
+  overscroll-behavior-y: contain !important;
+}
+
+@supports (overflow: clip) {
+  .screenSummaryPage,
+  .screenSummaryCard {
+    overflow: clip !important;
   }
 }

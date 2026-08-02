@@ -1,4 +1,3 @@
-import { useRef } from 'react'
 import './ScreenTimeDataPanel.css'
 import {
   isScreenSystemTotalRow,
@@ -119,17 +118,11 @@ export default function ScreenTimeDataPanel({
   onBackHome,
   onOpenTrain,
   onOpenDetailDate,
+  showTrainLink = true,
   developerMode = false,
   developerPanel = null,
 }) {
   const summaryRows = buildDailySummary(screenRecords)
-  const summaryFrozenRef = useRef(null)
-
-  function syncSummaryVerticalScroll(event) {
-    if (summaryFrozenRef.current) {
-      summaryFrozenRef.current.scrollTop = event.currentTarget.scrollTop
-    }
-  }
 
   if (mode === 'summary') {
     return (
@@ -143,85 +136,68 @@ export default function ScreenTimeDataPanel({
           >
             ‹
           </button>
-
           <h1>屏幕时间</h1>
-
-          <button
-            type="button"
-            className="screenSummaryTrainLink"
-            onClick={onOpenTrain}
-            aria-label="查看信息列车"
-          >
-            <span aria-hidden="true">🚆</span>
-            <em>查看列车</em>
-          </button>
+          {showTrainLink ? (
+            <button
+              type="button"
+              className="screenSummaryTrainLink"
+              onClick={onOpenTrain}
+              aria-label="查看信息列车"
+            >
+              <span aria-hidden="true">🚆</span>
+              <em>查看列车</em>
+            </button>
+          ) : (
+            <span aria-hidden="true" />
+          )}
         </div>
 
         <div className="screenSummaryCard">
-          <div className="screenSummaryMatrix">
-            <div className="screenSummaryCorner" aria-hidden="true">
-              <span>日期</span>
-              <span>总时</span>
-            </div>
+          <div className="screenSummaryScroller">
+            <div className="screenSummaryTable">
+              <div className="screenSummaryHeader screenSummaryGrid">
+                <span className="screenSummaryStickyDate">日期</span>
+                <span className="screenSummaryStickyTotal">总时长</span>
+                {Array.from({ length: 10 }, (_, index) => (
+                  <span key={index}>TOP {index + 1}</span>
+                ))}
+                <span>其他</span>
+              </div>
 
-            <div
-              className="screenSummaryFrozenViewport"
-              ref={summaryFrozenRef}
-            >
-              <div className="screenSummaryFrozenTrack">
+              <div className="screenSummaryBody">
                 {summaryRows.map(row => (
-                  <div className="screenSummaryFrozenRow" key={row.date}>
-                    <span className="screenSummaryDateCell">
+                  <div className="screenSummaryRow screenSummaryGrid" key={row.date}>
+                    <span className="screenSummaryStickyDate">
                       {screenDateLabel(row.date)}
                     </span>
 
                     {developerMode ? (
                       <button
                         type="button"
-                        className="screenSummaryTotalCell screenSummaryTotalButton"
+                        className="screenSummaryStickyTotal screenSummaryTotalButton"
                         onClick={() => onOpenDetailDate?.(row.date)}
-                        title="打开当天 APP 详情表"
+                        title="打开当天屏幕时间详情"
                       >
                         {compactDuration(row.totalMinutes)}
                       </button>
                     ) : (
-                      <span className="screenSummaryTotalCell">
+                      <span className="screenSummaryStickyTotal screenSummaryTotal">
                         {compactDuration(row.totalMinutes)}
                       </span>
                     )}
+
+                    {Array.from({ length: 10 }, (_, index) => (
+                      <SummaryCell item={row.top10[index]} key={index} />
+                    ))}
+                    <SummaryCell item={row.other} />
                   </div>
                 ))}
-              </div>
-            </div>
 
-            <div
-              className="screenSummaryRightScroller"
-              onScroll={syncSummaryVerticalScroll}
-            >
-              <div className="screenSummaryRightTrack">
-                <div className="screenSummaryHeaderTrack" aria-hidden="true">
-                  {Array.from({ length: 10 }, (_, index) => (
-                    <span key={index}>TOP {index + 1}</span>
-                  ))}
-                  <span>其他</span>
-                </div>
-
-                <div className="screenSummaryBodyTrack">
-                  {summaryRows.map(row => (
-                    <div className="screenSummaryBodyRow" key={row.date}>
-                      {Array.from({ length: 10 }, (_, index) => (
-                        <SummaryCell item={row.top10[index]} key={index} />
-                      ))}
-                      <SummaryCell item={row.other} />
-                    </div>
-                  ))}
-
-                  {!summaryRows.length && (
-                    <div className="screenSummaryEmptyState">
-                      目前还没有可汇总的 APP 屏幕时间记录。
-                    </div>
-                  )}
-                </div>
+                {!summaryRows.length && (
+                  <div className="screenSummaryEmptyState">
+                    目前还没有可汇总的 APP 屏幕时间记录。
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -12,6 +12,9 @@ public final class MainViewController: CAPBridgeViewController {
         // 苹果屏幕时间：授权状态与打开 DeviceActivityReport。
         bridge?.registerPluginInstance(IOSScreenTimePlugin())
 
+        // 足迹照片索引：只保存系统照片索引和小缩略图。
+        bridge?.registerPluginInstance(IOSPhotoIndexPlugin())
+
         // iPhone 录音结束后恢复媒体播放通道。
         bridge?.registerPluginInstance(IOSAudioSessionPlugin())
 
