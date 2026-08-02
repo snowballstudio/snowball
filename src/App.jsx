@@ -3074,9 +3074,14 @@ function App() {
       }
     }
 
+    // 首次启动时苹果 Report Extension 可能先返回空快照，再在数秒后写入正式结果。
+    // 除立即同步外，主动安排两次回读，避免主页永久停留在第一次的 0 和空表。
     syncIOSScreenTime()
+    const retryAfterFourSeconds = window.setTimeout(syncIOSScreenTime, 4000)
+    const retryAfterTenSeconds = window.setTimeout(syncIOSScreenTime, 10000)
 
     function handleResume() {
+      if (document.visibilityState === 'hidden') return
       syncIOSScreenTime()
     }
 
@@ -3085,6 +3090,8 @@ function App() {
 
     return () => {
       alive = false
+      window.clearTimeout(retryAfterFourSeconds)
+      window.clearTimeout(retryAfterTenSeconds)
       document.removeEventListener('visibilitychange', handleResume)
       window.removeEventListener('focus', handleResume)
     }

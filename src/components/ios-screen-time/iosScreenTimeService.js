@@ -4,6 +4,9 @@ const IOSScreenTime = registerPlugin('IOSScreenTime')
 const DEFAULT_CUTOFF_HOUR = 5
 const DEFAULT_MINIMUM_ACTIVITY_SECONDS = 10
 let sevenDaySummaryRefreshPromise = null
+let lastSevenDaySummaryRefreshAt = 0
+let lastSevenDaySummaryPayload = null
+const SEVEN_DAY_REFRESH_THROTTLE_MS = 30 * 1000
 
 export function isIOSScreenTimeAvailable() {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios'
@@ -62,11 +65,28 @@ export async function refreshIOSSevenDaySummary({
     return sevenDaySummaryRefreshPromise
   }
 
-  sevenDaySummaryRefreshPromise =
-    IOSScreenTime.refreshSevenDaySummary()
-      .finally(() => {
-        sevenDaySummaryRefreshPromise = null
-      })
+  const now = Date.now()
+  if (
+    !force &&
+    lastSevenDaySummaryPayload &&
+    now - lastSevenDaySummaryRefreshAt < SEVEN_DAY_REFRESH_THROTTLE_MS
+  ) {
+    return lastSevenDaySummaryPayload
+  }
+
+  sevenDaySummaryRefreshPromise = IOSScreenTime.refreshSevenDaySummary()
+    .then(payload => {
+      const days = Array.isArray(payload?.days) ? payload.days : []
+      if (!days.length) {
+        throw new Error('苹果七日报告暂时只返回了空快照。')
+      }
+      lastSevenDaySummaryRefreshAt = Date.now()
+      lastSevenDaySummaryPayload = payload
+      return payload
+    })
+    .finally(() => {
+      sevenDaySummaryRefreshPromise = null
+    })
 
   return sevenDaySummaryRefreshPromise
 }

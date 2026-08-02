@@ -235,21 +235,29 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             let host = UIHostingController(rootView: report)
 
             presenter.addChild(host)
+            // DeviceActivityReport 必须真正进入可布局的视图层级，
+            // 过小或完全移出屏幕的视图在部分 iPhone 上不会启动 Report Extension。
+            // 这里给它一个屏幕内的有效尺寸，但保持几乎透明且不可交互。
+            let bounds = presenter.view.bounds
             host.view.frame = CGRect(
-                x: -4,
-                y: -4,
-                width: 2,
-                height: 2
+                x: 0,
+                y: 0,
+                width: max(240, bounds.width),
+                height: max(240, min(bounds.height, 420))
             )
-            host.view.alpha = 0.01
+            host.view.alpha = 0.02
             host.view.isUserInteractionEnabled = false
-            presenter.view.addSubview(host.view)
+            host.view.backgroundColor = .clear
+            host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            presenter.view.insertSubview(host.view, at: 0)
             host.didMove(toParent: presenter)
+            host.view.setNeedsLayout()
+            host.view.layoutIfNeeded()
 
             let startedAt = Date()
             self.waitForSevenDaySummary(
                 newerThan: startedAt,
-                attemptsRemaining: 24
+                attemptsRemaining: 80
             ) { payload in
                 DispatchQueue.main.async {
                     host.willMove(toParent: nil)
@@ -971,16 +979,30 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         let updatedDate =
             ISO8601DateFormatter().date(from: updatedText),
         updatedDate >= startedAt.addingTimeInterval(-1) {
-            completion([
-                "refreshed": true,
-                "days": object["days"] ?? [],
-                "sevenDayAverageMinutes":
-                    object["averageMinutes"] ?? 0,
-                "sevenDayCount":
-                    object["dayCount"] ?? 7,
-                "updatedAt": updatedText
-            ])
-            return
+            let days = object["days"] as? [[String: Any]] ?? []
+            let validDays = days.filter { day in
+                guard let date = day["date"] as? String,
+                      !date.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                else { return false }
+                return day["screenMinutes"] != nil
+                    || day["totalActivitySeconds"] != nil
+                    || day["apps"] != nil
+            }
+
+            // 苹果第一次启动 Report Extension 时，可能先写入一个空快照，
+            // 随后才写入真正的七日结果。空快照不能作为刷新成功返回。
+            if !validDays.isEmpty {
+                completion([
+                    "refreshed": true,
+                    "days": validDays,
+                    "sevenDayAverageMinutes":
+                        object["averageMinutes"] ?? 0,
+                    "sevenDayCount":
+                        object["dayCount"] ?? validDays.count,
+                    "updatedAt": updatedText
+                ])
+                return
+            }
         }
 
         guard attemptsRemaining > 0 else {
