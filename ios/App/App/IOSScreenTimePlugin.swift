@@ -17,6 +17,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "presentSevenDayReport", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "refreshSevenDaySummary", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readActivityData", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "debugReadScreenTimeCache", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startOffscreenMonitoring", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readOffscreenMonitoringData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopOffscreenMonitoring", returnType: CAPPluginReturnPromise),
@@ -274,6 +275,122 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 }
             }
         }
+    }
+
+
+
+    @objc public func debugReadScreenTimeCache(
+        _ call: CAPPluginCall
+    ) {
+        let appGroupIdentifier = "group.com.snowball.health"
+        let summaryKey =
+            "snowball.ios-screen-time.seven-day-summary.v1"
+        let detailKey =
+            "snowball.ios-screen-time.days.v1"
+
+        guard let defaults = UserDefaults(
+            suiteName: appGroupIdentifier
+        ) else {
+            call.resolve([
+                "groupExists": false,
+                "appGroupIdentifier": appGroupIdentifier,
+                "message": "主 App 无法打开 App Group。"
+            ])
+            return
+        }
+
+        let containerPath = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier:
+                appGroupIdentifier
+        )?.path ?? ""
+
+        let summaryData = defaults.data(forKey: summaryKey)
+        let detailData = defaults.data(forKey: detailKey)
+
+        func dictionary(
+            from data: Data?
+        ) -> [String: Any]? {
+            guard let data else {
+                return nil
+            }
+
+            return try? JSONSerialization
+                .jsonObject(with: data) as? [String: Any]
+        }
+
+        func jsonPreview(
+            _ data: Data?
+        ) -> String {
+            guard let data else {
+                return ""
+            }
+
+            let maximumBytes = 16_000
+            let previewData = data.prefix(maximumBytes)
+            let text = String(
+                data: previewData,
+                encoding: .utf8
+            ) ?? "<无法转换为 UTF-8>"
+
+            return data.count > maximumBytes
+                ? text + "\n…（内容已截断）"
+                : text
+        }
+
+        let summaryObject = dictionary(from: summaryData)
+        let detailObject = dictionary(from: detailData)
+
+        let summaryDays =
+            summaryObject?["days"] as? [[String: Any]] ?? []
+        let detailDays =
+            detailObject?["days"] as? [[String: Any]] ?? []
+
+        let summaryDates = summaryDays.compactMap {
+            $0["date"] as? String
+        }
+        let detailDates = detailDays.compactMap {
+            $0["date"] as? String
+        }
+
+        call.resolve([
+            "groupExists": true,
+            "appGroupIdentifier": appGroupIdentifier,
+            "containerPath": containerPath,
+
+            "summaryKey": summaryKey,
+            "summaryExists": summaryData != nil,
+            "summaryBytes": summaryData?.count ?? 0,
+            "summaryJSONValid": summaryObject != nil,
+            "summaryAverageMinutes":
+                summaryObject?["averageMinutes"] ?? NSNull(),
+            "summaryDayCount":
+                summaryObject?["dayCount"] ?? summaryDays.count,
+            "summaryDaysCount": summaryDays.count,
+            "summaryDates": summaryDates,
+            "summaryUpdatedAt":
+                summaryObject?["updatedAt"] ?? "",
+            "summaryVersion":
+                summaryObject?["version"] ?? NSNull(),
+            "summaryJSONPreview": jsonPreview(summaryData),
+
+            "detailKey": detailKey,
+            "detailExists": detailData != nil,
+            "detailBytes": detailData?.count ?? 0,
+            "detailJSONValid": detailObject != nil,
+            "detailDaysCount": detailDays.count,
+            "detailDates": detailDates,
+            "detailUpdatedAt":
+                detailObject?["updatedAt"] ?? "",
+            "detailVersion":
+                detailObject?["version"] ?? NSNull(),
+            "detailJSONPreview": jsonPreview(detailData),
+
+            "allSharedDefaultsKeys":
+                Array(defaults.dictionaryRepresentation().keys)
+                    .sorted(),
+            "checkedAt":
+                ISO8601DateFormatter().string(from: Date())
+        ])
     }
 
 

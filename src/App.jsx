@@ -37,6 +37,7 @@ const STORAGE_KEY = 'healthy-snowball-v8'
 const TEST_PASSWORD = 'snowball'
 const CUSTOM_YEARS_BG_IDB_KEY = 'footprint-custom-background'
 const DeviceData = registerPlugin('DeviceData')
+const IOSScreenTimeNative = registerPlugin('IOSScreenTime')
 const DEVICE_USAGE_PROMPT_KEY = 'snowball-device-usage-prompt-v1'
 const DEVICE_INITIAL_IMPORT_DAYS = 7
 
@@ -2310,6 +2311,8 @@ function App() {
 
   const [customYearsBgImage, setCustomYearsBgImage] = useState(() => String(data.customYearsSceneImage || ''))
   const [showDataPanel, setShowDataPanel] = useState(false)
+  const [screenTimeCacheDiagnostic, setScreenTimeCacheDiagnostic] = useState(null)
+  const [screenTimeCacheDiagnosticLoading, setScreenTimeCacheDiagnosticLoading] = useState(false)
   const [installDateUnlocked, setInstallDateUnlocked] = useState(false)
 
   function unlockInstallDate(event) {
@@ -3662,6 +3665,39 @@ function App() {
     setShowDataPanel(true)
   }
 
+
+  async function inspectIOSScreenTimeCache() {
+    if (
+      !Capacitor.isNativePlatform()
+      || Capacitor.getPlatform() !== 'ios'
+    ) {
+      setScreenTimeCacheDiagnostic({
+        error: '此诊断仅可在安装到 iPhone 的原生 APP 中运行。',
+      })
+      return
+    }
+
+    setScreenTimeCacheDiagnosticLoading(true)
+
+    try {
+      const result =
+        await IOSScreenTimeNative.debugReadScreenTimeCache()
+      setScreenTimeCacheDiagnostic(result || {
+        error: '原生诊断没有返回内容。',
+      })
+    } catch (error) {
+      setScreenTimeCacheDiagnostic({
+        error: String(
+          error?.message
+          || error
+          || '读取苹果共享缓存失败。'
+        ),
+      })
+    } finally {
+      setScreenTimeCacheDiagnosticLoading(false)
+    }
+  }
+
   async function openSevenDayAverageTestReport() {
     try {
       // 显示之前已经成功的原生迷你七日报告。关闭时，Report Extension
@@ -5006,6 +5042,9 @@ max-width:78px !important;
               onOpenTrain={() => openTrainPage('yesterday')}
               onOpenDetailDate={openScreenDetailFromSummary}
               onOpenSevenDayReport={openSevenDayAverageTestReport}
+              onInspectCache={inspectIOSScreenTimeCache}
+              cacheDiagnostic={screenTimeCacheDiagnostic}
+              cacheDiagnosticLoading={screenTimeCacheDiagnosticLoading}
             />
           ) : dailyMode === 'screen-detail' ? (
             <ScreenTimeDataPanel
