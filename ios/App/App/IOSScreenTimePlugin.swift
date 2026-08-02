@@ -279,6 +279,34 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
 
 
+    private let screenTimeAppGroupIdentifier =
+        "group.com.snowball.health"
+    private let screenTimeDetailFileName =
+        "snowball-ios-screen-time-days-v1.json"
+    private let screenTimeSummaryFileName =
+        "snowball-ios-screen-time-seven-day-summary-v1.json"
+    private let screenTimeDiagnosticFileName =
+        "snowball-ios-screen-time-extension-diagnostic-v1.json"
+
+    private func screenTimeSharedFileData(
+        fileName: String
+    ) -> Data? {
+        guard let containerURL = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier:
+                screenTimeAppGroupIdentifier
+        ) else {
+            return nil
+        }
+
+        return try? Data(
+            contentsOf: containerURL.appendingPathComponent(
+                fileName,
+                isDirectory: false
+            )
+        )
+    }
+
+
     @objc public func debugReadScreenTimeCache(
         _ call: CAPPluginCall
     ) {
@@ -304,8 +332,25 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 appGroupIdentifier
         )?.path ?? ""
 
-        let summaryData = defaults.data(forKey: summaryKey)
-        let detailData = defaults.data(forKey: detailKey)
+        let summaryDefaultsData =
+            defaults.data(forKey: summaryKey)
+        let detailDefaultsData =
+            defaults.data(forKey: detailKey)
+        let summaryFileData = screenTimeSharedFileData(
+            fileName: screenTimeSummaryFileName
+        )
+        let detailFileData = screenTimeSharedFileData(
+            fileName: screenTimeDetailFileName
+        )
+        let extensionDiagnosticData =
+            screenTimeSharedFileData(
+                fileName: screenTimeDiagnosticFileName
+            )
+
+        let summaryData =
+            summaryFileData ?? summaryDefaultsData
+        let detailData =
+            detailFileData ?? detailDefaultsData
 
         func dictionary(
             from data: Data?
@@ -385,6 +430,25 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 detailObject?["version"] ?? NSNull(),
             "detailJSONPreview": jsonPreview(detailData),
 
+            "summaryDefaultsExists":
+                summaryDefaultsData != nil,
+            "summaryFileExists":
+                summaryFileData != nil,
+            "summaryFileBytes":
+                summaryFileData?.count ?? 0,
+            "detailDefaultsExists":
+                detailDefaultsData != nil,
+            "detailFileExists":
+                detailFileData != nil,
+            "detailFileBytes":
+                detailFileData?.count ?? 0,
+            "extensionDiagnosticExists":
+                extensionDiagnosticData != nil,
+            "extensionDiagnosticBytes":
+                extensionDiagnosticData?.count ?? 0,
+            "extensionDiagnosticPreview":
+                jsonPreview(extensionDiagnosticData),
+
             "allSharedDefaultsKeys":
                 Array(defaults.dictionaryRepresentation().keys)
                     .sorted(),
@@ -402,19 +466,32 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         guard let defaults = UserDefaults(
-            suiteName: "group.com.snowball.health"
+            suiteName: screenTimeAppGroupIdentifier
         ) else {
             call.reject("无法打开雪球 App Group 共享容器。")
             return
         }
 
-        let detailData = defaults.data(
+        let detailDefaultsData = defaults.data(
             forKey: "snowball.ios-screen-time.days.v1"
         )
-        let summaryData = defaults.data(
+        let summaryDefaultsData = defaults.data(
             forKey:
                 "snowball.ios-screen-time.seven-day-summary.v1"
         )
+
+        let detailFileData = screenTimeSharedFileData(
+            fileName: screenTimeDetailFileName
+        )
+        let summaryFileData = screenTimeSharedFileData(
+            fileName: screenTimeSummaryFileName
+        )
+
+        // 共享文件优先，旧 UserDefaults 作为兼容回退。
+        let detailData =
+            detailFileData ?? detailDefaultsData
+        let summaryData =
+            summaryFileData ?? summaryDefaultsData
 
         do {
             let detailCache: [String: Any] = {
@@ -519,7 +596,23 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                     ?? detailCache["version"]
                     ?? 1,
                 "source":
-                    "ios-device-activity-report-cache"
+                    "ios-device-activity-report-cache",
+                "summaryTransport":
+                    summaryFileData != nil
+                    ? "app-group-file"
+                    : (
+                        summaryDefaultsData != nil
+                        ? "app-group-user-defaults"
+                        : "missing"
+                    ),
+                "detailTransport":
+                    detailFileData != nil
+                    ? "app-group-file"
+                    : (
+                        detailDefaultsData != nil
+                        ? "app-group-user-defaults"
+                        : "missing"
+                    )
             ])
         } catch {
             call.reject(

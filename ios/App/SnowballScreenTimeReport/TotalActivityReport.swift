@@ -85,6 +85,86 @@ private enum SnowballScreenTimeSharedStore {
     static let sevenDaySummaryCacheKey =
         "snowball.ios-screen-time.seven-day-summary.v1"
 
+    // 跨进程桥接文件。苹果报告能够显示，只代表 Extension 已读取数据；
+    // 主页和每日表还需要通过 App Group 把汇总结果交给主 App。
+    static let detailFileName =
+        "snowball-ios-screen-time-days-v1.json"
+    static let sevenDaySummaryFileName =
+        "snowball-ios-screen-time-seven-day-summary-v1.json"
+    static let diagnosticFileName =
+        "snowball-ios-screen-time-extension-diagnostic-v1.json"
+
+    private static func appGroupContainerURL() -> URL? {
+        FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier:
+                appGroupIdentifier
+        )
+    }
+
+    @discardableResult
+    private static func writeSharedFile(
+        data: Data,
+        fileName: String
+    ) -> Bool {
+        guard let containerURL = appGroupContainerURL() else {
+            diagnostic(
+                "共享文件写入失败：无法取得 App Group 容器，file=\(fileName)"
+            )
+            return false
+        }
+
+        let fileURL = containerURL.appendingPathComponent(
+            fileName,
+            isDirectory: false
+        )
+
+        do {
+            try data.write(to: fileURL, options: [.atomic])
+            let readBack = try Data(contentsOf: fileURL)
+            let success = readBack == data
+            diagnostic(
+                "共享文件写入\(success ? "成功" : "失败")：" +
+                "file=\(fileName)，bytes=\(readBack.count)"
+            )
+            return success
+        } catch {
+            diagnostic(
+                "共享文件写入异常：file=\(fileName)，" +
+                "error=\(error.localizedDescription)"
+            )
+            return false
+        }
+    }
+
+    static func writeExtensionDiagnostic(
+        event: String,
+        extra: [String: Any] = [:]
+    ) {
+        var payload: [String: Any] = [
+            "event": event,
+            "checkedAt": isoFormatter.string(from: Date()),
+            "appGroupIdentifier": appGroupIdentifier,
+            "containerAvailable": appGroupContainerURL() != nil
+        ]
+
+        for (key, value) in extra {
+            payload[key] = value
+        }
+
+        guard JSONSerialization.isValidJSONObject(payload),
+              let data = try? JSONSerialization.data(
+                withJSONObject: payload
+              ) else {
+            return
+        }
+
+        _ = writeSharedFile(
+            data: data,
+            fileName: diagnosticFileName
+        )
+    }
+
+
     static func save(
         totalDuration: TimeInterval,
         segments: [ScreenTimeSegmentRow],
@@ -296,8 +376,25 @@ private enum SnowballScreenTimeSharedStore {
 
         defaults.set(data, forKey: cacheKey)
         let synchronized = defaults.synchronize()
+        let fileWritten = writeSharedFile(
+            data: data,
+            fileName: detailFileName
+        )
 
-        diagnostic("写入完成：synchronize=\(synchronized)")
+        writeExtensionDiagnostic(
+            event: "detail-save",
+            extra: [
+                "defaultsSynchronized": synchronized,
+                "fileWritten": fileWritten,
+                "bytes": data.count,
+                "daysCount": sortedDays.count,
+                "cacheKey": cacheKey
+            ]
+        )
+
+        diagnostic(
+            "写入完成：synchronize=\(synchronized)，fileWritten=\(fileWritten)"
+        )
 
         if let readBack = defaults.data(forKey: cacheKey) {
             diagnostic("立即读回成功：\(readBack.count) 字节")
@@ -394,9 +491,40 @@ private enum SnowballScreenTimeSharedStore {
         }
 
         defaults.set(data, forKey: sevenDaySummaryCacheKey)
-        defaults.synchronize()
+        let synchronized = defaults.synchronize()
+        let defaultsReadBack = defaults.data(
+            forKey: sevenDaySummaryCacheKey
+        )
+        let defaultsReadBackValid = defaultsReadBack == data
+
+        let fileWritten = writeSharedFile(
+            data: data,
+            fileName: sevenDaySummaryFileName
+        )
+
+        writeExtensionDiagnostic(
+            event: "seven-day-save",
+            extra: [
+                "defaultsSynchronized": synchronized,
+                "defaultsReadBackValid": defaultsReadBackValid,
+                "fileWritten": fileWritten,
+                "bytes": data.count,
+                "daysCount": payloadDays.count,
+                "averageMinutes":
+                    max(
+                        0,
+                        Int((averageDuration / 60.0).rounded())
+                    ),
+                "cacheKey": sevenDaySummaryCacheKey
+            ]
+        )
+
         diagnostic(
-            "七日汇总写入完成：days=\(payloadDays.count)，averageMinutes=\(Int((averageDuration / 60.0).rounded()))"
+            "七日汇总写入完成：" +
+            "days=\(payloadDays.count)，" +
+            "averageMinutes=\(Int((averageDuration / 60.0).rounded()))，" +
+            "defaultsReadBackValid=\(defaultsReadBackValid)，" +
+            "fileWritten=\(fileWritten)"
         )
     }
 
@@ -627,6 +755,10 @@ struct SevenDayAverageReport: DeviceActivityReportScene {
     func makeConfiguration(
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> SevenDayAverageConfiguration {
+        SnowballScreenTimeSharedStore.writeExtensionDiagnostic(
+            event: "seven-day-makeConfiguration-start"
+        )
+
         let calendar = Calendar.autoupdatingCurrent
 
         struct MutableAppBucket {
@@ -746,6 +878,18 @@ struct SevenDayAverageReport: DeviceActivityReportScene {
         SnowballScreenTimeSharedStore.saveSevenDaySummary(
             days: days,
             averageDuration: averageDuration
+        )
+
+        SnowballScreenTimeSharedStore.writeExtensionDiagnostic(
+            event: "seven-day-makeConfiguration-finished",
+            extra: [
+                "daysCount": days.count,
+                "averageMinutes":
+                    max(
+                        0,
+                        Int((averageDuration / 60.0).rounded())
+                    )
+            ]
         )
 
         return SevenDayAverageConfiguration(
