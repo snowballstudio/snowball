@@ -118,6 +118,7 @@ export default function ScreenTimeDataPanel({
   onBackHome,
   onOpenTrain,
   onOpenDetailDate,
+  onOpenSevenDayReport,
   showTrainLink = true,
   developerMode = false,
   developerPanel = null,
@@ -204,6 +205,26 @@ export default function ScreenTimeDataPanel({
 
           <p className="screenSummaryHint">
             每日按使用时长排列 TOP 10，其余应用合并为“其他”。
+            {onOpenSevenDayReport ? (
+              <>
+                <span aria-hidden="true"> · </span>
+                <button
+                  type="button"
+                  onClick={onOpenSevenDayReport}
+                  style={{
+                    border: 0,
+                    padding: 0,
+                    background: 'transparent',
+                    color: 'inherit',
+                    textDecoration: 'underline',
+                    font: 'inherit',
+                    cursor: 'pointer',
+                  }}
+                >
+                  测试看七日平均报告
+                </button>
+              </>
+            ) : null}
           </p>
         </div>
       </div>

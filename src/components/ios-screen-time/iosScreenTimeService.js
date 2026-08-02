@@ -38,6 +38,14 @@ export async function openIOSScreenTimeReport(date) {
   return IOSScreenTime.presentReport({ date: String(date || '') })
 }
 
+export async function openIOSSevenDayAverageReport() {
+  if (!isIOSScreenTimeAvailable()) {
+    throw new Error('苹果七日平均报告只能在 iPhone 真机打开。')
+  }
+
+  return IOSScreenTime.presentSevenDayReport()
+}
+
 
 export async function refreshIOSSevenDaySummary({
   force = false,
@@ -57,8 +65,6 @@ export async function refreshIOSSevenDaySummary({
   sevenDaySummaryRefreshPromise =
     IOSScreenTime.refreshSevenDaySummary()
       .finally(() => {
-        // 每次刷新结束后释放 Promise，后续重新打开主页或回到前台时
-        // 才能再次触发苹果七日报告，而不是永久复用第一次结果。
         sevenDaySummaryRefreshPromise = null
       })
 

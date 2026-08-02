@@ -14,6 +14,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getAuthorizationStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestAuthorization", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "presentReport", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "presentSevenDayReport", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "refreshSevenDaySummary", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readActivityData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startOffscreenMonitoring", returnType: CAPPluginReturnPromise),
@@ -106,6 +107,77 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
 
+    @objc public func presentSevenDayReport(_ call: CAPPluginCall) {
+        guard AuthorizationCenter.shared.authorizationStatus == .approved else {
+            call.reject("请先授权苹果屏幕时间。")
+            return
+        }
+
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: Date())
+
+        guard
+            let yesterday = calendar.date(
+                byAdding: .day,
+                value: -1,
+                to: today
+            ),
+            let start = calendar.date(
+                byAdding: .day,
+                value: -6,
+                to: yesterday
+            ),
+            let end = calendar.date(
+                byAdding: .day,
+                value: 1,
+                to: yesterday
+            )
+        else {
+            call.reject("无法计算七日屏幕时间区间。")
+            return
+        }
+
+        let filter = DeviceActivityFilter(
+            segment: .daily(
+                during: DateInterval(
+                    start: start,
+                    end: end
+                )
+            ),
+            users: .all,
+            devices: .all
+        )
+
+        DispatchQueue.main.async {
+            guard let presenter = self.bridge?.viewController else {
+                call.reject("找不到雪球主页面。")
+                return
+            }
+
+            let context = DeviceActivityReport.Context(
+                "Snowball Seven Day Average"
+            )
+            let reportView = IOSSevenDayReportContainer(
+                context: context,
+                filter: filter,
+                onClose: {
+                    presenter.dismiss(animated: true) {
+                        call.resolve([
+                            "closed": true,
+                            "startDate": self.formatSnowballDate(start),
+                            "endDate": self.formatSnowballDate(yesterday)
+                        ])
+                    }
+                }
+            )
+
+            let host = UIHostingController(rootView: reportView)
+            host.modalPresentationStyle = .fullScreen
+            presenter.present(host, animated: true)
+        }
+    }
+
+
     @objc public func refreshSevenDaySummary(
         _ call: CAPPluginCall
     ) {
@@ -163,29 +235,21 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             let host = UIHostingController(rootView: report)
 
             presenter.addChild(host)
-
-            // DeviceActivityReport 必须拥有位于可见窗口内、非零尺寸的承载视图，
-            // 系统才会稳定启动 Report Extension 的 makeConfiguration。
-            // 这里保持几乎透明且不接收触控，不影响雪球页面操作。
-            let containerBounds = presenter.view.bounds
-            let reportWidth = max(240, min(containerBounds.width, 420))
-            let reportHeight = max(180, min(containerBounds.height, 320))
             host.view.frame = CGRect(
-                x: 0,
-                y: 0,
-                width: reportWidth,
-                height: reportHeight
+                x: -4,
+                y: -4,
+                width: 2,
+                height: 2
             )
             host.view.alpha = 0.01
             host.view.isUserInteractionEnabled = false
-            host.view.backgroundColor = .clear
             presenter.view.addSubview(host.view)
             host.didMove(toParent: presenter)
 
             let startedAt = Date()
             self.waitForSevenDaySummary(
                 newerThan: startedAt,
-                attemptsRemaining: 40
+                attemptsRemaining: 24
             ) { payload in
                 DispatchQueue.main.async {
                     host.willMove(toParent: nil)
@@ -1011,6 +1075,26 @@ private struct IOSScreenTimeReportContainer: View {
         NavigationStack {
             DeviceActivityReport(context, filter: filter)
                 .navigationTitle("苹果屏幕时间 \(dateText)")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("关闭", action: onClose)
+                    }
+                }
+        }
+    }
+}
+
+
+private struct IOSSevenDayReportContainer: View {
+    let context: DeviceActivityReport.Context
+    let filter: DeviceActivityFilter
+    let onClose: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            DeviceActivityReport(context, filter: filter)
+                .navigationTitle("七日平均屏时")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {

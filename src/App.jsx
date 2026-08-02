@@ -26,6 +26,7 @@ import {
   getIOSScreenTimeStatus,
   readIOSScreenTimeData,
   openIOSScreenTimeReport,
+  openIOSSevenDayAverageReport,
 } from './components/ios-screen-time/iosScreenTimeService.js'
 import { restoreIOSPlaybackAudioSession } from './components/audio/iosAudioSessionService.js'
 import { isPhotoIndexAvailable, pickPhotoIndexes, presentIndexedPhoto } from './components/photo-index/photoIndexService.js'
@@ -2947,24 +2948,24 @@ function App() {
           snowballAppNameFor,
         )
 
-        if (alive) {
-          setData(prev => {
-            const averageValue = Number(
-              todayRawPayload?.sevenDayAverageMinutes
-              ?? prev.iosSevenDayAverageMinutes
-              ?? 0
-            )
+        // 七日平均属于汇总缓存，不依赖“今天”是否存在每日记录。
+        // 苹果七日报告只包含昨天及之前七个完整自然日，今天请求的 days 为空是正常的。
+        if (alive && Number.isFinite(Number(todayRawPayload?.sevenDayAverageMinutes))) {
+          setData(prev => ({
+            ...prev,
+            iosSevenDayAverageMinutes: Number(
+              todayRawPayload.sevenDayAverageMinutes
+            ),
+          }))
+        }
 
+        if (alive && todayPayload?.days?.length) {
+          setData(prev => {
             let next = {
               ...prev,
               iosSevenDayAverageMinutes:
-                Number.isFinite(averageValue) ? averageValue : 0,
+                Number(todayRawPayload?.sevenDayAverageMinutes ?? prev.iosSevenDayAverageMinutes),
             }
-
-            // 七日平均只包含昨天及之前的完整自然日，因此读取“今天”时
-            // days 可能为空；平均值仍然必须先写入主页。
-            if (!todayPayload?.days?.length) return next
-
             next = mergeNativeScreenDays(next, todayPayload, {
               liveToday: true,
               refreshDates: [today],
@@ -3004,13 +3005,18 @@ function App() {
             .filter(date => !existing.has(dateKey(date)))
         })()
 
-        const refreshDates = [...new Set([
+        let refreshDates = [...new Set([
           ...(firstImport ? dateListInclusive(firstDate, yesterday) : []),
           ...(yesterdayNeeded ? [yesterday] : []),
           ...missingDates,
         ].map(formatDateForDaily))]
 
-        if (!refreshDates.length) return
+        // 七日报告的固定日期范围始终是“昨天及之前连续七个完整自然日”。
+        // 即使本地曾错误标记为已导入，也重新读取这七天，避免空表永久无法恢复。
+        if (!refreshDates.length) {
+          refreshDates = dateListInclusive(firstDate, yesterday)
+            .map(formatDateForDaily)
+        }
 
         const oldest = refreshDates.map(parseLocalDate).sort((a, b) => a - b)[0]
         const days = Math.max(
@@ -3031,41 +3037,35 @@ function App() {
 
         if (!alive) return
 
+        if (!historyPayload?.days?.length) {
+          if (Number.isFinite(Number(historyRawPayload?.sevenDayAverageMinutes))) {
+            setData(prev => ({
+              ...prev,
+              iosSevenDayAverageMinutes: Number(
+                historyRawPayload.sevenDayAverageMinutes
+              ),
+            }))
+          }
+          return
+        }
+
         setData(prev => {
-          const averageValue = Number(
-            historyRawPayload?.sevenDayAverageMinutes
-            ?? prev.iosSevenDayAverageMinutes
-            ?? 0
-          )
-
-          let next = {
-            ...prev,
-            iosSevenDayAverageMinutes:
-              Number.isFinite(averageValue) ? averageValue : 0,
-          }
-
-          if (historyPayload?.days?.length) {
-            next = mergeNativeScreenDays(next, historyPayload, {
-              refreshDates,
-            })
-            next = mergeNativeOffscreenDays(next, historyPayload, {
-              refreshDates,
-            })
-            next = mergeNativeDailyDays(next, historyPayload, {
-              refreshDates,
-            })
-          }
+          let next = mergeNativeScreenDays(prev, historyPayload, {
+            refreshDates,
+          })
+          next = mergeNativeOffscreenDays(next, historyPayload, {
+            refreshDates,
+          })
+          next = mergeNativeDailyDays(next, historyPayload, {
+            refreshDates,
+          })
 
           return {
             ...next,
-            deviceScreenInitialImportDone:
-              historyPayload?.days?.length
-                ? true
-                : prev.deviceScreenInitialImportDone,
-            lastDeviceScreenAutoSyncDate:
-              historyPayload?.days?.length
-                ? todayKey
-                : prev.lastDeviceScreenAutoSyncDate,
+            iosSevenDayAverageMinutes:
+              Number(historyRawPayload?.sevenDayAverageMinutes ?? next.iosSevenDayAverageMinutes),
+            deviceScreenInitialImportDone: true,
+            lastDeviceScreenAutoSyncDate: todayKey,
             lastDeviceAutoSyncAt: Date.now(),
           }
         })
@@ -3219,6 +3219,7 @@ function App() {
     data.people,
     data.yesterdaySteps,
     data.iosSevenDayAverageMinutes,
+    data.screenRecords,
   ])
 
   const last3Healthy = useMemo(
@@ -3652,6 +3653,57 @@ function App() {
   function openScreenTimeSummary() {
     setDailyMode('screen-summary')
     setShowDataPanel(true)
+  }
+
+  async function openSevenDayAverageTestReport() {
+    try {
+      // 显示之前已经成功的原生迷你七日报告。关闭时，Report Extension
+      // 已有机会把平均值和七个自然日写进 App Group。
+      await openIOSSevenDayAverageReport()
+
+      const yesterday = yesterdayText()
+      const rawPayload = await readIOSScreenTimeData({
+        startDate: yesterday,
+        days: 7,
+        cutoffHour: 5,
+        minimumActivitySeconds: 10,
+      })
+      const payload = normalizeIOSScreenTimePayload(
+        rawPayload,
+        snowballAppNameFor,
+      )
+
+      setData(prev => {
+        let next = {
+          ...prev,
+          iosSevenDayAverageMinutes: Number(
+            rawPayload?.sevenDayAverageMinutes ?? 0
+          ),
+        }
+
+        if (payload?.days?.length) {
+          const refreshDates = payload.days
+            .map(day => formatDateForDaily(day.date))
+          next = mergeNativeScreenDays(next, payload, { refreshDates })
+          next = mergeNativeOffscreenDays(next, payload, { refreshDates })
+          next = mergeNativeDailyDays(next, payload, { refreshDates })
+          next.deviceScreenInitialImportDone = true
+          next.lastDeviceScreenAutoSyncDate = dateKey(todayText())
+          next.lastDeviceAutoSyncAt = Date.now()
+        }
+
+        return next
+      })
+    } catch (error) {
+      setDailyNotice({
+        title: '七日平均报告无法打开',
+        text: String(
+          error?.message
+          || error
+          || '请确认已经授权苹果屏幕时间。'
+        ),
+      })
+    }
   }
 
   async function openScreenDetailFromSummary(date) {
@@ -4946,6 +4998,7 @@ max-width:78px !important;
               onBackHome={() => setShowDataPanel(false)}
               onOpenTrain={() => openTrainPage('yesterday')}
               onOpenDetailDate={openScreenDetailFromSummary}
+              onOpenSevenDayReport={openSevenDayAverageTestReport}
             />
           ) : dailyMode === 'screen-detail' ? (
             <ScreenTimeDataPanel
