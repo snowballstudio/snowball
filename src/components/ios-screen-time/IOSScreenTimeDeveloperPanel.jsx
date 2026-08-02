@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
+import { registerPlugin } from '@capacitor/core'
 import './IOSScreenTimeDeveloperPanel.css'
 import {
   getIOSScreenTimeStatus,
   isIOSScreenTimeAvailable,
-  openIOSScreenTimeReport,
-  readIOSScreenTimeData,
   requestIOSScreenTimeAuthorization,
   startIOSMonitorMiniTest,
   readIOSMonitorMiniStatus,
   readIOSMonitorMiniCallbacks,
   stopIOSMonitorMiniTest,
 } from './iosScreenTimeService.js'
-import { normalizeIOSScreenTimePayload } from './screenTimeDataService.js'
+
+const IOSScreenTimeNative = registerPlugin('IOSScreenTime')
 
 const EMPTY_STATUS = {
   available: false,
@@ -74,7 +74,6 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
   const [status, setStatus] = useState(EMPTY_STATUS)
   const [runningAction, setRunningAction] = useState('')
   const [message, setMessage] = useState('')
-  const [reportPreview, setReportPreview] = useState(null)
   const [monitorPreview, setMonitorPreview] = useState(null)
 
   const runAction = useCallback(async (name, action, onSuccess) => {
@@ -124,7 +123,7 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
   return (
     <section
       className="iosScreenTimeDeveloperPanel"
-      aria-label="苹果屏幕时间数据"
+      aria-label="苹果离机 Monitor 调试"
       style={{
         boxSizing: 'border-box',
         width: '100%',
@@ -133,18 +132,18 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
     >
       <div className="iosScreenTimeDeveloperHead" style={{ marginBottom: '8px' }}>
         <div>
-          <h3 style={{ marginBottom: '4px' }}>苹果屏幕时间测试</h3>
-          <p style={{ margin: 0 }}>Report 与 Monitor 分开验证。</p>
+          <h3 style={{ marginBottom: '4px' }}>离机 Monitor 调试</h3>
+          <p style={{ margin: 0 }}>独立验证 Monitor 注册、状态和回调。</p>
         </div>
       </div>
 
       <div className="iosScreenTimeStatusGrid" style={{ marginBottom: '10px' }}>
         <span>日期</span><strong>{date || '—'}</strong>
         <span>授权</span><strong>{status.statusLabel || status.status || '—'}</strong>
-        <span>Monitor</span><strong>一次性 / 2分钟后开始 / 1分钟阈值</strong>
+        <span>Monitor</span><strong>单 App / 2分钟后开始 / 1分钟阈值</strong>
       </div>
 
-      {/* 所有关键按钮放在最前面，保证一屏内可见。 */}
+      {/* Monitor 调试按钮集中放置。 */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
@@ -177,6 +176,19 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
         <button
           type="button"
           style={buttonStyle}
+          disabled={!approved || loading('selectMonitorApp')}
+          onClick={() => runAction(
+            'selectMonitorApp',
+            () => IOSScreenTimeNative.presentMonitorAppPicker(),
+            result => setMonitorPreview(result),
+          )}
+        >
+          {loading('selectMonitorApp') ? '打开中…' : '① 选择测试 App'}
+        </button>
+
+        <button
+          type="button"
+          style={buttonStyle}
           disabled={!approved || loading('monitorStart')}
           onClick={() => runAction(
             'monitorStart',
@@ -184,7 +196,7 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
             result => setMonitorPreview(result),
           )}
         >
-          {loading('monitorStart') ? '注册中…' : '① 注册 Monitor'}
+          {loading('monitorStart') ? '注册中…' : '② 注册 Monitor'}
         </button>
 
         <button
@@ -197,7 +209,7 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
             result => setMonitorPreview(result),
           )}
         >
-          {loading('monitorStatus') ? '读取中…' : '② 读取注册状态'}
+          {loading('monitorStatus') ? '读取中…' : '③ 读取注册状态'}
         </button>
 
         <button
@@ -210,7 +222,7 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
             result => setMonitorPreview(result),
           )}
         >
-          {loading('monitorCallbacks') ? '读取中…' : '③ 读取回调'}
+          {loading('monitorCallbacks') ? '读取中…' : '④ 读取回调'}
         </button>
 
         <button
@@ -223,41 +235,9 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
             result => setMonitorPreview(result),
           )}
         >
-          {loading('monitorStop') ? '停止中…' : '④ 停止测试'}
+          {loading('monitorStop') ? '停止中…' : '⑤ 停止测试'}
         </button>
 
-        <button
-          type="button"
-          style={buttonStyle}
-          disabled={!approved || loading('openReport')}
-          onClick={() => runAction(
-            'openReport',
-            () => openIOSScreenTimeReport(date),
-          )}
-        >
-          {loading('openReport') ? '打开中…' : '打开当天系统报告'}
-        </button>
-
-        <button
-          type="button"
-          style={buttonStyle}
-          disabled={!approved || loading('readReport')}
-          onClick={() => runAction(
-            'readReport',
-            async () => {
-              const result = await readIOSScreenTimeData({
-                startDate: date,
-                days: 1,
-                cutoffHour: 5,
-                minimumActivitySeconds: 10,
-              })
-              return normalizeIOSScreenTimePayload(result)
-            },
-            result => setReportPreview(result),
-          )}
-        >
-          {loading('readReport') ? '读取中…' : '读取当天正式数据'}
-        </button>
       </div>
 
       <p
@@ -268,16 +248,15 @@ export default function IOSScreenTimeDeveloperPanel({ date }) {
           overflowWrap: 'anywhere',
         }}
       >
-        {message || '点注册后等待2分钟进入新区间；区间开始后使用手机1分钟，再读取回调。'}
+        {message || '先选择微信；再注册。等到新区间开始后，只使用微信至少1分钟，再读取回调。'}
       </p>
 
-      {/* 结果紧跟按钮，不再藏到页面最下方。 */}
+      {/* Monitor 结果紧跟按钮显示。 */}
       <CompactResult title="Monitor 结果" value={monitorPreview} height="42vh" />
-      <CompactResult title="正式报告结果" value={reportPreview} />
 
       <p className="iosScreenTimeDeveloperNote" style={{ marginBottom: 0 }}>
-        成功标准：systemConfirmed=true；最终 callbacks 中出现
-        eventDidReachThreshold。
+        成功标准：selectedApplicationCount=1、systemConfirmed=true；
+        最终 callbacks 中出现 eventDidReachThreshold。
       </p>
     </section>
   )

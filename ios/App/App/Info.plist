@@ -53,5 +53,7 @@
 	<string>雪粒需要使用麦克风，将你的话转换成文字。</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>雪粒需要使用语音识别，将你的话记录到对话中。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>雪粒需要读取您选择的照片，以保存照片索引并在足迹中再次查看原图。</string>
 </dict>
 </plist>

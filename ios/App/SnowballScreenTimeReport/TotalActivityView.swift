@@ -201,3 +201,41 @@ struct TotalActivityView: View {
         .background(Color(uiColor: .systemBackground))
     }
 }
+
+
+// MARK: - 雪地七日平均屏时测试视图
+
+struct SevenDayAverageView: View {
+    let configuration: SevenDayAverageConfiguration
+
+    private func hoursText(_ duration: TimeInterval) -> String {
+        let hours = max(0, duration) / 3600.0
+        return String(format: "%.1f", hours)
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text("七日平均屏时")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(hoursText(configuration.averageDuration))
+                    .font(.system(size: 34, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+
+                Text("小时")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            Text("昨日及之前七个完整自然日")
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 20)
+        .background(Color(uiColor: .systemBackground))
+    }
+}

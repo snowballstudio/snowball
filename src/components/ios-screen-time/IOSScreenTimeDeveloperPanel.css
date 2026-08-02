@@ -100,3 +100,8 @@
     width: 100%;
   }
 }
+
+
+.offscreenMonitorDeveloperBody .iosScreenTimeDeveloperPanel {
+  margin-top: 0;
+}

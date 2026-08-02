@@ -28,6 +28,7 @@ export default function Footprint({
   setSelectedFootprintId,
   selectedFootprint,
   setFootprintImagePreview,
+  openFootprintPhoto,
   startEditFootprint,
   requestDeleteFootprint,
   saveHomePosition,
@@ -58,6 +59,8 @@ export default function Footprint({
 }) {
   const [openYears, setOpenYears] = useState({})
   const [popupVisitIndex, setPopupVisitIndex] = useState(0)
+  const [footprintPopupMaximized, setFootprintPopupMaximized] = useState(false)
+  const [browseSort, setBrowseSort] = useState({ field: 'date', direction: 'desc' })
   const [openFuturePlanType, setOpenFuturePlanType] = useState(null)
   const [futurePlanInputActive, setFuturePlanInputActive] = useState(false)
   const futurePlanTextareaRef = useRef(null)
@@ -282,6 +285,20 @@ export default function Footprint({
 
   const footprintTypeLabel = type => FOOTPRINT_TYPES[type] || type || '足迹'
 
+  const formatFootprintMonth = month => {
+    const value = Number(month)
+    if (!Number.isInteger(value) || value < 1 || value > 12) {
+      return month || '待记录'
+    }
+    return String(value).padStart(2, '0')
+  }
+
+  const footprintPhotoThumbnail = photo => {
+    if (typeof photo === 'string') return photo
+    return String(photo?.thumbnail || '')
+  }
+
+
   const sortedFootprints = useMemo(() => {
     return [...(footprints || [])].sort((a, b) => {
       const ay = Number(a.year || 0)
@@ -450,11 +467,13 @@ export default function Footprint({
       .sort(popupRecordSort)
 
     setPopupVisitIndex(0)
+    setFootprintPopupMaximized(false)
     setSelectedFootprintId(visits[0]?.id || group.item.id)
   }
 
   function closeFootprintPopup() {
     setPopupVisitIndex(0)
+    setFootprintPopupMaximized(false)
     setSelectedFootprintId(null)
   }
 
@@ -465,6 +484,46 @@ export default function Footprint({
   function showNextVisit() {
     setPopupVisitIndex(index => Math.min(selectedMarkerVisits.length - 1, index + 1))
   }
+
+  function toggleBrowseSort(field) {
+    setBrowseSort(current => ({
+      field,
+      direction: current.field === field
+        ? (current.direction === 'asc' ? 'desc' : 'asc')
+        : (field === 'date' ? 'desc' : 'asc'),
+    }))
+  }
+
+  function browseSortArrow(field) {
+    if (browseSort.field !== field) return ''
+    return browseSort.direction === 'asc' ? '▲' : '▼'
+  }
+
+  const browseFootprints = useMemo(() => {
+    const items = (footprints || []).filter(item => item.type === footprintView)
+
+    return [...items].sort((a, b) => {
+      let result = 0
+
+      if (browseSort.field === 'place') {
+        result = String(a.place || '').localeCompare(
+          String(b.place || ''),
+          'zh-CN',
+          { numeric: true, sensitivity: 'base' },
+        )
+      } else {
+        const aDate = Number(a.year || 0) * 12 + Number(a.month || 0)
+        const bDate = Number(b.year || 0) * 12 + Number(b.month || 0)
+        result = aDate - bDate
+      }
+
+      if (result === 0) {
+        result = String(a.id || '').localeCompare(String(b.id || ''))
+      }
+
+      return browseSort.direction === 'asc' ? result : -result
+    })
+  }, [footprints, footprintView, browseSort])
 
   return (
     <>
@@ -579,11 +638,28 @@ export default function Footprint({
                   const hasMultipleVisits = selectedMarkerVisits.length > 1
 
                   return (
-                    <div className="mapFootprintPopup">
-                      <button className="mapFootprintPopupClose" onClick={closeFootprintPopup} aria-label="关闭足迹详情">×</button>
+                    <div className={`mapFootprintPopup ${footprintPopupMaximized ? 'isMaximized' : ''}`}>
+                      <button
+                        type="button"
+                        className="mapFootprintPopupClose"
+                        onClick={closeFootprintPopup}
+                        aria-label="关闭足迹详情"
+                      >
+                        ×
+                      </button>
+
+                      <button
+                        type="button"
+                        className="mapFootprintPopupResize"
+                        onClick={() => setFootprintPopupMaximized(value => !value)}
+                        aria-label={footprintPopupMaximized ? '恢复足迹详情窗口' : '最大化足迹详情窗口'}
+                        title={footprintPopupMaximized ? '恢复窗口' : '最大化窗口'}
+                      >
+                        {footprintPopupMaximized ? '❐' : '▢'}
+                      </button>
 
                       <div className="mapFootprintPopupHeader">
-                        <strong><span>{popupFootprint.year || '待记录'}年{popupFootprint.month || '待记录'}月 · {popupFootprint.place || '待记录'}</span></strong>
+                        <strong><span>{popupFootprint.year || '待记录'}年{formatFootprintMonth(popupFootprint.month)}月 · {popupFootprint.place || '待记录'}</span></strong>
 
                         {hasMultipleVisits && (
                           <div className="mapFootprintPager" aria-label="切换同一图钉的足迹记录">
@@ -612,11 +688,22 @@ export default function Footprint({
                       <p>最难忘的：{popupFootprint.note || '待记录'}</p>
                       {Array.isArray(popupFootprint.photos) && popupFootprint.photos.length > 0 ? (
                         <div className="mapFootprintPhotos">
-                          {popupFootprint.photos.slice(0, 3).map((src, index) => (
-                            <button type="button" className="mapFootprintPhotoButton" key={index} onClick={() => setFootprintImagePreview(src)} aria-label={`放大查看足迹照片${index + 1}`}>
-                              <img src={src} alt={`足迹照片${index + 1}`} />
-                            </button>
-                          ))}
+                          {popupFootprint.photos.map((photo, index) => {
+                            const thumbnail = footprintPhotoThumbnail(photo)
+                            if (!thumbnail) return null
+
+                            return (
+                              <button
+                                type="button"
+                                className="mapFootprintPhotoButton"
+                                key={photo?.id || index}
+                                onClick={() => openFootprintPhoto(photo)}
+                                aria-label={`打开足迹原图${index + 1}`}
+                              >
+                                <img src={thumbnail} alt={`足迹照片${index + 1}`} />
+                              </button>
+                            )
+                          })}
                         </div>
                       ) : (
                         <small className="mapFootprintNoPhoto">图片：待记录</small>
@@ -646,7 +733,7 @@ export default function Footprint({
                 <div className="yearsCard footprintEditorCard">
                   <p className="footprintTip">可输入地名或在地图上点精确方位添加足迹。</p>
                   <div className="footprintField footprintYearMonthField">
-                    <span>年月</span>
+                    <span>出行年月</span>
                     <div className="footprintInlinePair">
                       <input
                         placeholder="如：2026"
@@ -694,27 +781,53 @@ export default function Footprint({
                     />
                   </label>
                   <div className="footprintMemoryUploadRow">
-                    <label className="footprintPhotoInline">
-                      <span>上传图片</span>
-                      <input
-                        className="footprintPhotoNativeInput"
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        aria-label="上传足迹图片，最多3张"
-                        onChange={e => { handleFootprintPhotos(e.target.files); e.target.value = '' }}
-                      />
-                    </label>
-                    <button type="button" className="askSnowballMemoryBtn" onClick={askSnowballFootprintMemory}>? 问问雪粒帮忙回忆</button>
+                    <span className="footprintUploadLabel">上传图片</span>
+                    <button
+                      type="button"
+                      className="footprintPhotoIndexButton"
+                      onClick={() => handleFootprintPhotos()}
+                      aria-label="从照片图库选择图片"
+                    >
+                      <img
+                      className="footprintPhotoIndexIcon"
+                      src="/refine/footprint_photoicon.png"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                    </button>
+                    <span className="footprintPhotoIndexNote">仅保存原图索引，不占空间。</span>
+                    <input
+                      className="footprintPhotoNativeInput footprintPhotoFallbackInput"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      aria-label="上传足迹图片"
+                      onChange={e => {
+                        handleFootprintPhotos(e.target.files)
+                        e.target.value = ''
+                      }}
+                    />
                   </div>
                   {(footprintDraft.photos || []).length > 0 && (
                     <div className="footprintPhotoPreviewGrid">
-                      {(footprintDraft.photos || []).map((src, index) => (
-                        <div className="footprintPhotoPreview" key={index}>
-                          <img src={src} alt={`足迹照片${index + 1}`} />
-                          <button type="button" onClick={() => removeFootprintPhoto(index)}>删除</button>
-                        </div>
-                      ))}
+                      {(footprintDraft.photos || []).map((photo, index) => {
+                        const thumbnail = footprintPhotoThumbnail(photo)
+                        if (!thumbnail) return null
+
+                        return (
+                          <div className="footprintPhotoPreview" key={photo?.id || index}>
+                            <button
+                              type="button"
+                              className="footprintPhotoPreviewOpen"
+                              onClick={() => openFootprintPhoto(photo)}
+                              aria-label={`打开足迹原图${index + 1}`}
+                            >
+                              <img src={thumbnail} alt={`足迹照片${index + 1}`} />
+                            </button>
+                            <button type="button" onClick={() => removeFootprintPhoto(index)}>删除</button>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                   <div className="footprintSaveActions">
@@ -726,14 +839,78 @@ export default function Footprint({
                 <div className="yearsCard footprintEditorCard footprintBrowseListCard">
                   <p className="footprintTip">点图钉或记录看详情；拖行李箱、点纸条写计划。</p>
                   <div className="footprintFullList compactFootprintList">
-                    {footprints.filter(item => item.type === footprintView).length === 0 && <p>这里还没有足迹。</p>}
-                    {footprints.filter(item => item.type === footprintView).map(item => {
-                      const thumb = Array.isArray(item.photos) && item.photos.length > 0 ? item.photos[0] : ''
+                    {browseFootprints.length === 0 && <p>这里还没有足迹。</p>}
+                    {browseFootprints.map(item => {
+                      const thumb = Array.isArray(item.photos) && item.photos.length > 0 ? footprintPhotoThumbnail(item.photos[0]) : ''
+                      const active = selectedFootprintId === item.id
+
                       return (
-                        <button className={selectedFootprintId === item.id ? 'footprintListButton active footprintListRecord' : 'footprintListButton footprintListRecord'} key={item.id} onClick={() => { setPopupVisitIndex(0); setSelectedFootprintId(item.id) }}>
+                        <div
+                          className={active ? 'footprintListButton active footprintListRecord' : 'footprintListButton footprintListRecord'}
+                          key={item.id}
+                          role="button"
+                          tabIndex={0}
+                          aria-pressed={active}
+                          onClick={() => {
+                            setPopupVisitIndex(0)
+                            setSelectedFootprintId(item.id)
+                          }}
+                          onKeyDown={event => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              setPopupVisitIndex(0)
+                              setSelectedFootprintId(item.id)
+                            }
+                          }}
+                        >
                           <span className="footprintListThumb">{thumb ? <img src={thumb} alt="" /> : <span>图</span>}</span>
-                          <span className="footprintListText"><strong>{item.year}年{item.month}月 · {item.place}</strong>{item.detail ? <small>{item.detail}</small> : null}</span>
-                        </button>
+                          <span className="footprintListText">
+                            <strong>
+                              <span
+                                className={`footprintSortCell footprintSortDate ${browseSort.field === 'date' ? 'sorting' : ''}`}
+                                role="button"
+                                tabIndex={0}
+                                title="按日期排序"
+                                onClick={event => {
+                                  event.stopPropagation()
+                                  toggleBrowseSort('date')
+                                }}
+                                onKeyDown={event => {
+                                  if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                    toggleBrowseSort('date')
+                                  }
+                                }}
+                              >
+                                {item.year}年{formatFootprintMonth(item.month)}月
+                                <small className="footprintSortArrow" aria-hidden="true">{browseSortArrow('date')}</small>
+                              </span>
+                              <span className="footprintListSeparator"> · </span>
+                              <span
+                                className={`footprintSortCell footprintSortPlace ${browseSort.field === 'place' ? 'sorting' : ''}`}
+                                role="button"
+                                tabIndex={0}
+                                title="按地名排序"
+                                onClick={event => {
+                                  event.stopPropagation()
+                                  toggleBrowseSort('place')
+                                }}
+                                onKeyDown={event => {
+                                  if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                    toggleBrowseSort('place')
+                                  }
+                                }}
+                              >
+                                {item.place}
+                                <small className="footprintSortArrow" aria-hidden="true">{browseSortArrow('place')}</small>
+                              </span>
+                            </strong>
+                            {item.detail ? <small>{item.detail}</small> : null}
+                          </span>
+                        </div>
                       )
                     })}
                   </div>
@@ -884,7 +1061,7 @@ export default function Footprint({
                                 return (
                                   <button type="button" className="footprintHomeRecord" key={item.id} onClick={() => openFootprintRecord(item)}>
                                     <span className="footprintHomeThumb">{thumb ? <img src={thumb} alt="" /> : <span>图</span>}</span>
-                                    <span className="footprintHomeDate">{item.year || '待'}年{item.month || '待'}月</span>
+                                    <span className="footprintHomeDate">{item.year || '待'}年{formatFootprintMonth(item.month)}月</span>
                                     <strong>{item.place || '待记录'}</strong>
                                     <small className="footprintHomeDetail">{item.detail || ''}</small>
                                     <em>{footprintTypeLabel(item.type)}</em>
@@ -968,14 +1145,6 @@ export default function Footprint({
             <p>{footprintModal.text}</p>
           </div>
         </div>
-      )}
-      {footprintImagePreview && (
-      <div className="imagePreviewOverlay" onClick={() => setFootprintImagePreview(null)}>
-        <div className="imagePreviewBox" onClick={e => e.stopPropagation()}>
-          <button className="imagePreviewClose" onClick={() => setFootprintImagePreview(null)} aria-label="关闭大图">×</button>
-          <img src={footprintImagePreview} alt="足迹大图" />
-        </div>
-      </div>
       )}
     </>
   )

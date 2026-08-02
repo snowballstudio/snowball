@@ -15,5 +15,9 @@ struct SnowballScreenTimeReport: DeviceActivityReportExtension {
         TotalActivityReport { configuration in
             TotalActivityView(configuration: configuration)
         }
+
+        SevenDayAverageReport { configuration in
+            SevenDayAverageView(configuration: configuration)
+        }
     }
 }

@@ -25,8 +25,10 @@ import {
   recalculateIOSOffscreenRecord,
   getIOSScreenTimeStatus,
   readIOSScreenTimeData,
+  openIOSSevenDayAverage,
 } from './components/ios-screen-time/iosScreenTimeService.js'
 import { restoreIOSPlaybackAudioSession } from './components/audio/iosAudioSessionService.js'
+import { isPhotoIndexAvailable, pickPhotoIndexes, presentIndexedPhoto } from './components/photo-index/photoIndexService.js'
 import { ingestStepPayload, stepValueForDate } from './stepDataService.js'
 import { conversationBrainPercent, emptyConversationRecord, readConversationRecord, saveConversationRecord } from './components/call/conversationDataService.js'
 
@@ -1139,7 +1141,7 @@ const FOOD_ALIAS = {
   鱼虾蟹贝: ['虾蟹', '虾', '虾饺',  '鱼','老虎虾', '基围虾', '香蕉虾', '蛤蜊', '田螺', '淡菜', '鱿鱼', '墨鱼', '小河虾','明虾', '斑节虾',  '琵琶虾', '桂鱼', '鲈鱼', '生蚝', '扇贝', '泥蟹', '青蟹', '蟹', '鱼', '草鱼', '黑鱼', '鳊鱼', '多宝鱼', '鸦片鱼', '大闸蟹', '海鲜', '鲫鱼', '三文鱼','黄鱼', '带鱼', '鳕鱼', '海鱼', '鲍鱼', '胖头鱼', '河鱼',  '活鱼','鱼片', '鱼丸', '水煮鱼', '烤鱼', '小龙虾',  '金枪鱼', '螃蟹', '龙虾'],
   其它蛋白: ['其它蛋白'],
   白菜: ['白菜', '黄牙菜','卷心菜','包心白菜','娃娃菜','大白菜'],
-  绿叶菜: ['青菜', '小青菜', '油菜', '上海青', '油麦菜', '菠菜', '米苋', '空心菜', '茼蒿', '芥兰', '芥菜', '西洋菜', '香菜', '生菜', '木耳菜', '秋葵', '蒜苔'],
+  绿叶菜: ['青菜', '小青菜', '油菜', '上海青', '芥蓝', '鸡毛菜', '羽衣甘蓝', '奶油小白菜', '青梗菜', '荠菜', '萝卜缨子','塌棵菜','塔菜','菊花菜','菜心','油麦菜', '菠菜', '米苋', '空心菜', '茼蒿', '芥兰', '芥菜', '西洋菜', '香菜', '生菜', '木耳菜', '秋葵', '蒜苔'],
   花椰菜: ['西兰花', '花菜', '甘蓝', '有机花菜', '有机西兰花', '菜心', '菜花'],
   胡白萝卜: ['胡萝卜', '红萝卜', '萝卜', '萝卜丝', '白萝卜', '萝卜菜'],
   洋葱: ['洋葱'],
@@ -3536,7 +3538,7 @@ function App() {
     screenOpenTimerRef.current = window.setTimeout(() => {
       setSelectedScreenDate(targetDate)
       setScreenReturnMode(targetReturnMode)
-      setDailyMode('screen')
+      setDailyMode('screen-detail')
       setShowDataPanel(true)
     }, 180)
   }
@@ -3549,6 +3551,17 @@ function App() {
         ? dailyMode
         : dailyMode || 'home')
     setOffscreenReturnMode(targetReturnMode)
+    setDailyMode('offscreen-table')
+    setShowDataPanel(true)
+  }
+
+  function openOffscreenMonitorDeveloper() {
+    if (!data.developerMode || Capacitor.getPlatform() !== 'ios') return
+    setDailyMode('offscreen-monitor-developer')
+    setShowDataPanel(true)
+  }
+
+  function closeOffscreenMonitorDeveloper() {
     setDailyMode('offscreen-table')
     setShowDataPanel(true)
   }
@@ -3578,6 +3591,31 @@ function App() {
       setExpandedDailyMonths(prev => ({ ...prev, [currentMonthKey]: true, [previousMonthKey]: true }))
     }
     setDailyMode('home')
+    setShowDataPanel(true)
+  }
+
+  async function openScreenTimeSummary() {
+    if (Capacitor.getPlatform() === 'ios') {
+      try {
+        await openIOSSevenDayAverage()
+      } catch (error) {
+        setDailyNotice({
+          title: '七日平均屏时无法打开',
+          text: String(error?.message || error || '请确认已经授权苹果屏幕时间。'),
+        })
+      }
+      return
+    }
+
+    setDailyMode('screen-summary')
+    setShowDataPanel(true)
+  }
+
+  function openScreenDetailFromSummary(date) {
+    if (!data.developerMode) return
+    setSelectedScreenDate(formatDateForDaily(date || todayText()))
+    setScreenReturnMode('screen-summary')
+    setDailyMode('screen-detail')
     setShowDataPanel(true)
   }
 
@@ -4123,7 +4161,7 @@ function App() {
         place,
         detail: String(draft.detail || '').trim(),
         note: String(draft.note || '').trim(),
-        photos: Array.isArray(draft.photos) ? draft.photos.slice(0, 3) : [],
+        photos: Array.isArray(draft.photos) ? [...draft.photos] : [],
         ...(manualPos ? { x: manualPos.x, y: manualPos.y, positionMode: 'manual' } : {}),
       }
       const nextFootprints = oldItem
@@ -4163,7 +4201,7 @@ function App() {
         place: item.place || '',
         detail: item.detail || '',
         note: item.note || '',
-        photos: Array.isArray(item.photos) ? item.photos.slice(0, 3) : [],
+        photos: Array.isArray(item.photos) ? [...item.photos] : [],
         ...(footprintHasManualPosition(item) ? {
           x: normalizeFootprintPoint(item).x,
           y: normalizeFootprintPoint(item).y,
@@ -4222,11 +4260,35 @@ function App() {
     })
   }
 
-  function handleFootprintPhotos(files) {
-    const picked = Array.from(files || []).slice(0, 3)
+  async function handleFootprintPhotos(files = null) {
+    if (isPhotoIndexAvailable()) {
+      try {
+        const indexedPhotos = await pickPhotoIndexes()
+        if (!indexedPhotos.length) return
+
+        setData(prev => {
+          const current = prev.footprintDraft || DEFAULT.footprintDraft
+          return {
+            ...prev,
+            footprintDraft: {
+              ...current,
+              photos: [...(current.photos || []), ...indexedPhotos],
+            },
+          }
+        })
+      } catch (error) {
+        setFootprintModal({
+          title: '照片索引没有保存成功',
+          text: String(error?.message || error || '请稍后再试。'),
+        })
+      }
+      return
+    }
+
+    const picked = Array.from(files || [])
     if (!picked.length) return
 
-    Promise.all(picked.map(file => compressFootprintImage(file))).then(images => {
+    Promise.all(picked.map(file => compressFootprintImage(file, 240, 0.5))).then(images => {
       const cleanImages = images.filter(Boolean)
       if (!cleanImages.length) return
 
@@ -4236,13 +4298,55 @@ function App() {
           ...prev,
           footprintDraft: {
             ...current,
-            photos: [...(current.photos || []), ...cleanImages].slice(0, 3),
+            photos: [
+              ...(current.photos || []),
+              ...cleanImages.map((thumbnail, index) => ({
+                id: `web-photo-${Date.now()}-${index}`,
+                assetIdentifier: '',
+                thumbnail,
+                width: 0,
+                height: 0,
+                source: 'web-thumbnail-only',
+              })),
+            ],
           },
         }
       })
     }).catch(() => {
-      setFootprintModal({ title: '照片没有读成功', text: '这张照片雪粒没有读到，请换一张再试。' })
+      setFootprintModal({
+        title: '照片没有读成功',
+        text: '这张照片雪粒没有读到，请换一张再试。',
+      })
     })
+  }
+
+  async function openFootprintPhoto(photo) {
+    if (!photo) return
+
+    if (typeof photo === 'string') {
+      setFootprintImagePreview(photo)
+      return
+    }
+
+    if (isPhotoIndexAvailable() && (photo.assetIdentifier || photo.uri)) {
+      try {
+        await presentIndexedPhoto(photo)
+      } catch (error) {
+        setFootprintModal({
+          title: '原照片无法打开',
+          text: String(
+            error?.message
+              || error
+              || '原照片可能已被删除，或相册访问权限已经改变。',
+          ),
+        })
+      }
+      return
+    }
+
+    if (photo.thumbnail) {
+      setFootprintImagePreview(photo.thumbnail)
+    }
   }
 
 
@@ -4406,28 +4510,25 @@ const homeFloatingFootprintMemory = ''
     { key: 'all', label: '全部' },
     { key: 'steps', label: '步数' },
     { key: 'offscreen', label: '离机' },
-    { key: 'screen', label: '屏时' },
     { key: 'food', label: '饮食' },
     { key: 'mood', label: '心情' },
   ]
 
   const dailyViewHeaders = {
-    all: ['日期', '步数', '离机', '屏时', '食物', '口味', '心情', '互动'],
+    all: ['日期', '步数', '离机', '食物', '口味', '心情', '互动'],
     steps: ['日期', '步数'],
     offscreen: ['日期', '离机'],
-    screen: ['日期', '屏时'],
     food: ['日期', '食物', '口味'],
     mood: ['日期', '心情'],
-  }[dailyViewTab] || ['日期', '步数', '离机', '屏时', '食物', '口味', '心情', '互动']
+  }[dailyViewTab] || ['日期', '步数', '离机', '食物', '口味', '心情', '互动']
 
   const dailyTableGrid = {
-    all: '1.15fr 0.8fr 0.8fr 0.8fr 1.15fr 0.9fr 1fr 0.7fr 42px 42px 48px',
+    all: '1.15fr 0.8fr 0.8fr 1.2fr 0.9fr 1fr 0.7fr 42px 42px 48px',
     steps: '1.2fr 1fr 42px 42px 48px',
     offscreen: '1.15fr 0.9fr 42px 42px 48px',
-    screen: '1.15fr 0.9fr 42px 42px 48px',
     food: '0.85fr 1.7fr 0.85fr 42px 42px 48px',
     mood: '0.85fr 1.7fr 42px 42px 48px',
-  }[dailyViewTab] || '1.15fr 0.8fr 0.8fr 0.8fr 1.15fr 0.9fr 1fr 0.7fr 42px 42px 48px'
+  }[dailyViewTab] || '1.15fr 0.8fr 0.8fr 1.2fr 0.9fr 1fr 0.7fr 42px 42px 48px'
 
   function dailyGroupCellsForView(group) {
     const openMark = !!expandedDailyMonths[group.key] ? '−' : '+'
@@ -4438,10 +4539,6 @@ const homeFloatingFootprintMemory = ''
     if (dailyViewTab === 'offscreen') return [
       <span className="dailyMonthName" key="month">{openMark} {group.label}</span>,
       <span key="offscreen">{group.avgOffscreen}</span>,
-    ]
-    if (dailyViewTab === 'screen') return [
-      <span className="dailyMonthName" key="month">{openMark} {group.label}</span>,
-      <span key="screen">{group.avgScreen}</span>,
     ]
     if (dailyViewTab === 'food') return [
       <span className="dailyMonthName" key="month">{openMark} {group.label}</span>,
@@ -4456,7 +4553,6 @@ const homeFloatingFootprintMemory = ''
       <span className="dailyMonthName" key="month">{openMark} {group.label}</span>,
       <span key="steps">{group.avgSteps}</span>,
       <span key="offscreen">{group.avgOffscreen}</span>,
-      <span key="screen">{group.avgScreen}</span>,
       <span className="dailyWrapCell dailyMonthFoodTop" key="food" title={group.topFood}>{group.topFood}</span>,
       <span className="dailyWrapCell" key="taste" title={group.topTaste}>{group.topTaste}</span>,
       <span className="dailyWrapCell" key="mood" title={group.topMood}>{group.topMood}</span>,
@@ -4522,10 +4618,6 @@ const homeFloatingFootprintMemory = ''
       <span key="date">{formatDailyDateWithWeek(r.date)}</span>,
       offscreenButton,
     ]
-    if (dailyViewTab === 'screen') return [
-      <span key="date">{formatDailyDateWithWeek(r.date)}</span>,
-      screenButton,
-    ]
     if (dailyViewTab === 'food') return [
       <span key="date">{formatDailyDateWithWeek(r.date)}</span>,
       foodCell,
@@ -4539,7 +4631,6 @@ const homeFloatingFootprintMemory = ''
       <span key="date">{formatDailyDateWithWeek(r.date)}</span>,
       <span key="steps" className={dailyValueClass(stepsValue >= 5000)}>{stepsValue}</span>,
       offscreenButton,
-      screenButton,
       foodCell,
       tasteCell,
       moodCell,
@@ -4579,6 +4670,7 @@ const homeFloatingFootprintMemory = ''
         homeYesterdaySteps={homeYesterdaySteps}
         body={body}
         openDailyDetail={openDailyDetail}
+        openScreenTimeSummary={openScreenTimeSummary}
         homeYesterdaySleep={homeYesterdaySleep}
         furDisplay={furDisplay}
         food={food}
@@ -4715,8 +4807,9 @@ const homeFloatingFootprintMemory = ''
             }
 
             .dailyEditOnlyPage .dailyEditStickyActions button {
-              width: auto !important;
-              min-width: 72px !important;
+             width:96px !important;
+min-width:78px !important;
+max-width:78px !important;
               min-height: 34px !important;
               height: 34px !important;
               margin: 0 !important;
@@ -4769,6 +4862,7 @@ const homeFloatingFootprintMemory = ''
               dailyTopApps={dailyTopApps}
               dailyTopAppSummary={dailyTopAppSummary}
               openDailyDetail={openDailyDetail}
+              openScreenTimeSummary={openScreenTimeSummary}
               onBackHome={() => setShowDataPanel(false)}
             />
           ) : dailyMode === 'steps-auto' ? (
@@ -4776,8 +4870,18 @@ const homeFloatingFootprintMemory = ''
               records={data.stepAutoRecords || []}
               onBack={() => setDailyMode('home')}
             />
-          ) : dailyMode === 'screen' ? (
+          ) : dailyMode === 'screen-summary' ? (
             <ScreenTimeDataPanel
+              mode="summary"
+              screenRecords={data.screenRecords || []}
+              developerMode={data.developerMode}
+              onBackHome={() => setShowDataPanel(false)}
+              onOpenTrain={() => openTrainPage('yesterday')}
+              onOpenDetailDate={openScreenDetailFromSummary}
+            />
+          ) : dailyMode === 'screen-detail' ? (
+            <ScreenTimeDataPanel
+              mode="detail"
               selectedDate={selectedScreenDate}
               screenRecords={data.screenRecords || []}
               appOptions={APP_OPTIONS}
@@ -4785,16 +4889,36 @@ const homeFloatingFootprintMemory = ''
               onDeleteRecord={deleteScreenRecord}
               onAddRecord={addScreenRecord}
               onSaveAndReturn={saveScreenDetailAndReturn}
-              developerPanel={
-                data.developerMode && Capacitor.getPlatform() === 'ios'
-                  ? <IOSScreenTimeDeveloperPanel date={selectedScreenDate} />
-                  : null
-              }
             />
+          ) : dailyMode === 'offscreen-monitor-developer' ? (
+            <div className="offscreenMonitorDeveloperPage">
+              <div className="offscreenMonitorDeveloperTop">
+                <button
+                  type="button"
+                  className="offscreenMonitorDeveloperBack"
+                  onClick={closeOffscreenMonitorDeveloper}
+                  aria-label="返回离机时间表"
+                >
+                  ‹
+                </button>
+                <h2>离机 Monitor 调试</h2>
+                <span aria-hidden="true" />
+              </div>
+
+              <div className="offscreenMonitorDeveloperBody">
+                <IOSScreenTimeDeveloperPanel
+                  date={formatDateForDaily(todayText())}
+                />
+              </div>
+            </div>
           ) : dailyMode === 'offscreen-table' ? (
             <OffscreenTimeDataPanel
               records={data.offscreenRecords || []}
               onBack={saveOffscreenTableAndReturn}
+              showMonitorDeveloperLink={
+                data.developerMode && Capacitor.getPlatform() === 'ios'
+              }
+              onOpenMonitorDeveloper={openOffscreenMonitorDeveloper}
             />
           ) : dailyMode === 'home' ? (
             <div className="dailyPage dailyHomePage">
@@ -4815,9 +4939,7 @@ const homeFloatingFootprintMemory = ''
               <div className="dailyTableCard dailyGlassScreen dailyUnifiedTableCard" key={data.lastSavedAt || 0}>
                 <div className={`dailyTableHeader dailyTableHeaderV2 dailyUnifiedHeader dailyTab-${dailyViewTab}`} style={{ gridTemplateColumns: dailyTableGrid }}>
                   {dailyViewHeaders.map(item => (
-                    item === '屏时' && dailyViewTab === 'screen'
-                      ? <span className="dailyLinkedHeader" key={item}>屏时<button type="button" className="dailyHeaderNavLink dailyTrainHeaderLink" onClick={() => openTrainPage('yesterday')} aria-label="查看信息列车"><span className="dailyHeaderNavText">查看信息列车</span><span className="dailyHeaderNavIcon" aria-hidden="true">🚆</span></button></span>
-                      : item === '食物' && dailyViewTab === 'food'
+                    item === '食物' && dailyViewTab === 'food'
                         ? <span className="dailyLinkedHeader" key={item}>食物<button type="button" className="dailyHeaderNavLink dailyNutritionHeaderLink" onClick={() => openNutritionPage('today')} aria-label="查看营养光谱"><span className="dailyHeaderNavText">查看营养光谱</span><span className="dailyHeaderNavIcon" aria-hidden="true">🌈</span></button></span>
                         : item === '步数' && dailyViewTab === 'steps' && data.developerMode
                           ? <span className="dailyLinkedHeader" key={item}>步数<button type="button" className="dailyHeaderNavLink" onClick={openStepAutoTable} aria-label="查看步数自动获取表"><span className="dailyHeaderNavText">详情</span></button></span>
@@ -4867,28 +4989,21 @@ const homeFloatingFootprintMemory = ''
             <div className="dataPanel dataPanelOnScene dailyEditPage dailyEditOnlyPage">
               <div className="dataEdit dailyStructuredEdit">
                 <div className="dailyEditStickyActions" aria-label="每日数据编辑操作">
-                  <button type="button" onClick={saveToday}>保存</button>
-                  <button type="button" onClick={cancelDailyEditAndReturn}>放弃</button>
+                  <div className="dailyEditStickyDate">
+                    <span>日期</span>
+                    <strong>{formatDailyDateWithWeek(data.date)}</strong>
+                  </div>
+                  <button type="button" className="dailyEditSaveButton" onClick={saveToday}>保存</button>
+                  <button type="button" className="dailyEditCancelButton" onClick={cancelDailyEditAndReturn}>放弃</button>
                 </div>
-                <div className="dailyEditTwoCol dailyEditTopGrid">
-                  <label>日期
-                    <div className="dailyReadonlyValue">
-                      {formatDailyDateWithWeek(data.date)}
-                    </div>
-                  </label>
 
+                <div className="dailyEditTwoCol dailyEditTopGrid dailyEditStatusGrid">
                   <label>当日步数
                     <input type="number" inputMode="numeric" value={Number(data.yesterdaySteps || 0) ? data.yesterdaySteps : ''} onChange={e => setData({ ...data, yesterdaySteps: e.target.value })} placeholder="0" />
                   </label>
-                </div>
 
-                <div className="dailyEditTwoCol dailyEditTopGrid">
                   <label>当日离屏
                     <input value={data.yesterdaySleepTime} onChange={e => setData({ ...data, yesterdaySleepTime: e.target.value })} placeholder="例如23:30或26:00" />
-                  </label>
-
-                  <label>屏幕时长
-                    <input type="number" step="0.1" value={data.screenMinutes || ''} onChange={e => setData({ ...data, screenMinutes: e.target.value })} placeholder="小时" />
                   </label>
                 </div>
 
@@ -4992,6 +5107,7 @@ const homeFloatingFootprintMemory = ''
           setSelectedFootprintId={setSelectedFootprintId}
           selectedFootprint={selectedFootprint}
           setFootprintImagePreview={setFootprintImagePreview}
+          openFootprintPhoto={openFootprintPhoto}
           startEditFootprint={startEditFootprint}
           requestDeleteFootprint={requestDeleteFootprint}
           saveHomePosition={saveHomePosition}

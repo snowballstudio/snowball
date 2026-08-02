@@ -14,12 +14,15 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getAuthorizationStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestAuthorization", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "presentReport", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "presentSevenDayAverage", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readActivityData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startOffscreenMonitoring", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readOffscreenMonitoringData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopOffscreenMonitoring", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startMonitorMiniTest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readMonitorMiniStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "presentMonitorAppPicker", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readMonitorAppSelection", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readMonitorMiniCallbacks", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopMonitorMiniTest", returnType: CAPPluginReturnPromise)
     ]
@@ -97,6 +100,82 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 call.resolve([
                     "opened": true,
                     "date": self.formatSnowballDate(dayStart)
+                ])
+            }
+        }
+    }
+
+
+    @objc public func presentSevenDayAverage(_ call: CAPPluginCall) {
+        guard AuthorizationCenter.shared.authorizationStatus == .approved else {
+            call.reject("请先授权苹果屏幕时间。")
+            return
+        }
+
+        let calendar = Calendar.autoupdatingCurrent
+        let todayStart = calendar.startOfDay(for: Date())
+
+        guard
+            let end = calendar.date(
+                byAdding: .day,
+                value: -1,
+                to: todayStart
+            ),
+            let start = calendar.date(
+                byAdding: .day,
+                value: -6,
+                to: end
+            ),
+            let intervalEnd = calendar.date(
+                byAdding: .day,
+                value: 1,
+                to: end
+            )
+        else {
+            call.reject("无法计算七日平均屏幕时间区间。")
+            return
+        }
+
+        let interval = DateInterval(
+            start: start,
+            end: intervalEnd
+        )
+
+        let filter = DeviceActivityFilter(
+            segment: .daily(during: interval),
+            users: .all,
+            devices: .all
+        )
+
+        DispatchQueue.main.async {
+            guard let presenter = self.bridge?.viewController else {
+                call.reject("找不到雪球主页面。")
+                return
+            }
+
+            let reportView = IOSSevenDayAverageContainer(
+                context: .init("Snowball Seven Day Average"),
+                filter: filter,
+                onClose: {
+                    presenter.dismiss(animated: true)
+                }
+            )
+
+            let host = UIHostingController(rootView: reportView)
+            host.modalPresentationStyle = .formSheet
+            host.preferredContentSize = CGSize(width: 340, height: 240)
+
+            if let sheet = host.sheetPresentationController {
+                sheet.detents = [.medium()]
+                sheet.prefersGrabberVisible = true
+            }
+
+            presenter.present(host, animated: true) {
+                call.resolve([
+                    "opened": true,
+                    "startDate": self.formatSnowballDate(start),
+                    "endDate": self.formatSnowballDate(end),
+                    "dayCount": 7
                 ])
             }
         }
@@ -312,6 +391,111 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
 
+    // MARK: - 单 App Monitor 选择器
+
+    @objc public func presentMonitorAppPicker(_ call: CAPPluginCall) {
+        guard AuthorizationCenter.shared.authorizationStatus == .approved else {
+            call.reject("请先授权苹果屏幕时间。")
+            return
+        }
+
+        DispatchQueue.main.async {
+            guard let presenter = self.bridge?.viewController else {
+                call.reject("找不到雪球主页面。")
+                return
+            }
+
+            let picker = IOSMonitorAppPickerView(
+                onSave: { selection in
+                    guard selection.applicationTokens.count == 1,
+                          selection.categoryTokens.isEmpty,
+                          selection.webDomainTokens.isEmpty else {
+                        call.reject("请只选择一个 App，不要选择类别或网站。")
+                        return
+                    }
+
+                    do {
+                        let data = try JSONEncoder().encode(selection)
+                        let defaults = UserDefaults(
+                            suiteName: SnowballMonitorMiniDefinition.appGroup
+                        )
+                        defaults?.set(
+                            data,
+                            forKey: SnowballMonitorMiniDefinition.selectionKey
+                        )
+                        defaults?.set(
+                            ISO8601DateFormatter().string(from: Date()),
+                            forKey: SnowballMonitorMiniDefinition.selectionSavedAtKey
+                        )
+
+                        presenter.dismiss(animated: true) {
+                            call.resolve([
+                                "selected": true,
+                                "applicationCount": 1,
+                                "message": "已保存一个测试 App。下一步请注册 Monitor。"
+                            ])
+                        }
+                    } catch {
+                        presenter.dismiss(animated: true) {
+                            call.reject(
+                                "保存测试 App 失败：\(error.localizedDescription)",
+                                nil,
+                                error
+                            )
+                        }
+                    }
+                },
+                onCancel: {
+                    presenter.dismiss(animated: true) {
+                        call.resolve([
+                            "selected": false,
+                            "message": "已取消选择测试 App。"
+                        ])
+                    }
+                }
+            )
+
+            let host = UIHostingController(rootView: picker)
+            host.modalPresentationStyle = .fullScreen
+            presenter.present(host, animated: true)
+        }
+    }
+
+    @objc public func readMonitorAppSelection(_ call: CAPPluginCall) {
+        guard let defaults = UserDefaults(
+            suiteName: SnowballMonitorMiniDefinition.appGroup
+        ) else {
+            call.reject("无法打开 Monitor 测试的 App Group。")
+            return
+        }
+
+        guard let data = defaults.data(
+            forKey: SnowballMonitorMiniDefinition.selectionKey
+        ),
+        let selection = try? JSONDecoder().decode(
+            FamilyActivitySelection.self,
+            from: data
+        ) else {
+            call.resolve([
+                "selected": false,
+                "applicationCount": 0,
+                "message": "尚未选择测试 App。"
+            ])
+            return
+        }
+
+        call.resolve([
+            "selected": selection.applicationTokens.count == 1,
+            "applicationCount": selection.applicationTokens.count,
+            "categoryCount": selection.categoryTokens.count,
+            "webDomainCount": selection.webDomainTokens.count,
+            "savedAt": defaults.string(
+                forKey: SnowballMonitorMiniDefinition.selectionSavedAtKey
+            ) ?? ""
+        ])
+    }
+
+
     // MARK: - DeviceActivity Monitor 最小验证
 
     @objc public func startMonitorMiniTest(_ call: CAPPluginCall) {
@@ -324,6 +508,20 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         let defaults = UserDefaults(
             suiteName: SnowballMonitorMiniDefinition.appGroup
         )
+
+        guard let selectionData = defaults?.data(
+            forKey: SnowballMonitorMiniDefinition.selectionKey
+        ),
+        let selection = try? JSONDecoder().decode(
+            FamilyActivitySelection.self,
+            from: selectionData
+        ),
+        selection.applicationTokens.count == 1,
+        selection.categoryTokens.isEmpty,
+        selection.webDomainTokens.isEmpty else {
+            call.reject("请先点①选择测试 App，并且只选择一个 App。")
+            return
+        }
 
         if let previousActivityText = defaults?.string(
             forKey: SnowballMonitorMiniDefinition.lastActivityKey
@@ -373,6 +571,9 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
         let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
             eventName: DeviceActivityEvent(
+                applications: selection.applicationTokens,
+                categories: [],
+                webDomains: [],
                 threshold: DateComponents(minute: 1)
             )
         ]
@@ -426,6 +627,8 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 "scheduleExists": storedSchedule != nil,
                 "repeats": false,
                 "pastActivityIncluded": false,
+                "selectedApplicationCount": selection.applicationTokens.count,
+                "monitorScope": "one-selected-application",
                 "scheduledStart": ISO8601DateFormatter().string(
                     from: startDate
                 ),
@@ -433,7 +636,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                     from: endDate
                 ),
                 "message": registered
-                    ? "系统已登记一次性测试：2分钟后开始，持续15分钟。开始后正常使用手机1分钟，再读取回调。"
+                    ? "系统已登记单 App 测试：2分钟后开始，持续15分钟。开始后只使用刚才选择的 App 至少1分钟，再读取回调。"
                     : "startMonitoring未报错，但系统反查不完整，请读取注册状态。"
             ])
         } catch {
@@ -477,6 +680,15 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         let schedule = center.schedule(for: activity)
         let events = center.events(for: activity)
 
+        let selection: FamilyActivitySelection? = defaults.data(
+            forKey: SnowballMonitorMiniDefinition.selectionKey
+        ).flatMap {
+            try? JSONDecoder().decode(
+                FamilyActivitySelection.self,
+                from: $0
+            )
+        }
+
         let schedulePayload: [String: Any] = [
             "exists": schedule != nil,
             "repeats": schedule?.repeats ?? false,
@@ -516,6 +728,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             "systemActivities": activities.map(\.rawValue),
             "activityName": activity.rawValue,
             "expectedEventName": eventName.rawValue,
+            "selectedApplicationCount": selection?.applicationTokens.count ?? 0,
             "schedule": schedulePayload,
             "events": eventPayload,
             "systemConfirmed":
@@ -661,6 +874,26 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
+private struct IOSSevenDayAverageContainer: View {
+    let context: DeviceActivityReport.Context
+    let filter: DeviceActivityFilter
+    let onClose: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            DeviceActivityReport(context, filter: filter)
+                .navigationTitle("七日平均屏时")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("关闭", action: onClose)
+                    }
+                }
+        }
+    }
+}
+
+
 private struct IOSScreenTimeReportContainer: View {
     let context: DeviceActivityReport.Context
     let filter: DeviceActivityFilter
@@ -697,6 +930,10 @@ private enum SnowballMonitorMiniDefinition {
         "snowball.monitor.mini.lastStart.v2"
     static let lastEndKey =
         "snowball.monitor.mini.lastEnd.v2"
+    static let selectionKey =
+        "snowball.monitor.mini.singleAppSelection.v1"
+    static let selectionSavedAtKey =
+        "snowball.monitor.mini.singleAppSelectionSavedAt.v1"
 
     static func token(for date: Date) -> String {
         let formatter = DateFormatter()

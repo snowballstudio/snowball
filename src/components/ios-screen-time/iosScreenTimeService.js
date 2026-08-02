@@ -37,6 +37,14 @@ export async function openIOSScreenTimeReport(date) {
   return IOSScreenTime.presentReport({ date: String(date || '') })
 }
 
+export async function openIOSSevenDayAverage() {
+  if (!isIOSScreenTimeAvailable()) {
+    throw new Error('苹果七日平均屏时只能在 iPhone 真机打开。')
+  }
+
+  return IOSScreenTime.presentSevenDayAverage()
+}
+
 function dateKey(value) {
   const text = String(value || '').trim()
   const match = text.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/)

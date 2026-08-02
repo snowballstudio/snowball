@@ -85,3 +85,107 @@
     max-width: 100%;
   }
 }
+
+
+/* 开发者入口与独立 Monitor 调试页 */
+.offscreenTimeTitleActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.offscreenMonitorDeveloperLink {
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #d8b85c;
+  font-size: 12px;
+  line-height: 1.2;
+  text-decoration: underline;
+  text-decoration-color: rgba(216, 184, 92, 0.42);
+  text-underline-offset: 3px;
+}
+
+.offscreenMonitorDeveloperPage {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(6, 17, 30, 0.97), rgba(5, 15, 27, 0.99)),
+    #071524;
+}
+
+.offscreenMonitorDeveloperTop {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  align-items: center;
+  min-height: 62px;
+  padding: calc(env(safe-area-inset-top, 0px) + 6px) 12px 7px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  color: #eef3f7;
+  background: rgba(7, 20, 35, 0.98);
+}
+
+.offscreenMonitorDeveloperTop h2 {
+  margin: 0;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.offscreenMonitorDeveloperBack {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #eef3f7;
+  font-size: 36px;
+  line-height: 1;
+  font-weight: 300;
+}
+
+.offscreenMonitorDeveloperBody {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.offscreenMonitorDeveloperBody .iosScreenTimeDeveloperPanel {
+  width: min(720px, 100%);
+  margin: 0 auto;
+}
+
+@media (max-width: 600px) {
+  .offscreenTimeTitleActions {
+    gap: 9px;
+  }
+
+  .offscreenMonitorDeveloperLink {
+    font-size: 11px;
+  }
+
+  .offscreenMonitorDeveloperBody {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}

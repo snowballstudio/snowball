@@ -151,6 +151,7 @@ export default function Train({
   dailyTopApps,
   dailyTopAppSummary,
   openDailyDetail,
+  openScreenTimeSummary,
   onBackHome,
 }) {
   return (
@@ -219,7 +220,7 @@ export default function Train({
                   <button key={tab.key} className={dailyStatRange === tab.key ? 'active' : ''} onClick={() => setDailyStatRange(tab.key)}>{tab.label}</button>
                 ))}
               </div>
-              <button type="button" className="trainInlineDetailLink" onClick={() => openDailyDetail('screen')}>详情</button>
+              <button type="button" className="trainInlineDetailLink" onClick={openScreenTimeSummary}>详情</button>
             </div>
             <div className="dailyMiniTable appMiniTable trainLedTable">
               <div className="trainLedHeader">

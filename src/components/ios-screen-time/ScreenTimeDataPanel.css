@@ -157,3 +157,326 @@
   }
 }
 
+/* =========================================================
+   屏幕时间每日汇总表｜固定左列 + 原生同层表头
+   右侧 HEADER 与数据位于同一个双向滚动容器，
+   横向移动由浏览器一次完成，不再用 JavaScript 追随。
+   ========================================================= */
+
+.screenSummaryPage {
+  --screen-date-width: 70px;
+  --screen-total-width: 50px;
+  --screen-frozen-width: calc(var(--screen-date-width) + var(--screen-total-width));
+  --screen-app-width: 85px;
+  --screen-header-height: 44px;
+  --screen-row-height: 56px;
+  --screen-header-font: 12px;
+  --screen-cell-font: 11px;
+  --screen-sub-font: 11px;
+  --screen-gold: #f1dfb1;
+  --screen-page-bg: #071524;
+  --screen-card-bg: #111f30;
+  --screen-header-bg: #192b40;
+  --screen-frozen-bg: #132236;
+  --screen-grid-line: rgba(255, 255, 255, 0.08);
+
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 100vw;
+  height: 100dvh;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(6, 17, 30, 0.96), rgba(5, 15, 27, 0.98)),
+    var(--screen-page-bg);
+  color: #eef3f7;
+}
+
+.screenSummaryTopBar {
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 118px;
+  align-items: center;
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 6px)
+    12px
+    7px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(7, 20, 35, 0.98);
+}
+
+.screenSummaryTopBar h1 {
+  margin: 0;
+  text-align: center;
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+.screenSummaryBack {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #eef3f7;
+  font-size: 36px;
+  line-height: 1;
+  font-weight: 300;
+}
+
+.screenSummaryTrainLink {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 2px;
+  border: 0;
+  background: transparent;
+  color: #d8b85c;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.screenSummaryTrainLink span {
+  font-size: 14px;
+}
+
+.screenSummaryTrainLink em {
+  font-style: normal;
+}
+
+.screenSummaryCard {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+  padding: 10px 10px calc(env(safe-area-inset-bottom, 0px) + 8px);
+  box-sizing: border-box;
+}
+
+.screenSummaryMatrix {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--screen-frozen-width) minmax(0, 1fr);
+  grid-template-rows: var(--screen-header-height) minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid rgba(220, 231, 239, 0.14);
+  border-radius: 14px;
+  background: var(--screen-card-bg);
+}
+
+.screenSummaryCorner {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: var(--screen-date-width) var(--screen-total-width);
+  height: var(--screen-header-height);
+  overflow: hidden;
+  background: var(--screen-header-bg);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.screenSummaryCorner span,
+.screenSummaryHeaderTrack span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  min-width: 0;
+  box-sizing: border-box;
+  border-right: 1px solid var(--screen-grid-line);
+  color: rgba(238, 244, 249, 0.78);
+  font-size: var(--screen-header-font);
+  white-space: nowrap;
+}
+
+.screenSummaryFrozenViewport {
+  grid-column: 1;
+  grid-row: 2;
+  overflow: hidden;
+  background: var(--screen-frozen-bg);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.screenSummaryFrozenTrack {
+  width: var(--screen-frozen-width);
+}
+
+.screenSummaryFrozenRow {
+  display: grid;
+  grid-template-columns: var(--screen-date-width) var(--screen-total-width);
+  height: var(--screen-row-height);
+  border-bottom: 1px solid var(--screen-grid-line);
+  background: var(--screen-frozen-bg);
+}
+
+.screenSummaryFrozenRow > span,
+.screenSummaryFrozenRow > button {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  border: 0;
+  border-right: 1px solid var(--screen-grid-line);
+  background: var(--screen-frozen-bg);
+  color: #eef3f7;
+  font: inherit;
+}
+
+.screenSummaryDateCell {
+  justify-content: flex-start;
+  padding: 0 8px;
+  color: rgba(238, 244, 249, 0.84) !important;
+  font-size: var(--screen-cell-font) !important;
+  white-space: nowrap;
+}
+
+.screenSummaryTotalCell {
+  justify-content: center;
+  padding: 0 6px;
+  color: var(--screen-gold) !important;
+  -webkit-text-fill-color: var(--screen-gold);
+  font-size: var(--screen-cell-font) !important;
+  font-weight: 600 !important;
+  white-space: nowrap;
+}
+
+.screenSummaryTotalButton {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(241, 223, 177, 0.38);
+  text-underline-offset: 3px;
+}
+
+/*
+ * 唯一的右侧双向滚动容器。
+ * HEADER 与数据在同一滚动层中，所以横向移动永远同步。
+ */
+.screenSummaryRightScroller {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+  background: var(--screen-card-bg);
+}
+
+.screenSummaryRightTrack {
+  width: calc(11 * var(--screen-app-width));
+  min-height: 100%;
+}
+
+.screenSummaryHeaderTrack {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(11, var(--screen-app-width));
+  width: calc(11 * var(--screen-app-width));
+  height: var(--screen-header-height);
+  background: var(--screen-header-bg);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.screenSummaryBodyTrack {
+  width: calc(11 * var(--screen-app-width));
+}
+
+.screenSummaryBodyRow {
+  display: grid;
+  grid-template-columns: repeat(11, var(--screen-app-width));
+  width: calc(11 * var(--screen-app-width));
+  height: var(--screen-row-height);
+  border-bottom: 1px solid var(--screen-grid-line);
+}
+
+.screenSummaryBodyRow > span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  box-sizing: border-box;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: transparent;
+  color: #eef3f7;
+}
+
+.screenSummaryAppCell {
+  flex-direction: column;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.screenSummaryAppCell strong {
+  width: 100%;
+  overflow: hidden;
+  color: #f2f5f7;
+  font-size: var(--screen-cell-font);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.screenSummaryAppCell small {
+  color: rgba(215, 225, 233, 0.66);
+  font-size: var(--screen-sub-font);
+  white-space: nowrap;
+}
+
+.screenSummaryEmpty {
+  color: rgba(215, 225, 233, 0.34);
+  font-size: var(--screen-cell-font);
+}
+
+.screenSummaryEmptyState {
+  width: min(420px, calc(100vw - var(--screen-frozen-width) - 24px));
+  padding: 26px 14px;
+  color: rgba(225, 233, 239, 0.64);
+  font-size: 12px;
+}
+
+.screenSummaryHint {
+  margin: 7px 3px 0;
+  color: rgba(218, 227, 234, 0.55);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+@media (max-width: 600px) {
+  .screenSummaryTopBar {
+    grid-template-columns: 42px minmax(0, 1fr) 106px;
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+
+  .screenSummaryTopBar h1 {
+    font-size: 17px;
+  }
+
+  .screenSummaryTrainLink {
+    font-size: 12px;
+  }
+
+  .screenSummaryCard {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+}

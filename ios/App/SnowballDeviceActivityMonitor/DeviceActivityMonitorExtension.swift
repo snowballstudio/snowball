@@ -4,8 +4,6 @@ import OSLog
 
 final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     private let appGroup = "group.com.snowball.health"
-    private let miniActivity =
-        DeviceActivityName("snowball.monitor.mini.v1")
     private let miniCallbackLogKey =
         "snowball.monitor.mini.callbacks.v1"
 
@@ -81,7 +79,7 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             event: event
         )
 
-        guard activity != miniActivity else { return }
+        guard !isMiniTest(activity) else { return }
 
         saveProductionThresholdRecord(
             event: event,
@@ -120,7 +118,7 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             "activityName": activity.rawValue,
             "eventName": eventName,
             "timestamp": timestamp,
-            "isMiniTest": activity == miniActivity
+            "isMiniTest": isMiniTest(activity)
         ], at: 0)
 
         if callbacks.count > 100 {
@@ -143,6 +141,12 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             kind,
             forKey: "snowball.monitor.mini.lastCallbackKind"
         )
+    }
+
+    private func isMiniTest(
+        _ activity: DeviceActivityName
+    ) -> Bool {
+        activity.rawValue.hasPrefix("snowball.monitor.mini.")
     }
 
     private func saveProductionThresholdRecord(

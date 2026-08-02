@@ -31,9 +31,18 @@
   border: 0;
   background: transparent;
   color: inherit;
-  font-size: 30px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: Arial, "Helvetica Neue", sans-serif;
+  font-size: 32px;
+  font-weight: 300;
   line-height: 1;
-  padding: 0 8px;
+  transform: translateY(-1px);
 }
 
 .stepAutoScroll {
@@ -45,21 +54,43 @@
 }
 
 .stepAutoTable {
-  min-width: 1540px;
+  min-width: 1710px;
 }
 
 .stepAutoRow {
   display: grid;
-  grid-template-columns: 115px 90px 150px 130px 145px 130px 100px 100px 80px 115px 100px 260px 170px;
-  align-items: center;
+  grid-template-columns:
+    92px
+    82px
+    112px
+    116px
+    128px
+    122px
+    88px
+    88px
+    108px
+    178px
+    78px
+    96px
+    82px
+    180px
+    140px;
+  align-items: stretch;
   min-height: 46px;
   border-bottom: 1px solid rgba(50, 70, 78, 0.12);
 }
 
 .stepAutoRow > span {
+  min-width: 0;
   box-sizing: border-box;
-  padding: 8px 10px;
-  overflow-wrap: anywhere;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: keep-all;
   font-size: 13px;
 }
 
@@ -78,6 +109,11 @@
   align-self: stretch;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
   background: #e7ecee;
   border-right: 1px solid rgba(50, 70, 78, 0.10);
 }

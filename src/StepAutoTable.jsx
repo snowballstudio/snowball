@@ -19,7 +19,7 @@ export default function StepAutoTable({ records = [], onBack }) {
   return (
     <div className="stepAutoPage">
       <div className="stepAutoTop">
-        <button type="button" className="stepAutoBack" onClick={onBack} aria-label="返回日常数据">&lt;</button>
+        <button type="button" className="stepAutoBack" onClick={onBack} aria-label="返回日常数据">‹</button>
         <div>
           <h2>步数自动获取表</h2>
           <p>只读诊断表。每日来源优先；无每日来源时按23:50累计与登录累计容错推算。</p>
@@ -45,7 +45,11 @@ export default function StepAutoTable({ records = [], onBack }) {
               <span>{valueText(row.firstCumulativeSteps)}</span>
               <span>{valueText(row.lastCumulativeSteps)}</span>
               <span>{valueText(row.backgroundCumulativeSteps)}</span>
-              <span className="stepAutoNote">
+              <span className="stepAutoNote" title={row.backgroundCapturedAt
+                  ? `${timeText(row.backgroundCapturedAt)}｜${row.backgroundStepTestStatus || '已执行'}`
+                  : row.backgroundScheduledFor
+                    ? `计划：${timeText(row.backgroundScheduledFor)}`
+                    : row.backgroundStepTestStatus || '—'}>
                 {row.backgroundCapturedAt
                   ? `${timeText(row.backgroundCapturedAt)}｜${row.backgroundStepTestStatus || '已执行'}`
                   : row.backgroundScheduledFor
@@ -55,7 +59,7 @@ export default function StepAutoTable({ records = [], onBack }) {
               <span>{valueText(row.loginCount)}</span>
               <span>{valueText(row.previousLoginDate)}</span>
               <span>{valueText(row.cumulativeDelta)}</span>
-              <span className="stepAutoNote">{row.calculationNote || '—'}</span>
+              <span className="stepAutoNote" title={row.calculationNote || '—'}>{row.calculationNote || '—'}</span>
               <span>{timeText(row.updatedAt)}</span>
             </div>
           ))}

@@ -7,6 +7,7 @@ import SwiftUI
 
 extension DeviceActivityReport.Context {
     static let totalActivity = Self("Total Activity")
+    static let sevenDayAverage = Self("Snowball Seven Day Average")
 }
 
 struct ScreenTimeApplicationRow: Identifiable, Hashable, Sendable {
@@ -509,6 +510,57 @@ struct TotalActivityReport: DeviceActivityReportScene {
             segments: segments,
             applications: applications,
             devices: devices
+        )
+    }
+}
+
+struct SevenDayAverageConfiguration: Sendable {
+    let averageDuration: TimeInterval
+    let totalDuration: TimeInterval
+    let dayCount: Int
+    let periodStart: Date?
+    let periodEnd: Date?
+}
+
+struct SevenDayAverageReport: DeviceActivityReportScene {
+    let context: DeviceActivityReport.Context = .sevenDayAverage
+    let content: (SevenDayAverageConfiguration) -> SevenDayAverageView
+
+    func makeConfiguration(
+        representing data: DeviceActivityResults<DeviceActivityData>
+    ) async -> SevenDayAverageConfiguration {
+        var totalDuration: TimeInterval = 0
+        var earliestStart: Date?
+        var latestEnd: Date?
+
+        for await deviceData in data {
+            for await segment in deviceData.activitySegments {
+                totalDuration += segment.totalActivityDuration
+
+                let start = segment.dateInterval.start
+                let end = segment.dateInterval.end
+
+                if earliestStart == nil || start < earliestStart! {
+                    earliestStart = start
+                }
+
+                if latestEnd == nil || end > latestEnd! {
+                    latestEnd = end
+                }
+            }
+        }
+
+        // Filter 始终请求昨日及之前的七个完整自然日。
+        // 即使某一天完全没有屏幕活动，也应作为 0 分钟计入平均值。
+        let fixedDayCount = 7
+        let averageDuration = totalDuration / Double(fixedDayCount)
+
+        return SevenDayAverageConfiguration(
+            averageDuration: averageDuration,
+            totalDuration: totalDuration,
+            dayCount: fixedDayCount,
+            periodStart: earliestStart,
+            periodEnd: latestEnd
         )
     }
 }

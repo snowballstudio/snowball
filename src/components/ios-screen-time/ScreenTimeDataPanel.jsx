@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import './ScreenTimeDataPanel.css'
 import {
   isScreenSystemTotalRow,
@@ -9,7 +10,105 @@ import {
   screenSystemTotalMinutesForDate,
 } from './screenTimeDataService.js'
 
+function screenDateKey(value) {
+  const text = String(value || '').trim()
+  const match = text.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/)
+  if (!match) return text
+  return `${match[1]}-${String(match[2]).padStart(2, '0')}-${String(match[3]).padStart(2, '0')}`
+}
+
+function screenDateLabel(value) {
+  const key = screenDateKey(value)
+  const match = key.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return String(value || '—')
+  return `${match[1]}/${Number(match[2])}/${Number(match[3])}`
+}
+
+function compactDuration(minutes) {
+  const value = Math.max(0, Number(minutes || 0))
+  if (!value) return '—'
+  return `${(value / 60).toFixed(1)}h`
+}
+
+function displayAppName(row) {
+  return String(
+    row?.app
+      || row?.realAppName
+      || '未识别',
+  ).trim() || '未识别'
+}
+
+function buildDailySummary(screenRecords = []) {
+  const dates = [...new Set(
+    (screenRecords || [])
+      .map(row => screenDateKey(row?.date))
+      .filter(Boolean),
+  )].sort((a, b) => b.localeCompare(a))
+
+  return dates.map(date => {
+    const datedRows = screenRowsForDate(screenRecords, date)
+      .map(({ row }) => row)
+    const appRows = datedRows.filter(row => !isScreenSystemTotalRow(row))
+
+    const appsByName = new Map()
+    appRows.forEach(row => {
+      const name = displayAppName(row)
+      const current = appsByName.get(name) || {
+        app: name,
+        minutes: 0,
+        pickups: 0,
+      }
+      current.minutes += Math.max(0, Number(screenMinutesForDetailRow(row) || 0))
+      current.pickups += Math.max(0, Number(row?.pickups || 0))
+      appsByName.set(name, current)
+    })
+
+    const ranked = [...appsByName.values()]
+      .filter(item => item.minutes > 0 || item.pickups > 0)
+      .sort((a, b) =>
+        b.minutes - a.minutes
+        || b.pickups - a.pickups
+        || a.app.localeCompare(b.app, 'zh-CN'),
+      )
+
+    const top10 = ranked.slice(0, 10)
+    const remaining = ranked.slice(10)
+    const other = remaining.reduce(
+      (sum, item) => ({
+        app: '其他',
+        minutes: sum.minutes + item.minutes,
+        pickups: sum.pickups + item.pickups,
+      }),
+      { app: '其他', minutes: 0, pickups: 0 },
+    )
+
+    const systemTotal = screenSystemTotalMinutesForDate(screenRecords, date)
+    const appSubtotal = screenAppSubtotalMinutesForDate(screenRecords, date)
+
+    return {
+      date,
+      totalMinutes: systemTotal > 0 ? systemTotal : appSubtotal,
+      top10,
+      other,
+    }
+  })
+}
+
+function SummaryCell({ item, emptyLabel = '—' }) {
+  if (!item || (!item.minutes && !item.pickups)) {
+    return <span className="screenSummaryEmpty">{emptyLabel}</span>
+  }
+
+  return (
+    <span className="screenSummaryAppCell" title={`${item.app} · ${screenDurationText(item.minutes)} · ${item.pickups || 0}次`}>
+      <strong>{item.app}</strong>
+      <small>{compactDuration(item.minutes)} · {item.pickups || 0}次</small>
+    </span>
+  )
+}
+
 export default function ScreenTimeDataPanel({
+  mode = 'summary',
   selectedDate,
   screenRecords = [],
   appOptions = [],
@@ -17,8 +116,124 @@ export default function ScreenTimeDataPanel({
   onDeleteRecord,
   onAddRecord,
   onSaveAndReturn,
+  onBackHome,
+  onOpenTrain,
+  onOpenDetailDate,
+  developerMode = false,
   developerPanel = null,
 }) {
+  const summaryRows = buildDailySummary(screenRecords)
+  const summaryFrozenRef = useRef(null)
+
+  function syncSummaryVerticalScroll(event) {
+    if (summaryFrozenRef.current) {
+      summaryFrozenRef.current.scrollTop = event.currentTarget.scrollTop
+    }
+  }
+
+  if (mode === 'summary') {
+    return (
+      <div className="screenSummaryPage">
+        <div className="screenSummaryTopBar">
+          <button
+            type="button"
+            className="screenSummaryBack"
+            onClick={onBackHome}
+            aria-label="返回主页"
+          >
+            ‹
+          </button>
+
+          <h1>屏幕时间</h1>
+
+          <button
+            type="button"
+            className="screenSummaryTrainLink"
+            onClick={onOpenTrain}
+            aria-label="查看信息列车"
+          >
+            <span aria-hidden="true">🚆</span>
+            <em>查看列车</em>
+          </button>
+        </div>
+
+        <div className="screenSummaryCard">
+          <div className="screenSummaryMatrix">
+            <div className="screenSummaryCorner" aria-hidden="true">
+              <span>日期</span>
+              <span>总时</span>
+            </div>
+
+            <div
+              className="screenSummaryFrozenViewport"
+              ref={summaryFrozenRef}
+            >
+              <div className="screenSummaryFrozenTrack">
+                {summaryRows.map(row => (
+                  <div className="screenSummaryFrozenRow" key={row.date}>
+                    <span className="screenSummaryDateCell">
+                      {screenDateLabel(row.date)}
+                    </span>
+
+                    {developerMode ? (
+                      <button
+                        type="button"
+                        className="screenSummaryTotalCell screenSummaryTotalButton"
+                        onClick={() => onOpenDetailDate?.(row.date)}
+                        title="打开当天 APP 详情表"
+                      >
+                        {compactDuration(row.totalMinutes)}
+                      </button>
+                    ) : (
+                      <span className="screenSummaryTotalCell">
+                        {compactDuration(row.totalMinutes)}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div
+              className="screenSummaryRightScroller"
+              onScroll={syncSummaryVerticalScroll}
+            >
+              <div className="screenSummaryRightTrack">
+                <div className="screenSummaryHeaderTrack" aria-hidden="true">
+                  {Array.from({ length: 10 }, (_, index) => (
+                    <span key={index}>TOP {index + 1}</span>
+                  ))}
+                  <span>其他</span>
+                </div>
+
+                <div className="screenSummaryBodyTrack">
+                  {summaryRows.map(row => (
+                    <div className="screenSummaryBodyRow" key={row.date}>
+                      {Array.from({ length: 10 }, (_, index) => (
+                        <SummaryCell item={row.top10[index]} key={index} />
+                      ))}
+                      <SummaryCell item={row.other} />
+                    </div>
+                  ))}
+
+                  {!summaryRows.length && (
+                    <div className="screenSummaryEmptyState">
+                      目前还没有可汇总的 APP 屏幕时间记录。
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p className="screenSummaryHint">
+            每日按使用时长排列 TOP 10，其余应用合并为“其他”。
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const rows = screenRowsForDate(screenRecords, selectedDate)
   const appSubtotalMinutes = screenAppSubtotalMinutesForDate(
     screenRecords,

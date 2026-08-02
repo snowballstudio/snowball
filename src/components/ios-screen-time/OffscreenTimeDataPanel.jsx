@@ -7,6 +7,8 @@ const IOSScreenTime = registerPlugin('IOSScreenTime')
 export default function OffscreenTimeDataPanel({
   records = [],
   onBack,
+  showMonitorDeveloperLink = false,
+  onOpenMonitorDeveloper,
 }) {
   const [iosMonitorRecords, setIosMonitorRecords] = useState([])
   const [monitorMessage, setMonitorMessage] = useState('')
@@ -79,13 +81,24 @@ export default function OffscreenTimeDataPanel({
       <div className="dailyTableCard offscreenTimeDataCard">
         <div className="offscreenTimeTitleLine">
           <h2>离机时间表</h2>
-          <button
-            type="button"
-            className="dailyAddDateBtn"
-            onClick={onBack}
-          >
-            返回
-          </button>
+          <div className="offscreenTimeTitleActions">
+            {showMonitorDeveloperLink && (
+              <button
+                type="button"
+                className="offscreenMonitorDeveloperLink"
+                onClick={onOpenMonitorDeveloper}
+              >
+                Monitor 调试
+              </button>
+            )}
+            <button
+              type="button"
+              className="dailyAddDateBtn"
+              onClick={onBack}
+            >
+              返回
+            </button>
+          </div>
         </div>
 
         {!!monitorMessage && (
