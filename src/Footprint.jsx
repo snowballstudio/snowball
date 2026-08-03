@@ -697,7 +697,7 @@ export default function Footprint({
                                 type="button"
                                 className="mapFootprintPhotoButton"
                                 key={photo?.id || index}
-                                onClick={() => openFootprintPhoto(photo)}
+                                onClick={() => openFootprintPhoto(photo, popupFootprint.photos, index)}
                                 aria-label={`打开足迹原图${index + 1}`}
                               >
                                 <img src={thumbnail} alt={`足迹照片${index + 1}`} />
@@ -819,12 +819,31 @@ export default function Footprint({
                             <button
                               type="button"
                               className="footprintPhotoPreviewOpen"
-                              onClick={() => openFootprintPhoto(photo)}
+                              onClick={() => openFootprintPhoto(photo, footprintDraft.photos, index)}
                               aria-label={`打开足迹原图${index + 1}`}
                             >
                               <img src={thumbnail} alt={`足迹照片${index + 1}`} />
                             </button>
-                            <button type="button" onClick={() => removeFootprintPhoto(index)}>删除</button>
+                            <button
+                              type="button"
+                              className="footprintPhotoDeleteButton"
+                              onPointerDown={event => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                              }}
+                              onTouchStart={event => {
+                                event.stopPropagation()
+                              }}
+                              onClick={event => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                removeFootprintPhoto(index)
+                              }}
+                              aria-label={`删除足迹照片${index + 1}`}
+                              title="删除照片"
+                            >
+                              <span aria-hidden="true">×</span>
+                            </button>
                           </div>
                         )
                       })}

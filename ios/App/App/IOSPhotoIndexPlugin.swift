@@ -2,6 +2,7 @@ import Capacitor
 import Foundation
 import Photos
 import PhotosUI
+import QuartzCore
 import UIKit
 
 @objc(IOSPhotoIndexPlugin)
@@ -105,32 +106,70 @@ public final class IOSPhotoIndexPlugin: CAPPlugin,
     }
 
     @objc public func presentPhoto(_ call: CAPPluginCall) {
-        guard let identifier = call.getString("assetIdentifier"),
-              !identifier.isEmpty else {
+        let requestedIdentifier =
+            call.getString("assetIdentifier") ?? ""
+
+        var identifiers =
+            call.getArray("assetIdentifiers")?
+                .compactMap { $0 as? String }
+                .filter { !$0.isEmpty }
+            ?? []
+
+        if identifiers.isEmpty && !requestedIdentifier.isEmpty {
+            identifiers = [requestedIdentifier]
+        }
+
+        guard !identifiers.isEmpty else {
             call.reject("缺少照片索引。")
             return
         }
+
+        let requestedIndex = call.getInt("currentIndex") ?? 0
 
         requestPhotoLibraryAccess { [weak self] granted in
             guard let self else { return }
 
             guard granted else {
                 DispatchQueue.main.async {
-                    call.reject("雪粒没有读取这张原图的权限。")
+                    call.reject("雪粒没有读取这些原图的权限。")
                 }
                 return
             }
 
-            let assets = PHAsset.fetchAssets(
-                withLocalIdentifiers: [identifier],
-                options: nil
-            )
+            var assets: [PHAsset] = []
+            var availableIdentifiers: [String] = []
 
-            guard let asset = assets.firstObject else {
+            for identifier in identifiers {
+                let fetched = PHAsset.fetchAssets(
+                    withLocalIdentifiers: [identifier],
+                    options: nil
+                )
+
+                if let asset = fetched.firstObject {
+                    assets.append(asset)
+                    availableIdentifiers.append(identifier)
+                }
+            }
+
+            guard !assets.isEmpty else {
                 DispatchQueue.main.async {
-                    call.reject("原照片已不在系统相册中，或访问权限已被取消。")
+                    call.reject(
+                        "这些原照片已不在系统相册中，或访问权限已被取消。"
+                    )
                 }
                 return
+            }
+
+            var initialIndex = max(
+                0,
+                min(requestedIndex, assets.count - 1)
+            )
+
+            if !requestedIdentifier.isEmpty,
+               let exactIndex = availableIdentifiers.firstIndex(
+                   of: requestedIdentifier
+               ) {
+                initialIndex = exactIndex
             }
 
             DispatchQueue.main.async {
@@ -140,13 +179,18 @@ public final class IOSPhotoIndexPlugin: CAPPlugin,
                 }
 
                 let viewer = SnowballIndexedPhotoViewController(
-                    asset: asset
+                    assets: assets,
+                    initialIndex: initialIndex
                 )
                 viewer.modalPresentationStyle = .fullScreen
+
                 presenter.present(viewer, animated: true) {
                     call.resolve([
                         "opened": true,
-                        "assetIdentifier": identifier
+                        "assetIdentifier":
+                            availableIdentifiers[initialIndex],
+                        "count": assets.count,
+                        "currentIndex": initialIndex
                     ])
                 }
             }
@@ -254,17 +298,30 @@ public final class IOSPhotoIndexPlugin: CAPPlugin,
 
 private final class SnowballIndexedPhotoViewController:
     UIViewController,
-    UIScrollViewDelegate {
+    UIScrollViewDelegate,
+    UIGestureRecognizerDelegate {
 
-    private let asset: PHAsset
+    private let assets: [PHAsset]
+    private var currentIndex: Int
+
     private let scrollView = UIScrollView()
     private let imageView = UIImageView()
     private let spinner = UIActivityIndicatorView(style: .large)
+    private let counterLabel = UILabel()
+
     private var imageRequestID: PHImageRequestID =
         PHInvalidImageRequestID
+    private var currentImage: UIImage?
 
-    init(asset: PHAsset) {
-        self.asset = asset
+    init(
+        assets: [PHAsset],
+        initialIndex: Int
+    ) {
+        self.assets = assets
+        self.currentIndex = max(
+            0,
+            min(initialIndex, max(assets.count - 1, 0))
+        )
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -283,13 +340,27 @@ private final class SnowballIndexedPhotoViewController:
         scrollView.maximumZoomScale = 5
         scrollView.showsVerticalScrollIndicator = false
         scrollView.showsHorizontalScrollIndicator = false
+        scrollView.backgroundColor = .black
 
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFit
+        imageView.isUserInteractionEnabled = true
 
         spinner.translatesAutoresizingMaskIntoConstraints = false
         spinner.color = .white
-        spinner.startAnimating()
+
+        counterLabel.translatesAutoresizingMaskIntoConstraints = false
+        counterLabel.textColor = .white
+        counterLabel.font = .systemFont(
+            ofSize: 14,
+            weight: .medium
+        )
+        counterLabel.textAlignment = .center
+        counterLabel.backgroundColor =
+            UIColor.black.withAlphaComponent(0.32)
+        counterLabel.layer.cornerRadius = 13
+        counterLabel.clipsToBounds = true
+        counterLabel.isHidden = assets.count <= 1
 
         let closeButton = UIButton(type: .system)
         closeButton.translatesAutoresizingMaskIntoConstraints = false
@@ -308,9 +379,38 @@ private final class SnowballIndexedPhotoViewController:
             for: .touchUpInside
         )
 
+        let swipeLeft = UISwipeGestureRecognizer(
+            target: self,
+            action: #selector(handleSwipe(_:))
+        )
+        swipeLeft.direction = .left
+        swipeLeft.delegate = self
+        swipeLeft.cancelsTouchesInView = false
+
+        let swipeRight = UISwipeGestureRecognizer(
+            target: self,
+            action: #selector(handleSwipe(_:))
+        )
+        swipeRight.direction = .right
+        swipeRight.delegate = self
+        swipeRight.cancelsTouchesInView = false
+
+        let longPress = UILongPressGestureRecognizer(
+            target: self,
+            action: #selector(handleLongPress(_:))
+        )
+        longPress.minimumPressDuration = 0.55
+        longPress.delegate = self
+        longPress.cancelsTouchesInView = false
+
+        scrollView.addGestureRecognizer(swipeLeft)
+        scrollView.addGestureRecognizer(swipeRight)
+        imageView.addGestureRecognizer(longPress)
+
         view.addSubview(scrollView)
         scrollView.addSubview(imageView)
         view.addSubview(spinner)
+        view.addSubview(counterLabel)
         view.addSubview(closeButton)
 
         NSLayoutConstraint.activate([
@@ -353,6 +453,20 @@ private final class SnowballIndexedPhotoViewController:
                 equalTo: view.centerYAnchor
             ),
 
+            counterLabel.centerXAnchor.constraint(
+                equalTo: view.centerXAnchor
+            ),
+            counterLabel.bottomAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+                constant: -16
+            ),
+            counterLabel.widthAnchor.constraint(
+                greaterThanOrEqualToConstant: 54
+            ),
+            counterLabel.heightAnchor.constraint(
+                equalToConstant: 26
+            ),
+
             closeButton.trailingAnchor.constraint(
                 equalTo: view.safeAreaLayoutGuide.trailingAnchor,
                 constant: -14
@@ -365,15 +479,12 @@ private final class SnowballIndexedPhotoViewController:
             closeButton.heightAnchor.constraint(equalToConstant: 44)
         ])
 
-        loadPhoto()
+        updateCounter()
+        loadCurrentPhoto(animatedFrom: nil)
     }
 
     deinit {
-        if imageRequestID != PHInvalidImageRequestID {
-            PHImageManager.default().cancelImageRequest(
-                imageRequestID
-            )
-        }
+        cancelCurrentRequest()
     }
 
     func viewForZooming(
@@ -382,11 +493,101 @@ private final class SnowballIndexedPhotoViewController:
         imageView
     }
 
+    func gestureRecognizerShouldBegin(
+        _ gestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        if gestureRecognizer is UISwipeGestureRecognizer {
+            return scrollView.zoomScale <= 1.01
+        }
+        return true
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith
+            otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        true
+    }
+
     @objc private func closeViewer() {
         dismiss(animated: true)
     }
 
-    private func loadPhoto() {
+    @objc private func handleSwipe(
+        _ recognizer: UISwipeGestureRecognizer
+    ) {
+        guard scrollView.zoomScale <= 1.01 else {
+            return
+        }
+
+        switch recognizer.direction {
+        case .left:
+            guard currentIndex < assets.count - 1 else {
+                return
+            }
+            currentIndex += 1
+            loadCurrentPhoto(animatedFrom: .right)
+
+        case .right:
+            guard currentIndex > 0 else {
+                return
+            }
+            currentIndex -= 1
+            loadCurrentPhoto(animatedFrom: .left)
+
+        default:
+            return
+        }
+    }
+
+    @objc private func handleLongPress(
+        _ recognizer: UILongPressGestureRecognizer
+    ) {
+        guard recognizer.state == .began else {
+            return
+        }
+
+        UIImpactFeedbackGenerator(
+            style: .light
+        ).impactOccurred()
+
+        if let currentImage {
+            presentShareSheet(image: currentImage)
+            return
+        }
+
+        requestShareImage()
+    }
+
+    private func loadCurrentPhoto(
+        animatedFrom direction: CATransitionSubtype?
+    ) {
+        guard assets.indices.contains(currentIndex) else {
+            return
+        }
+
+        cancelCurrentRequest()
+
+        currentImage = nil
+        imageView.image = nil
+        scrollView.setZoomScale(1, animated: false)
+        spinner.startAnimating()
+        updateCounter()
+
+        if let direction {
+            let transition = CATransition()
+            transition.type = .push
+            transition.subtype = direction
+            transition.duration = 0.22
+            transition.timingFunction =
+                CAMediaTimingFunction(name: .easeInEaseOut)
+            imageView.layer.add(
+                transition,
+                forKey: "snowball-photo-swipe"
+            )
+        }
+
         let scale = UIScreen.main.scale
         let target = CGSize(
             width: max(view.bounds.width, 1) * scale * 2,
@@ -398,8 +599,9 @@ private final class SnowballIndexedPhotoViewController:
         options.resizeMode = .none
         options.isNetworkAccessAllowed = true
 
+        let requestedIndex = currentIndex
         imageRequestID = PHImageManager.default().requestImage(
-            for: asset,
+            for: assets[currentIndex],
             targetSize: target,
             contentMode: .aspectFit,
             options: options
@@ -409,9 +611,87 @@ private final class SnowballIndexedPhotoViewController:
             if degraded { return }
 
             DispatchQueue.main.async {
-                self?.spinner.stopAnimating()
-                self?.imageView.image = image
+                guard let self,
+                      requestedIndex == self.currentIndex else {
+                    return
+                }
+
+                self.spinner.stopAnimating()
+                self.currentImage = image
+                self.imageView.image = image
             }
         }
     }
+
+    private func requestShareImage() {
+        guard assets.indices.contains(currentIndex) else {
+            return
+        }
+
+        spinner.startAnimating()
+
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .highQualityFormat
+        options.resizeMode = .none
+        options.isNetworkAccessAllowed = true
+
+        PHImageManager.default().requestImageDataAndOrientation(
+            for: assets[currentIndex],
+            options: options
+        ) { [weak self] data, _, _, _ in
+            guard let self,
+                  let data,
+                  let image = UIImage(data: data) else {
+                DispatchQueue.main.async {
+                    self?.spinner.stopAnimating()
+                }
+                return
+            }
+
+            DispatchQueue.main.async {
+                self.spinner.stopAnimating()
+                self.currentImage = image
+                self.presentShareSheet(image: image)
+            }
+        }
+    }
+
+    private func presentShareSheet(image: UIImage) {
+        guard presentedViewController == nil else {
+            return
+        }
+
+        let activity = UIActivityViewController(
+            activityItems: [image],
+            applicationActivities: nil
+        )
+
+        if let popover = activity.popoverPresentationController {
+            popover.sourceView = imageView
+            popover.sourceRect = CGRect(
+                x: imageView.bounds.midX,
+                y: imageView.bounds.midY,
+                width: 1,
+                height: 1
+            )
+            popover.permittedArrowDirections = []
+        }
+
+        present(activity, animated: true)
+    }
+
+    private func updateCounter() {
+        counterLabel.text =
+            "\(currentIndex + 1) / \(assets.count)"
+    }
+
+    private func cancelCurrentRequest() {
+        if imageRequestID != PHInvalidImageRequestID {
+            PHImageManager.default().cancelImageRequest(
+                imageRequestID
+            )
+            imageRequestID = PHInvalidImageRequestID
+        }
+    }
 }
+

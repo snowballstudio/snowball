@@ -246,3 +246,213 @@ struct SevenDayAverageView: View {
     }
 }
 
+// MARK: - 昨日及之前七个完整自然日的原生屏幕时间表
+
+struct SevenDayDailyTableView: View {
+    let configuration: SevenDayAverageConfiguration
+
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.autoupdatingCurrent
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "M/d"
+        return formatter
+    }()
+
+    private func compactDuration(
+        _ duration: TimeInterval
+    ) -> String {
+        let hours = max(0, duration) / 3600.0
+        guard hours > 0 else {
+            return "—"
+        }
+        return String(format: "%.1fh", hours)
+    }
+
+    private func rankedApps(
+        for day: SevenDayScreenSummary
+    ) -> [SevenDayApplicationSummary] {
+        day.applications
+            .filter {
+                $0.duration > 0 || $0.pickups > 0
+            }
+            .sorted { left, right in
+                if left.duration != right.duration {
+                    return left.duration > right.duration
+                }
+                if left.pickups != right.pickups {
+                    return left.pickups > right.pickups
+                }
+                return left.displayName < right.displayName
+            }
+    }
+
+    private func topApps(
+        for day: SevenDayScreenSummary
+    ) -> [SevenDayApplicationSummary] {
+        Array(rankedApps(for: day).prefix(10))
+    }
+
+    private func otherApp(
+        for day: SevenDayScreenSummary
+    ) -> SevenDayApplicationSummary? {
+        let remaining = rankedApps(for: day).dropFirst(10)
+        guard !remaining.isEmpty else {
+            return nil
+        }
+
+        return SevenDayApplicationSummary(
+            displayName: "其他",
+            bundleIdentifier: "",
+            categoryName: "其它",
+            duration: remaining.reduce(0) {
+                $0 + $1.duration
+            },
+            pickups: remaining.reduce(0) {
+                $0 + $1.pickups
+            }
+        )
+    }
+
+    private func appCell(
+        _ app: SevenDayApplicationSummary?
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(app?.displayName ?? "—")
+                .font(.system(size: 11, weight: .semibold))
+                .lineLimit(1)
+
+            if let app,
+               app.duration > 0 || app.pickups > 0 {
+                Text(
+                    compactDuration(app.duration) +
+                    " · " +
+                    String(app.pickups) +
+                    "次"
+                )
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            } else {
+                Text(" ")
+                    .font(.system(size: 9))
+            }
+        }
+        .frame(width: 88, alignment: .leading)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 8)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("每日屏幕时间")
+                        .font(.headline)
+                    Text("昨日及之前七个完整自然日")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text(
+                    "七日平均 " +
+                    compactDuration(
+                        configuration.averageDuration
+                    )
+                )
+                .font(.caption.weight(.semibold))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            ScrollView([.horizontal, .vertical]) {
+                VStack(spacing: 0) {
+                    HStack(spacing: 0) {
+                        Text("日期")
+                            .frame(width: 58, alignment: .leading)
+                        Text("总时长")
+                            .frame(width: 70, alignment: .leading)
+
+                        ForEach(1...10, id: \.self) { index in
+                            Text("TOP \(index)")
+                                .frame(
+                                    width: 102,
+                                    alignment: .leading
+                                )
+                        }
+
+                        Text("其他")
+                            .frame(width: 102, alignment: .leading)
+                    }
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 9)
+                    .background(
+                        Color(uiColor: .secondarySystemBackground)
+                    )
+
+                    ForEach(
+                        configuration.days.reversed(),
+                        id: \.date
+                    ) { day in
+                        let apps = topApps(for: day)
+                        let other = otherApp(for: day)
+
+                        HStack(spacing: 0) {
+                            Text(dateFormatter.string(from: day.date))
+                                .font(
+                                    .system(
+                                        size: 12,
+                                        weight: .semibold,
+                                        design: .rounded
+                                    )
+                                )
+                                .frame(
+                                    width: 58,
+                                    alignment: .leading
+                                )
+
+                            Text(
+                                compactDuration(day.totalDuration)
+                            )
+                            .font(
+                                .system(
+                                    size: 12,
+                                    weight: .semibold,
+                                    design: .rounded
+                                )
+                            )
+                            .frame(
+                                width: 70,
+                                alignment: .leading
+                            )
+
+                            ForEach(0..<10, id: \.self) { index in
+                                appCell(
+                                    index < apps.count
+                                    ? apps[index]
+                                    : nil
+                                )
+                            }
+
+                            appCell(other)
+                        }
+                        .padding(.horizontal, 10)
+                        .background(
+                            Color(uiColor: .systemBackground)
+                        )
+
+                        Divider()
+                    }
+                }
+            }
+        }
+        .background(Color(uiColor: .systemBackground))
+    }
+}
+

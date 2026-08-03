@@ -1939,3 +1939,208 @@
   box-shadow: none !important;
   filter: none !important;
 }
+
+/* ======================================================
+   2026-08-03｜人间人物照片区
+   点击任意人物圆圈或“我”打开；默认只读，编辑后临时删除。
+   ====================================================== */
+.peopleSelf {
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.peoplePhotoPanel {
+  position: relative;
+  width: min(520px, 94vw);
+  height: min(92vh, 760px);
+  max-height: 92vh;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.peoplePhotoPanel h3 {
+  margin: 0 48px 12px 0;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+}
+
+.peoplePhotoClose {
+  position: absolute;
+  right: 16px;
+  top: 14px;
+  z-index: 5;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0 0 2px;
+  border: none;
+  background: transparent;
+  color: #687585;
+  font-size: 27px;
+  line-height: 1;
+}
+
+.peoplePhotoToolbar {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 12px;
+}
+
+.peoplePhotoToolButton {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.58);
+  color: #425264;
+  font-size: 24px;
+  line-height: 1;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.peoplePhotoEditButton {
+  transform: translateY(-7px);
+   margin-left: 8px;
+}
+
+.peoplePhotoUploadButton input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.peoplePhotoUploadButton img {
+  display: block;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  object-position: center;
+  transform: translateY(0);
+  pointer-events: none;
+}
+
+.peoplePhotoEditActions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-left: 18px;
+}
+
+.peoplePhotoEditActions button {
+  border: none;
+  background: transparent;
+  color: #425264;
+  padding: 6px 4px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.peoplePhotoEditActions button:first-child {
+  color: #425264;
+  font-weight: 400;
+}
+
+.peoplePhotoScroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.peoplePhotoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  align-content: start;
+}
+
+.peoplePhotoItem {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  overflow: visible;
+  background: rgba(230,235,236,0.72);
+}
+
+.peoplePhotoOpen {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: block;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+}
+
+.peoplePhotoOpen img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.peoplePhotoDelete {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  z-index: 4;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0 0 1px;
+  margin: 0;
+  border: 1px solid rgba(105,112,120,0.44);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.95);
+  color: #59616a;
+  font-size: 16px;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.16);
+  touch-action: manipulation;
+}
+
+.peoplePhotoEmpty {
+  margin: 24px 0 0;
+  color: #7a8590;
+  font-size: 14px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .peoplePhotoOverlay {
+    padding: 18px;
+    align-items: center;
+  }
+
+  .peoplePhotoPanel {
+    width: min(94vw, 520px);
+    height: min(86vh, 720px);
+    max-height: 86vh;
+    border-radius: 26px;
+  }
+}
+

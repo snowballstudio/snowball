@@ -118,10 +118,6 @@ export default function ScreenTimeDataPanel({
   onBackHome,
   onOpenTrain,
   onOpenDetailDate,
-  onOpenSevenDayReport,
-  onInspectCache,
-  cacheDiagnostic = null,
-  cacheDiagnosticLoading = false,
   showTrainLink = true,
   developerMode = false,
   developerPanel = null,
@@ -208,79 +204,7 @@ export default function ScreenTimeDataPanel({
 
           <p className="screenSummaryHint">
             每日按使用时长排列 TOP 10，其余应用合并为“其他”。
-            {onOpenSevenDayReport ? (
-              <>
-                <span aria-hidden="true"> · </span>
-                <button
-                  type="button"
-                  onClick={onOpenSevenDayReport}
-                  style={{
-                    border: 0,
-                    padding: 0,
-                    background: 'transparent',
-                    color: 'inherit',
-                    textDecoration: 'underline',
-                    font: 'inherit',
-                    cursor: 'pointer',
-                  }}
-                >
-                  测试看七日平均报告
-                </button>
-              </>
-            ) : null}
           </p>
-
-          {onInspectCache ? (
-            <div
-              style={{
-                marginTop: '12px',
-                paddingTop: '10px',
-                borderTop: '1px solid rgba(120, 130, 140, 0.22)',
-              }}
-            >
-              <button
-                type="button"
-                onClick={onInspectCache}
-                disabled={cacheDiagnosticLoading}
-                style={{
-                  border: 0,
-                  padding: 0,
-                  background: 'transparent',
-                  color: 'inherit',
-                  textDecoration: 'underline',
-                  font: 'inherit',
-                  cursor: cacheDiagnosticLoading ? 'wait' : 'pointer',
-                  opacity: cacheDiagnosticLoading ? 0.65 : 1,
-                }}
-              >
-                {cacheDiagnosticLoading
-                  ? '正在读取苹果共享缓存…'
-                  : '检查苹果共享缓存'}
-              </button>
-
-              {cacheDiagnostic ? (
-                <pre
-                  style={{
-                    margin: '10px 0 0',
-                    padding: '12px',
-                    maxHeight: '42vh',
-                    overflow: 'auto',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    borderRadius: '10px',
-                    background: 'rgba(0, 0, 0, 0.28)',
-                    fontSize: '11px',
-                    lineHeight: 1.55,
-                    textAlign: 'left',
-                    userSelect: 'text',
-                    WebkitUserSelect: 'text',
-                  }}
-                >
-                  {JSON.stringify(cacheDiagnostic, null, 2)}
-                </pre>
-              ) : null}
-            </div>
-          ) : null}
         </div>
       </div>
     )

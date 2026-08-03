@@ -7,6 +7,9 @@ import {
   conversationBrainPercent,
   readConversationRecord,
 } from './conversationDataService.js'
+import {
+  recalculateIOSOffscreenRecord,
+} from '../ios-screen-time/iosScreenTimeService.js'
 
 const VOICE_DURATION_MS = {
   'voice1_hello_askmood.mp4': 2600,
@@ -59,6 +62,258 @@ async function waitForNativeSpeechToStop(timeoutMs = 1600) {
   }
 
   return false
+}
+
+
+const SPOKEN_REST_DATE_WORDS = ['昨天', '昨晚']
+const SPOKEN_REST_CONTEXT_WORDS = [
+  '到',
+  '才睡',
+  '睡',
+  '睡觉',
+  '休息',
+  '记一下',
+  '记下',
+  '记',
+  '改成',
+  '修改',
+  '改',
+  '离机',
+  '晚安',
+]
+
+const CHINESE_TIME_DIGITS = {
+  零: 0,
+  〇: 0,
+  一: 1,
+  二: 2,
+  两: 2,
+  三: 3,
+  四: 4,
+  五: 5,
+  六: 6,
+  七: 7,
+  八: 8,
+  九: 9,
+}
+
+function chineseTimeNumber(value) {
+  const text = String(value || '').trim()
+  if (!text) return null
+  if (/^\d+$/.test(text)) return Number(text)
+
+  if (text === '十') return 10
+
+  if (text.includes('十')) {
+    const [before, after] = text.split('十')
+    const tens = before
+      ? CHINESE_TIME_DIGITS[before]
+      : 1
+    const ones = after
+      ? CHINESE_TIME_DIGITS[after]
+      : 0
+
+    if (
+      Number.isFinite(tens)
+      && Number.isFinite(ones)
+    ) {
+      return tens * 10 + ones
+    }
+  }
+
+  if (text.length === 1) {
+    const digit = CHINESE_TIME_DIGITS[text]
+    return Number.isFinite(digit) ? digit : null
+  }
+
+  return null
+}
+
+function calendarYesterdayKey(now = new Date()) {
+  const date = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() - 1,
+  )
+
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-')
+}
+
+function logicalRestHour(rawHour, text) {
+  const hour = Number(rawHour)
+  if (!Number.isFinite(hour) || hour < 0 || hour > 28) {
+    return null
+  }
+
+  // 用户已直接说出 24—28 点时，保持原值。
+  if (hour >= 24) return hour
+
+  const source = String(text || '')
+
+  // 明确的 24 小时制（13—23点）直接保留。
+  if (hour >= 13) return hour
+
+  // 雪粒的晚间逻辑日到次日 05:00。
+  // 睡眠语境中的 1—4 点均视为次日凌晨，写为 25—28 点。
+  if (
+    hour >= 0
+    && hour < 5
+    && !source.includes('下午')
+  ) {
+    return hour + 24
+  }
+
+  // “昨晚11点”按 23:00；晚上5—11点按 17—23点。
+  if (
+    source.includes('昨晚')
+    || source.includes('晚上')
+    || source.includes('夜里')
+    || source.includes('夜晚')
+    || source.includes('睡')
+    || source.includes('休息')
+    || source.includes('晚安')
+  ) {
+    if (hour === 12) return 24
+    if (hour >= 5 && hour <= 11) return hour + 12
+  }
+
+  if (source.includes('下午') && hour >= 1 && hour <= 11) {
+    return hour + 12
+  }
+
+  return hour
+}
+
+function parseSpokenYesterdayRestTime(value) {
+  const original = String(value || '').trim()
+  if (!original) return null
+
+  const compact = original
+    .replace(/\s+/g, '')
+    .replace(/：/g, ':')
+    .replace(/[，。！？,.!?]/g, '')
+
+  const hasYesterday = SPOKEN_REST_DATE_WORDS.some(
+    word => compact.includes(word),
+  )
+  if (!hasYesterday) return null
+
+  const hasRestContext =
+    compact.includes('昨晚')
+    || SPOKEN_REST_CONTEXT_WORDS.some(
+      word => compact.includes(word),
+    )
+  if (!hasRestContext) return null
+
+  let hour = null
+  let minute = 0
+  let approximate = false
+
+  // 23:30、3:20
+  const colonMatch = compact.match(
+    /(\d{1,2})[:](\d{1,2})/,
+  )
+
+  if (colonMatch) {
+    hour = Number(colonMatch[1])
+    minute = Number(colonMatch[2])
+  } else {
+    // 23点30分、十一点半、三点多、11点
+    const pointMatch = compact.match(
+      /([零〇一二两三四五六七八九十\d]{1,3})点(?:(半)|([零〇一二两三四五六七八九十\d]{1,3})分?|([一二三四五六七八九\d])刻|(多))?/,
+    )
+
+    if (!pointMatch) return null
+
+    hour = chineseTimeNumber(pointMatch[1])
+
+    if (pointMatch[2]) {
+      minute = 30
+    } else if (pointMatch[3]) {
+      minute = chineseTimeNumber(pointMatch[3])
+    } else if (pointMatch[4]) {
+      minute = Number(pointMatch[4]) * 15
+    } else {
+      minute = 0
+    }
+
+    approximate = Boolean(pointMatch[5])
+  }
+
+  if (
+    !Number.isFinite(hour)
+    || !Number.isFinite(minute)
+    || minute < 0
+    || minute > 59
+  ) {
+    return null
+  }
+
+  const storedHour = logicalRestHour(hour, compact)
+  if (!Number.isFinite(storedHour)) return null
+
+  const time = `${String(storedHour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+
+  return {
+    date: calendarYesterdayKey(),
+    time,
+    displayTime: time.replace(':', '：'),
+    approximate,
+    original,
+  }
+}
+
+function updateSpokenRestRecord(data, spokenRest) {
+  if (!spokenRest) return data
+
+  const existingRecords = Array.isArray(data?.offscreenRecords)
+    ? data.offscreenRecords
+    : []
+
+  const rowIndex = existingRecords.findIndex(
+    row => String(row?.date || '').replace(/\//g, '-')
+      === spokenRest.date,
+  )
+
+  const existing =
+    rowIndex >= 0
+      ? existingRecords[rowIndex]
+      : {
+          id: `offscreen-${spokenRest.date}`,
+          date: spokenRest.date,
+        }
+
+  // 语音内容写入现有“苹果最后长时活动结束时间”字段。
+  // 原有 recalculateIOSOffscreenRecord 会继续把它与道晚安时间、
+  // 最后一小时拿起时间+活动时长进行比较，并取最晚值。
+  const recalculated = recalculateIOSOffscreenRecord({
+    ...existing,
+    date: spokenRest.date,
+    iosLastLongActivityEnd: spokenRest.time,
+  })
+
+  const nextRecords = [...existingRecords]
+  if (rowIndex >= 0) {
+    nextRecords[rowIndex] = recalculated
+  } else {
+    nextRecords.push(recalculated)
+  }
+
+  nextRecords.sort((left, right) =>
+    String(right?.date || '').localeCompare(
+      String(left?.date || ''),
+    ),
+  )
+
+  return {
+    ...data,
+    offscreenRecords: nextRecords,
+    lastSavedAt: Date.now(),
+  }
 }
 
 export default function useSnowballCall({
@@ -487,7 +742,14 @@ export default function useSnowballCall({
         ...derivedBase,
         brainPercent: conversationBrainPercent(conversation),
       }
-      const reply = '知道了，我听着呢。'
+
+      const spokenRest = clean
+        ? parseSpokenYesterdayRestTime(clean)
+        : null
+
+      const reply = spokenRest
+        ? `记下了，昨天休息时间按 ${spokenRest.displayTime} 记录。`
+        : '知道了，我听着呢。'
 
       chatStepRef.current = 'free'
 
@@ -498,8 +760,12 @@ export default function useSnowballCall({
             })
           : prev
 
+        const nextWithRest = spokenRest
+          ? updateSpokenRestRecord(next, spokenRest)
+          : next
+
         return {
-          ...next,
+          ...nextWithRest,
           ...(clean ? { brainPercent: derived.brainPercent } : {}),
           chatInput: '',
           chatStep: 'free',

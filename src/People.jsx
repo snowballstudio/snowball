@@ -1,5 +1,10 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './People.css'
+import {
+  isPhotoIndexAvailable,
+  pickPhotoIndexes,
+  presentIndexedPhoto,
+} from './components/photo-index/photoIndexService.js'
 
 const TEST_PASSWORD = 'snowball'
 const PEOPLE_GROUPS = ['家人', '朋友', '工作', '其他']
@@ -53,6 +58,7 @@ const EMPTY_PERSON = {
   note: '',
   witnessEntries: [],
   history: [],
+  photos: [],
 }
 
 function clamp(n, min, max) {
@@ -387,6 +393,7 @@ function normalizePerson(person) {
       : clamp(Number(rawDepth), 1, 10),
     witnessEntries: Array.isArray(person?.witnessEntries) ? person.witnessEntries : (person?.witnessText ? [person.witnessText] : []),
     history: Array.isArray(person?.history) ? person.history : [],
+    photos: Array.isArray(person?.photos) ? person.photos : [],
   }
 }
 
@@ -491,7 +498,126 @@ function KeywordPicker({ value, onChange }) {
   )
 }
 
-export default function People({ people = [], setData, onClose, birthDate = '' }) {
+
+const PEOPLE_MEDIA_DB = 'snowball-people-media-v1'
+const PEOPLE_MEDIA_STORE = 'photos'
+const PEOPLE_MEDIA_KEY = 'people-photo-indexes'
+
+function openPeopleMediaDb() {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') {
+      reject(new Error('IndexedDB is not available'))
+      return
+    }
+
+    const request = indexedDB.open(PEOPLE_MEDIA_DB, 1)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      if (!db.objectStoreNames.contains(PEOPLE_MEDIA_STORE)) {
+        db.createObjectStore(PEOPLE_MEDIA_STORE)
+      }
+    }
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () =>
+      reject(request.error || new Error('People media DB open failed'))
+  })
+}
+
+function loadPeopleMedia() {
+  return openPeopleMediaDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(PEOPLE_MEDIA_STORE, 'readonly')
+    const request = tx.objectStore(PEOPLE_MEDIA_STORE).get(PEOPLE_MEDIA_KEY)
+    request.onsuccess = () =>
+      resolve(request.result || { selfPhotos: [], peoplePhotos: {} })
+    request.onerror = () =>
+      reject(request.error || new Error('People media read failed'))
+    tx.oncomplete = () => db.close()
+  }))
+}
+
+function savePeopleMedia(selfPhotos, people) {
+  const peoplePhotos = {}
+  ;(Array.isArray(people) ? people : []).forEach(person => {
+    if (Array.isArray(person?.photos) && person.photos.length) {
+      peoplePhotos[String(person.id)] = person.photos
+    }
+  })
+
+  const payload = {
+    selfPhotos: Array.isArray(selfPhotos) ? selfPhotos : [],
+    peoplePhotos,
+    savedAt: Date.now(),
+  }
+
+  return openPeopleMediaDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(PEOPLE_MEDIA_STORE, 'readwrite')
+    tx.objectStore(PEOPLE_MEDIA_STORE).put(payload, PEOPLE_MEDIA_KEY)
+    tx.oncomplete = () => {
+      db.close()
+      resolve(true)
+    }
+    tx.onerror = () => {
+      db.close()
+      reject(tx.error || new Error('People media write failed'))
+    }
+  }))
+}
+
+function compressPeoplePhoto(file, index = 0) {
+  return new Promise(resolve => {
+    if (!file || !file.type?.startsWith('image/')) {
+      resolve(null)
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const source = String(reader.result || '')
+      const image = new Image()
+
+      image.onload = () => {
+        const maxSide = 320
+        const scale = Math.min(
+          1,
+          maxSide / Math.max(image.width || 1, image.height || 1),
+        )
+        const width = Math.max(1, Math.round(image.width * scale))
+        const height = Math.max(1, Math.round(image.height * scale))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const context = canvas.getContext('2d')
+
+        if (!context) {
+          resolve({
+            id: `people-web-photo-${Date.now()}-${index}`,
+            assetIdentifier: '',
+            uri: '',
+            thumbnail: source,
+            source: 'web-thumbnail-only',
+          })
+          return
+        }
+
+        context.drawImage(image, 0, 0, width, height)
+        resolve({
+          id: `people-web-photo-${Date.now()}-${index}`,
+          assetIdentifier: '',
+          uri: '',
+          thumbnail: canvas.toDataURL('image/jpeg', 0.62),
+          source: 'web-thumbnail-only',
+        })
+      }
+
+      image.onerror = () => resolve(null)
+      image.src = source
+    }
+    reader.onerror = () => resolve(null)
+    reader.readAsDataURL(file)
+  })
+}
+
+export default function People({ people = [], setData, onClose, birthDate = '', selfPhotos = [] }) {
   const [groupFilter, setGroupFilter] = useState('全部')
   const [tableGroupFilter, setTableGroupFilter] = useState('全部')
   const [sortKey, setSortKey] = useState('updatedAt')
@@ -529,6 +655,10 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
   const [expandedWitnessId, setExpandedWitnessId] = useState(null)
   const [showPeopleInfo, setShowPeopleInfo] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [photoTarget, setPhotoTarget] = useState(null)
+  const [photoEditing, setPhotoEditing] = useState(false)
+  const [photoDraft, setPhotoDraft] = useState([])
+  const [peopleMediaReady, setPeopleMediaReady] = useState(false)
   const [dragAngles, setDragAngles] = useState({})
   const mapCanvasRef = useRef(null)
   const dragRef = useRef(null)
@@ -579,6 +709,181 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
     () => activeBirthDate ? layoutGraphPeople(graphPeople, activeBirthDate, activeMapMonth) : [],
     [activeBirthDate, activeMapMonth, graphPeople],
   )
+
+  useEffect(() => {
+    let alive = true
+
+    loadPeopleMedia()
+      .then(media => {
+        if (!alive) return
+
+        const restoredSelf = Array.isArray(media?.selfPhotos)
+          ? media.selfPhotos
+          : []
+        const peoplePhotos =
+          media?.peoplePhotos && typeof media.peoplePhotos === 'object'
+            ? media.peoplePhotos
+            : {}
+
+        setData(prev => ({
+          ...prev,
+          peopleSelfPhotos: restoredSelf,
+          people: (prev.people || []).map(person => ({
+            ...person,
+            photos: Array.isArray(peoplePhotos[String(person.id)])
+              ? peoplePhotos[String(person.id)]
+              : [],
+          })),
+          lastSavedAt: Date.now(),
+        }))
+      })
+      .catch(error => {
+        console.warn('人间照片索引读取失败。', error)
+      })
+      .finally(() => {
+        if (alive) setPeopleMediaReady(true)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [setData])
+
+  useEffect(() => {
+    if (!peopleMediaReady) return
+    savePeopleMedia(selfPhotos, people)
+      .catch(error => {
+        console.warn('人间照片索引保存失败。', error)
+      })
+  }, [peopleMediaReady, people, selfPhotos])
+
+  function photosForTarget(target = photoTarget) {
+    if (!target) return []
+    if (target.kind === 'self') {
+      return Array.isArray(selfPhotos) ? selfPhotos : []
+    }
+
+    const person = normalizedPeople.find(
+      item => String(item.id) === String(target.id),
+    )
+    return Array.isArray(person?.photos) ? person.photos : []
+  }
+
+  function openPhotoArea(target) {
+    const photos = target.kind === 'self'
+      ? (Array.isArray(selfPhotos) ? selfPhotos : [])
+      : (
+          normalizedPeople.find(
+            item => String(item.id) === String(target.id),
+          )?.photos || []
+        )
+
+    setPhotoTarget(target)
+    setPhotoDraft([...photos])
+    setPhotoEditing(false)
+  }
+
+  function closePhotoArea() {
+    setPhotoTarget(null)
+    setPhotoDraft([])
+    setPhotoEditing(false)
+  }
+
+  function beginPhotoEdit() {
+    setPhotoDraft([...photosForTarget()])
+    setPhotoEditing(true)
+  }
+
+  function cancelPhotoEdit() {
+    setPhotoDraft([...photosForTarget()])
+    setPhotoEditing(false)
+  }
+
+  function commitPhotos(nextPhotos) {
+    const safePhotos = Array.isArray(nextPhotos) ? nextPhotos : []
+
+    setData(prev => {
+      if (photoTarget?.kind === 'self') {
+        return {
+          ...prev,
+          peopleSelfPhotos: safePhotos,
+          lastSavedAt: Date.now(),
+        }
+      }
+
+      return {
+        ...prev,
+        people: (prev.people || []).map(person =>
+          String(person.id) === String(photoTarget?.id)
+            ? { ...person, photos: safePhotos, updatedAt: Date.now() }
+            : person,
+        ),
+        lastSavedAt: Date.now(),
+      }
+    })
+  }
+
+  function savePhotoEdit() {
+    commitPhotos(photoDraft)
+    setPhotoEditing(false)
+  }
+
+  async function pickPeoplePhotos(files = null) {
+    try {
+      let picked = []
+
+      if (isPhotoIndexAvailable()) {
+        picked = await pickPhotoIndexes()
+      } else {
+        const fileList = Array.from(files || [])
+        picked = (
+          await Promise.all(
+            fileList.map((file, index) =>
+              compressPeoplePhoto(file, index),
+            ),
+          )
+        ).filter(Boolean)
+      }
+
+      if (!picked.length) return
+
+      if (photoEditing) {
+        setPhotoDraft(prev => [...prev, ...picked])
+      } else {
+        const nextPhotos = [...photosForTarget(), ...picked]
+        commitPhotos(nextPhotos)
+        setPhotoDraft(nextPhotos)
+      }
+    } catch (error) {
+      window.alert(
+        String(error?.message || error || '照片没有保存成功，请稍后再试。'),
+      )
+    }
+  }
+
+  function removePhotoDraft(index) {
+    setPhotoDraft(prev =>
+      prev.filter((_, photoIndex) => photoIndex !== index),
+    )
+  }
+
+  async function openPeoplePhoto(photo, photos, index) {
+    if (!photo) return
+
+    if (isPhotoIndexAvailable() && (photo.assetIdentifier || photo.uri)) {
+      try {
+        await presentIndexedPhoto(photo, photos, index)
+      } catch (error) {
+        window.alert(
+          String(
+            error?.message
+              || error
+              || '原照片可能已被删除，或相册访问权限已经改变。',
+          ),
+        )
+      }
+    }
+  }
 
   function openAdd() {
     setEditing('new')
@@ -806,7 +1111,11 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
   function handlePersonClick(person) {
     const suppressed = suppressClickRef.current
     if (suppressed.id === person.id && Date.now() < suppressed.until) return
-    openEdit(person)
+    openPhotoArea({
+      kind: 'person',
+      id: person.id,
+      name: person.name || person.nickname || '人物',
+    })
   }
 
   return (
@@ -880,7 +1189,7 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
                 aria-hidden="true"
               />
             ))}
-            {activeBirthDate && <div className="peopleSelf" style={{ width: `${selfSize}px`, height: `${selfSize}px`, marginLeft: `${-selfSize / 2}px`, marginTop: `${-selfSize / 2}px` }}>我</div>}
+            {activeBirthDate && <button type="button" className="peopleSelf" style={{ width: `${selfSize}px`, height: `${selfSize}px`, marginLeft: `${-selfSize / 2}px`, marginTop: `${-selfSize / 2}px` }} onClick={() => openPhotoArea({ kind: 'self', id: 'self', name: '我' })}>我</button>}
             {activeBirthDate && graphLayoutPeople.map(person => {
               const liveAngle = dragAngles[person.id]
               const point = Number.isFinite(liveAngle)
@@ -990,6 +1299,120 @@ export default function People({ people = [], setData, onClose, birthDate = '' }
               <p>颜色记录人间冷暖，关键词越多，色彩越明确。人物图标越深，表示这份印象越清晰。</p>
               <p>默认看到的是今天。你也可以选择过去或未来的月份，看人间如何变化。</p>
               <p>人物资料可以随时更新。联系减少、关系停留或重新靠近，都会留在你的记录里。</p>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {photoTarget && (
+        <div className="peopleEditorOverlay peoplePhotoOverlay">
+          <section className="peopleEditor peoplePhotoPanel">
+            <button
+              type="button"
+              className="peoplePhotoClose"
+              onClick={closePhotoArea}
+              aria-label="关闭照片区"
+            >
+              ×
+            </button>
+
+            <h3>{photoTarget.name}</h3>
+
+            <div className="peoplePhotoToolbar">
+              <label
+                className="peoplePhotoToolButton peoplePhotoUploadButton"
+                title="上传照片"
+                aria-label="上传照片"
+              >
+                <img
+                  src="/refine/footprint_photoicon.png"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={event => {
+                    pickPeoplePhotos(event.target.files)
+                    event.currentTarget.value = ''
+                  }}
+                />
+              </label>
+
+              {!photoEditing ? (
+                <button
+                  type="button"
+                  className="peoplePhotoToolButton peoplePhotoEditButton"
+                  onClick={beginPhotoEdit}
+                  title="编辑照片"
+                  aria-label="编辑照片"
+                >
+                  ✎
+                </button>
+              ) : (
+                <div className="peoplePhotoEditActions">
+                  <button type="button" onClick={savePhotoEdit}>保存</button>
+                  <button type="button" onClick={cancelPhotoEdit}>取消</button>
+                </div>
+              )}
+            </div>
+
+            <div className="peoplePhotoScroll">
+              {(photoEditing ? photoDraft : photosForTarget()).length > 0 ? (
+                <div className="peoplePhotoGrid">
+                  {(photoEditing ? photoDraft : photosForTarget()).map(
+                    (photo, index) => (
+                      <div
+                        className="peoplePhotoItem"
+                        key={
+                          photo.id
+                          || photo.assetIdentifier
+                          || photo.uri
+                          || index
+                        }
+                      >
+                        <button
+                          type="button"
+                          className="peoplePhotoOpen"
+                          onClick={() =>
+                            openPeoplePhoto(
+                              photo,
+                              photoEditing
+                                ? photoDraft
+                                : photosForTarget(),
+                              index,
+                            )
+                          }
+                        >
+                          <img
+                            src={photo.thumbnail}
+                            alt={`${photoTarget.name}照片${index + 1}`}
+                          />
+                        </button>
+
+                        {photoEditing && (
+                          <button
+                            type="button"
+                            className="peoplePhotoDelete"
+                            onClick={event => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              removePhotoDraft(index)
+                            }}
+                            aria-label={`删除照片${index + 1}`}
+                            title="删除照片"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ),
+                  )}
+                </div>
+              ) : (
+                <p className="peoplePhotoEmpty">还没有照片。</p>
+              )}
             </div>
           </section>
         </div>

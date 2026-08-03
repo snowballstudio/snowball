@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './Things.css'
+import {
+  isPhotoIndexAvailable,
+  pickPhotoIndexes,
+  presentIndexedPhoto,
+} from './components/photo-index/photoIndexService.js'
 
 const THING_TYPES = { wish: '愿单', treasure: '在手', memory: '舍离' }
 const THING_COPY = {
@@ -10,7 +15,7 @@ const THING_COPY = {
 const THING_LIMIT = 300
 const PAW_STEP = 20
 const THING_CAT_IMAGES = { overview: '/refine/things_general_cat.png' }
-const EMPTY_THING_DRAFT = { type: 'wish', year: '', month: '', name: '', reason: '', photo: '', valueType: 'priceless', value: '' }
+const EMPTY_THING_DRAFT = { type: 'wish', year: '', month: '', name: '', reason: '', photos: [], valueType: 'priceless', value: '' }
 const THING_STATUS_ORDER = { treasure: 0, wish: 1, memory: 2 }
 
 const THINGS_BACKUP_DB = 'snowball-things-v1'
@@ -155,8 +160,8 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
         const localSavedAt = Number(initialThingsSavedAtRef.current || 0)
         const backupHasMore = Boolean(backupThings && backupThings.length > localThings.length)
         const backupIsNewer = Boolean(backupThings && backupSavedAt > localSavedAt)
-        const backupHasPhotos = Boolean(backupThings?.some(item => item?.photo))
-        const localHasPhotos = Boolean(localThings.some(item => item?.photo))
+        const backupHasPhotos = Boolean(backupThings?.some(item => Array.isArray(item?.photos) && item.photos.length))
+        const localHasPhotos = Boolean(localThings.some(item => Array.isArray(item?.photos) && item.photos.length))
 
         // 物馆使用自己的时间戳，不再受日常、人间等模块的全局 lastSavedAt 干扰。
         // localStorage 会主动去掉照片，因此同数量时也优先恢复包含照片的 IndexedDB 版本。
@@ -263,10 +268,10 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
     const line = `雪粒理解了，此物值得${thingTypeVerb(type)}。`
     if (editingThingId) {
       const savedId = editingThingId
-      setData(prev => ({ ...prev, things: (prev.things || []).map(item => item.id === savedId ? { ...item, type, year, month, name, reason, valueType, value, photo: draft.photo || '', pawText: line, updatedAt: Date.now() } : item), thingDraft: { ...EMPTY_THING_DRAFT, type }, thingsSavedAt: Date.now(), lastSavedAt: Date.now() }))
+      setData(prev => ({ ...prev, things: (prev.things || []).map(item => item.id === savedId ? { ...item, type, year, month, name, reason, valueType, value, photos: Array.isArray(draft.photos) ? draft.photos : [], pawText: line, updatedAt: Date.now() } : item), thingDraft: { ...EMPTY_THING_DRAFT, type }, thingsSavedAt: Date.now(), lastSavedAt: Date.now() }))
       setEditingThingId(null); setSelectedThingId(savedId); setThingsMode(type); setShowAddForm(false); showThingMessage('已更新', '理解了，雪粒已将记录改好。'); return
     }
-    const item = { id: Date.now(), type, year, month, name, reason, valueType, value, photo: draft.photo || '', pawText: line, pawCount: 1, createdAt: Date.now() }
+    const item = { id: Date.now(), type, year, month, name, reason, valueType, value, photos: Array.isArray(draft.photos) ? draft.photos : [], pawText: line, pawCount: 1, createdAt: Date.now() }
     setData(prev => ({ ...prev, things: [item, ...(prev.things || [])], thingDraft: { ...EMPTY_THING_DRAFT, type }, thingsSavedAt: Date.now(), lastSavedAt: Date.now() }))
     setSelectedThingId(item.id); setShowAddForm(false); showThingMessage('已盖章', line)
   }
@@ -285,7 +290,7 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
   function startEditThing(item) {
     if (!item) return
     setEditingThingId(item.id); setSelectedThingId(null); setShowAddForm(true)
-    setData(prev => ({ ...prev, thingDraft: { type: item.type || thingsMode, year: item.year || '', month: item.month || '', name: item.name || '', reason: item.reason || '', photo: item.photo || '', valueType: item.valueType || (thingIsPriceless(item) ? 'priceless' : 'gold'), value: item.value || '' } }))
+    setData(prev => ({ ...prev, thingDraft: { type: item.type || thingsMode, year: item.year || '', month: item.month || '', name: item.name || '', reason: item.reason || '', photos: Array.isArray(item.photos) ? item.photos : [], valueType: item.valueType || (thingIsPriceless(item) ? 'priceless' : 'gold'), value: item.value || '' } }))
     setThingsMode(item.type || thingsMode)
   }
   function requestDeleteThing(id) { const current = things.find(item => item.id === id); if (current) setPendingThingDelete({ id, title: '删除记录', text: `确定删除「${current.name}」吗？删除后，这件物品和它的爪印记录都会消失。` }) }
@@ -296,33 +301,134 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
   function toggleThingsSort(key) { setThingsSort(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' })) }
   function thingSortMark(key) { return thingsSort.key !== key ? '' : thingsSort.direction === 'asc' ? ' ↑' : ' ↓' }
   function openThingFromOverview(item) { setThingsMode(item.type); setSelectedThingId(item.id); updateThingDraft('type', item.type); selectThing(item.id) }
-  function handleThingPhoto(file) {
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const source = String(reader.result || '')
-      const image = new Image()
-      image.onload = () => {
-        const maxSide = 900
-        const scale = Math.min(1, maxSide / Math.max(image.width || 1, image.height || 1))
-        const width = Math.max(1, Math.round(image.width * scale))
-        const height = Math.max(1, Math.round(image.height * scale))
-        const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
-        const context = canvas.getContext('2d')
-        if (!context) {
-          updateThingDraft('photo', source)
-          return
-        }
-        context.drawImage(image, 0, 0, width, height)
-        const compressed = canvas.toDataURL('image/jpeg', 0.78)
-        updateThingDraft('photo', compressed)
+  function compressThingPhoto(file, index = 0) {
+    return new Promise(resolve => {
+      if (!file || !file.type?.startsWith('image/')) {
+        resolve(null)
+        return
       }
-      image.onerror = () => updateThingDraft('photo', source)
-      image.src = source
+
+      const reader = new FileReader()
+      reader.onload = () => {
+        const source = String(reader.result || '')
+        const image = new Image()
+
+        image.onload = () => {
+          const maxSide = 320
+          const scale = Math.min(
+            1,
+            maxSide / Math.max(image.width || 1, image.height || 1),
+          )
+          const width = Math.max(1, Math.round(image.width * scale))
+          const height = Math.max(1, Math.round(image.height * scale))
+          const canvas = document.createElement('canvas')
+          canvas.width = width
+          canvas.height = height
+          const context = canvas.getContext('2d')
+
+          if (!context) {
+            resolve({
+              id: `thing-web-photo-${Date.now()}-${index}`,
+              assetIdentifier: '',
+              uri: '',
+              thumbnail: source,
+              source: 'web-thumbnail-only',
+            })
+            return
+          }
+
+          context.drawImage(image, 0, 0, width, height)
+          resolve({
+            id: `thing-web-photo-${Date.now()}-${index}`,
+            assetIdentifier: '',
+            uri: '',
+            thumbnail: canvas.toDataURL('image/jpeg', 0.62),
+            source: 'web-thumbnail-only',
+          })
+        }
+
+        image.onerror = () => resolve(null)
+        image.src = source
+      }
+      reader.onerror = () => resolve(null)
+      reader.readAsDataURL(file)
+    })
+  }
+
+  async function handleThingPhotos(files = null) {
+    try {
+      let pickedPhotos = []
+
+      if (isPhotoIndexAvailable()) {
+        pickedPhotos = await pickPhotoIndexes()
+      } else {
+        const pickedFiles = Array.from(files || [])
+        pickedPhotos = (
+          await Promise.all(
+            pickedFiles.map((file, index) =>
+              compressThingPhoto(file, index),
+            ),
+          )
+        ).filter(Boolean)
+      }
+
+      if (!pickedPhotos.length) return
+
+      setData(prev => {
+        const current = prev.thingDraft || EMPTY_THING_DRAFT
+        return {
+          ...prev,
+          thingDraft: {
+            ...current,
+            photos: [
+              ...(Array.isArray(current.photos) ? current.photos : []),
+              ...pickedPhotos,
+            ],
+          },
+          lastSavedAt: Date.now(),
+        }
+      })
+    } catch (error) {
+      showThingMessage(
+        '照片没有保存成功',
+        String(error?.message || error || '请稍后再试。'),
+      )
     }
-    reader.readAsDataURL(file)
+  }
+
+  function removeThingDraftPhoto(index) {
+    setData(prev => {
+      const current = prev.thingDraft || EMPTY_THING_DRAFT
+      return {
+        ...prev,
+        thingDraft: {
+          ...current,
+          photos: (current.photos || []).filter(
+            (_, photoIndex) => photoIndex !== index,
+          ),
+        },
+        lastSavedAt: Date.now(),
+      }
+    })
+  }
+
+  async function openThingPhoto(photo, photos, index) {
+    if (!photo) return
+
+    if (isPhotoIndexAvailable() && (photo.assetIdentifier || photo.uri)) {
+      try {
+        await presentIndexedPhoto(photo, photos, index)
+      } catch (error) {
+        showThingMessage(
+          '原照片无法打开',
+          String(
+            error?.message
+              || error
+              || '原照片可能已被删除，或相册访问权限已经改变。',
+          ),
+        )
+      }
+    }
   }
 
   return <>
@@ -349,7 +455,7 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
           <div className="thingsOverview">
             <div className="thingsProgressLine"><div className="thingsProgressCrate" aria-label={`物馆进度${things.length}/${THING_LIMIT}`}><span>{things.length}/{THING_LIMIT}</span><div className="thingsCrateFill" style={{ width: `${things.length > 0 ? Math.max(8, Math.min(100, (things.length / THING_LIMIT) * 100)) : 0}%` }} /></div><div className="thingsProgressText"><strong>{thingProgress.title}</strong><small>{thingProgress.desc}</small></div></div>
             <div className="thingsOverviewGrid">{Object.entries(THING_TYPES).map(([key, label]) => { const count = things.filter(item => item.type === key).length; return <section key={key} className={`thingOverviewButton thingOverviewButton-${key}`}><span className="thingCategoryTitle">{label}</span><span className="thingCategoryCaption">{thingCategoryCaption(key)}</span><span className="thingCategoryCount"><button type="button" className="thingCaptionCount" onClick={() => openThings(key)}>{count}</button><span className="thingCategoryUnit">件</span></span><span className="thingCategoryGold">估值 {thingTotals[key]?.gold || 0}金粒</span><span className="thingCategoryPriceless">无价 {thingTotals[key]?.priceless || 0}件</span></section> })}</div>
-            <div className="thingsNameList thingsOverviewTableWrap">{things.length === 0 && <p className="thingsEmpty">物馆还空着。可以先从一件愿单开始。</p>}{things.length > 0 && <div className="thingsOverviewTable"><button className="thingsTableHead" onClick={() => toggleThingsSort('name')}>物品名称描述{thingSortMark('name')}</button><button className="thingsTableHead" onClick={() => toggleThingsSort('start')}>起始{thingSortMark('start')}</button><button className="thingsTableHead" onClick={() => toggleThingsSort('status')}>类{thingSortMark('status')}</button><button className="thingsTableHead thingsValueHead" onClick={() => toggleThingsSort('value')}>估值{thingSortMark('value')}</button>{sortedThings.map(item => <div className="thingsTableRowGroup" key={item.id}><button className="thingsTableCell thingsTableName" onClick={() => openThingFromOverview(item)}><span className="thingsTableThumb">{item.photo ? <img src={item.photo} alt="" /> : <span>📁</span>}</span><span>{item.name}<ThingPaws item={item} className="thingRowPaws" /></span></button><span className="thingsTableCell">{thingStartLabel(item)}</span><span className="thingsTableCell">{THING_TYPES[item.type]}</span><span className="thingsTableCell">{thingValueLabel(item)}</span></div>)}</div>}</div>
+            <div className="thingsNameList thingsOverviewTableWrap">{things.length === 0 && <p className="thingsEmpty">物馆还空着。可以先从一件愿单开始。</p>}{things.length > 0 && <div className="thingsOverviewTable"><button className="thingsTableHead" onClick={() => toggleThingsSort('name')}>物品名称描述{thingSortMark('name')}</button><button className="thingsTableHead" onClick={() => toggleThingsSort('start')}>起始{thingSortMark('start')}</button><button className="thingsTableHead" onClick={() => toggleThingsSort('status')}>类{thingSortMark('status')}</button><button className="thingsTableHead thingsValueHead" onClick={() => toggleThingsSort('value')}>估值{thingSortMark('value')}</button>{sortedThings.map(item => <div className="thingsTableRowGroup" key={item.id}><button className="thingsTableCell thingsTableName" onClick={() => openThingFromOverview(item)}><span className="thingsTableThumb">{item.photos?.[0]?.thumbnail ? <img src={item.photos[0].thumbnail} alt="" /> : <span>📁</span>}</span><span>{item.name}<ThingPaws item={item} className="thingRowPaws" /></span></button><span className="thingsTableCell">{thingStartLabel(item)}</span><span className="thingsTableCell">{THING_TYPES[item.type]}</span><span className="thingsTableCell">{thingValueLabel(item)}</span></div>)}</div>}</div>
             <img className="thingsOverviewBottomCat" src={THING_CAT_IMAGES.overview} alt="雪粒馆长" />
             <nav className="thingsOverviewBottomLinks" aria-label="物馆分类">
               <button type="button" onClick={() => openThings('wish')}>愿单</button>
@@ -360,9 +466,9 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
         ) : (
           <div className={`thingsSubPage ${showAddForm ? 'isAdding' : ''}`}>
             <div className="thingsLayout">
-              {showAddForm ? <section className="thingsAddCard"><div className="thingsAddCardHead"><h3>{editingThingId ? `${THING_TYPES[thingsMode]} · 编辑记录` : `${THING_TYPES[thingsMode]} · 添加记录`}</h3><button type="button" className="thingsAddClose" onClick={closeThingForm} aria-label="收起添加记录">×</button></div><p className="thingHint">{THING_COPY[thingsMode]?.reasonLabel}是门槛。</p><label className="thingPhotoUpload">{thingDraft.photo ? <img src={thingDraft.photo} alt="物品照片预览" /> : <><span className="thingFolderIcon">📁</span><small>上传照片</small></>}<input type="file" accept="image/*" onChange={e => handleThingPhoto(e.target.files?.[0])} /></label><label className="thingFieldLabel">物名（不超10汉字或20个字母）<input className="thingNameInput" placeholder="例如 手表 / 旧相机" value={thingDraft.name || ''} onCompositionStart={() => { nameComposingRef.current = true }} onCompositionEnd={e => { nameComposingRef.current = false; updateThingDraft('name', limitThingText(e.currentTarget.value, THING_NAME_MAX_UNITS)) }} onChange={e => updateThingDraft('name', nameComposingRef.current ? e.target.value : limitThingText(e.target.value, THING_NAME_MAX_UNITS))} /></label><label className="thingFieldLabel">起始<div className="thingDateGrid"><input placeholder="年，例如 2026" value={thingDraft.year || ''} onChange={e => updateThingDraft('year', e.target.value)} /><input placeholder="月，例如 7" value={thingDraft.month || ''} onChange={e => updateThingDraft('month', e.target.value)} /></div></label><label className="thingFieldLabel">估值<div className="thingValueGrid"><select value={thingDraft.valueType || 'priceless'} onChange={e => updateThingDraft('valueType', e.target.value)}><option value="priceless">无价</option><option value="gold">金粒</option></select><input className="thingValueInput" type="number" min="0" placeholder="1金粒=1克黄金（约1250元）" value={thingDraft.value || ''} disabled={(thingDraft.valueType || 'priceless') === 'priceless'} onChange={e => updateThingDraft('value', e.target.value)} /></div></label><label className="thingFieldLabel">描述 （不少于4汉字或8个字母）<textarea placeholder={THING_COPY[thingsMode]?.placeholder} value={thingDraft.reason || ''} onChange={e => updateThingDraft('reason', e.target.value)} /></label><div className="thingPawPreview"><span>👁️</span><p>雪粒会查看你的理由。</p></div><button className="saveThingBtn" disabled={(!editingThingId && things.length >= THING_LIMIT) || !thingDraft.year || !thingDraft.month || !thingDraft.name || thingTextUnits(thingDraft.name) > THING_NAME_MAX_UNITS || !thingDraft.reason || thingTextUnits(thingDraft.reason) < THING_REASON_MIN_UNITS || ((thingDraft.valueType || 'priceless') === 'gold' && !thingDraft.value)} onClick={saveThing}>{editingThingId ? '保存修改' : '让雪粒盖章'}</button></section> : <>
+              {showAddForm ? <section className="thingsAddCard"><div className="thingsAddCardHead"><h3>{editingThingId ? `${THING_TYPES[thingsMode]} · 编辑记录` : `${THING_TYPES[thingsMode]} · 添加记录`}</h3><button type="button" className="thingsAddClose" onClick={closeThingForm} aria-label="收起添加记录">×</button></div><p className="thingHint">{THING_COPY[thingsMode]?.reasonLabel}是门槛。</p><div className="thingPhotoEditor"><label className="thingPhotoUpload"><img className="thingPhotoUploadIcon" src="/refine/footprint_photoicon.png" alt="" aria-hidden="true" /><small>上传照片</small><input type="file" accept="image/*" multiple onChange={e => { handleThingPhotos(e.target.files); e.currentTarget.value = '' }} /></label>{Array.isArray(thingDraft.photos) && thingDraft.photos.length > 0 && <div className="thingPhotoDraftGrid">{thingDraft.photos.map((photo, index) => <div className="thingPhotoDraftItem" key={photo.id || photo.assetIdentifier || photo.uri || index}><img src={photo.thumbnail} alt={`物品照片${index + 1}`} /><button type="button" className="thingPhotoDeleteButton" onClick={event => { event.preventDefault(); event.stopPropagation(); removeThingDraftPhoto(index) }} aria-label={`删除物品照片${index + 1}`} title="删除照片">×</button></div>)}</div>}</div><label className="thingFieldLabel">物名（不超10汉字或20个字母）<input className="thingNameInput" placeholder="例如 手表 / 旧相机" value={thingDraft.name || ''} onCompositionStart={() => { nameComposingRef.current = true }} onCompositionEnd={e => { nameComposingRef.current = false; updateThingDraft('name', limitThingText(e.currentTarget.value, THING_NAME_MAX_UNITS)) }} onChange={e => updateThingDraft('name', nameComposingRef.current ? e.target.value : limitThingText(e.target.value, THING_NAME_MAX_UNITS))} /></label><label className="thingFieldLabel">起始<div className="thingDateGrid"><input placeholder="年，例如 2026" value={thingDraft.year || ''} onChange={e => updateThingDraft('year', e.target.value)} /><input placeholder="月，例如 7" value={thingDraft.month || ''} onChange={e => updateThingDraft('month', e.target.value)} /></div></label><label className="thingFieldLabel">估值<div className="thingValueGrid"><select value={thingDraft.valueType || 'priceless'} onChange={e => updateThingDraft('valueType', e.target.value)}><option value="priceless">无价</option><option value="gold">金粒</option></select><input className="thingValueInput" type="number" min="0" placeholder="1金粒=1克黄金（约1250元）" value={thingDraft.value || ''} disabled={(thingDraft.valueType || 'priceless') === 'priceless'} onChange={e => updateThingDraft('value', e.target.value)} /></div></label><label className="thingFieldLabel">描述 （不少于4汉字或8个字母）<textarea placeholder={THING_COPY[thingsMode]?.placeholder} value={thingDraft.reason || ''} onChange={e => updateThingDraft('reason', e.target.value)} /></label><div className="thingPawPreview"><span>👁️</span><p>雪粒会查看你的理由。</p></div><button className="saveThingBtn" disabled={(!editingThingId && things.length >= THING_LIMIT) || !thingDraft.year || !thingDraft.month || !thingDraft.name || thingTextUnits(thingDraft.name) > THING_NAME_MAX_UNITS || !thingDraft.reason || thingTextUnits(thingDraft.reason) < THING_REASON_MIN_UNITS || ((thingDraft.valueType || 'priceless') === 'gold' && !thingDraft.value)} onClick={saveThing}>{editingThingId ? '保存修改' : '让雪粒盖章'}</button></section> : <>
               <section className="thingsListCard"><div className="thingsListHeader"><span>{currentThingList.length}件 · {thingTotals[thingsMode]?.gold || 0} 金粒 · {thingTotals[thingsMode]?.priceless || 0} 件无价</span></div><div className="thingsList">{currentThingList.map(item => <button key={item.id} className={selectedThing?.id === item.id ? 'thingListItem active' : 'thingListItem'} onClick={() => selectThing(item.id)}><small>{item.year}年{item.month}月</small><strong>{item.name}</strong></button>)}</div></section>
-              <section className="thingDetailCard">{selectedThing ? <>{selectedThing.photo ? <img className="thingDetailPhoto" src={selectedThing.photo} alt={selectedThing.name} /> : <div className="thingDetailPhoto thingDetailPhotoEmpty">🐾</div>}<h3>{selectedThing.name}</h3><small>{selectedThing.year}年{selectedThing.month}月 · {THING_TYPES[selectedThing.type]} · 估值 {thingValueLabel(selectedThing)}</small><p className="thingReason">{selectedThing.reason}</p><div className="thingPawSeal"><div className="thingSealLine thingVisitLine"><ThingPaws item={selectedThing} className="thingVisitPaws" compact /><p>雪粒已经来看过 {Number(selectedThing.pawCount || 1)} 次。</p></div><div className="thingActionButtons">{selectedThing.type === 'wish' && <button onClick={() => moveThing(selectedThing.id, 'treasure')}>此物到手</button>}{selectedThing.type === 'treasure' && <button onClick={() => moveThing(selectedThing.id, 'memory')}>舍离此物</button>}<button className="thingIconAction deleteThingBtn" title="删除记录" aria-label="删除记录" onClick={() => requestDeleteThing(selectedThing.id)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5" /></svg></button><button className="thingIconAction" title="编辑修改" aria-label="编辑修改" onClick={() => startEditThing(selectedThing)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4Zm9-13 4 4" /></svg></button></div></div></> : null}</section></>}
+              <section className="thingDetailCard">{selectedThing ? <>{Array.isArray(selectedThing.photos) && selectedThing.photos.length > 0 ? <div className="thingDetailPhotoGrid">{selectedThing.photos.map((photo, index) => <button type="button" className="thingDetailPhotoButton" key={photo.id || photo.assetIdentifier || photo.uri || index} onClick={() => openThingPhoto(photo, selectedThing.photos, index)}><img src={photo.thumbnail} alt={`${selectedThing.name}照片${index + 1}`} /></button>)}</div> : <div className="thingDetailPhoto thingDetailPhotoEmpty">🐾</div>}<h3>{selectedThing.name}</h3><small>{selectedThing.year}年{selectedThing.month}月 · {THING_TYPES[selectedThing.type]} · 估值 {thingValueLabel(selectedThing)}</small><p className="thingReason">{selectedThing.reason}</p><div className="thingPawSeal"><div className="thingSealLine thingVisitLine"><ThingPaws item={selectedThing} className="thingVisitPaws" compact /><p>雪粒已经来看过 {Number(selectedThing.pawCount || 1)} 次。</p></div><div className="thingActionButtons">{selectedThing.type === 'wish' && <button onClick={() => moveThing(selectedThing.id, 'treasure')}>此物到手</button>}{selectedThing.type === 'treasure' && <button onClick={() => moveThing(selectedThing.id, 'memory')}>舍离此物</button>}<button className="thingIconAction deleteThingBtn" title="删除记录" aria-label="删除记录" onClick={() => requestDeleteThing(selectedThing.id)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5" /></svg></button><button className="thingIconAction" title="编辑修改" aria-label="编辑修改" onClick={() => startEditThing(selectedThing)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4Zm9-13 4 4" /></svg></button></div></div></> : null}</section></>}
             </div>
             {!showAddForm && <button type="button" className="thingsAddLink" onClick={openAddThing}>＋ 添加记录</button>}
           </div>

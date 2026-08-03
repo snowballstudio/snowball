@@ -3,10 +3,6 @@ import { Capacitor, registerPlugin } from '@capacitor/core'
 const IOSScreenTime = registerPlugin('IOSScreenTime')
 const DEFAULT_CUTOFF_HOUR = 5
 const DEFAULT_MINIMUM_ACTIVITY_SECONDS = 10
-let sevenDaySummaryRefreshPromise = null
-let lastSevenDaySummaryRefreshAt = 0
-let lastSevenDaySummaryPayload = null
-const SEVEN_DAY_REFRESH_THROTTLE_MS = 30 * 1000
 
 export function isIOSScreenTimeAvailable() {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios'
@@ -41,55 +37,14 @@ export async function openIOSScreenTimeReport(date) {
   return IOSScreenTime.presentReport({ date: String(date || '') })
 }
 
-export async function openIOSSevenDayAverageReport() {
+export async function openIOSSevenDayDailyTable() {
   if (!isIOSScreenTimeAvailable()) {
-    throw new Error('苹果七日平均报告只能在 iPhone 真机打开。')
+    throw new Error('苹果七日屏幕时间表只能在 iPhone 真机打开。')
   }
 
-  return IOSScreenTime.presentSevenDayReport()
+  return IOSScreenTime.presentSevenDayDailyTable()
 }
 
-
-export async function refreshIOSSevenDaySummary({
-  force = false,
-} = {}) {
-  if (!isIOSScreenTimeAvailable()) {
-    return {
-      refreshed: false,
-      sevenDayAverageMinutes: 0,
-      days: [],
-    }
-  }
-
-  if (!force && sevenDaySummaryRefreshPromise) {
-    return sevenDaySummaryRefreshPromise
-  }
-
-  const now = Date.now()
-  if (
-    !force &&
-    lastSevenDaySummaryPayload &&
-    now - lastSevenDaySummaryRefreshAt < SEVEN_DAY_REFRESH_THROTTLE_MS
-  ) {
-    return lastSevenDaySummaryPayload
-  }
-
-  sevenDaySummaryRefreshPromise = IOSScreenTime.refreshSevenDaySummary()
-    .then(payload => {
-      const days = Array.isArray(payload?.days) ? payload.days : []
-      if (!days.length) {
-        throw new Error('苹果七日报告暂时只返回了空快照。')
-      }
-      lastSevenDaySummaryRefreshAt = Date.now()
-      lastSevenDaySummaryPayload = payload
-      return payload
-    })
-    .finally(() => {
-      sevenDaySummaryRefreshPromise = null
-    })
-
-  return sevenDaySummaryRefreshPromise
-}
 
 function dateKey(value) {
   const text = String(value || '').trim()
@@ -388,48 +343,6 @@ export function recalculateIOSOffscreenRecord(
  *   }]
  * }
  */
-export async function readIOSScreenTimeData({
-  startDate,
-  days = 1,
-  cutoffHour = DEFAULT_CUTOFF_HOUR,
-  minimumActivitySeconds = DEFAULT_MINIMUM_ACTIVITY_SECONDS,
-} = {}) {
-  if (!isIOSScreenTimeAvailable()) {
-    throw new Error('苹果屏幕时间数据只能在 iPhone 真机读取。')
-  }
-
-  if (typeof IOSScreenTime.readActivityData !== 'function') {
-    throw new Error('当前 iOS 原生插件尚未实现 readActivityData。')
-  }
-
-  // 主页面打开后的正式同步会先触发一个不可见的七日 Report，
-  // 让 Extension 自动计算并写入昨日及之前七个完整自然日。
-  try {
-    await refreshIOSSevenDaySummary()
-  } catch (error) {
-    // 刷新稍慢时仍继续读取上一次缓存，不阻塞雪球主页。
-    console.warn('苹果七日屏时刷新暂未完成。', error)
-  }
-
-  const payload = await IOSScreenTime.readActivityData({
-    startDate: String(startDate || ''),
-    days: Math.max(1, Math.round(Number(days || 1))),
-    cutoffHour: Number(cutoffHour || DEFAULT_CUTOFF_HOUR),
-    minimumActivitySeconds: Number(minimumActivitySeconds || DEFAULT_MINIMUM_ACTIVITY_SECONDS),
-  })
-
-  const rawDays = Array.isArray(payload?.days) ? payload.days : []
-  return {
-    ...payload,
-    days: rawDays.map(day => ({
-      ...day,
-      date: dateKey(day?.date),
-    })),
-  }
-}
-
-
-// MARK: - DeviceActivity Monitor 最小验证
 
 export async function startIOSMonitorMiniTest() {
   if (!isIOSScreenTimeAvailable()) {

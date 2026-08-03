@@ -1069,12 +1069,12 @@
 .footprintPhotoPreviewGrid {
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 8px !important;
+  gap: 3px !important;
   margin: 6px 0 10px 80px !important;
 }
 
 .footprintPhotoPreview { border-radius: 0 !important; overflow: hidden !important; background: #eee !important; }
-.footprintPhotoPreview img { width: 100% !important; height: 64px !important; object-fit: cover !important; display: block !important; }
+.footprintPhotoPreview img { width: 100% !important; height: 72px !important; object-fit: cover !important; display: block !important; }
 .footprintPhotoPreview button { width: 100% !important; border: none !important; background: #eee !important; color: #555 !important; font-size: 11px !important; padding: 3px !important; }
 
 /* ======================================================
@@ -1100,7 +1100,7 @@
 .mapFootprintPopup strong span { display: inline-block !important; padding: 6px 11px !important; border-radius: 8px !important; background: rgba(241,223,177,0.76) !important; color: #17304a !important; }
 .mapFootprintPopup p { margin: 8px 0 0 !important; color: #34475a !important; font-size: 13px !important; line-height: 1.45 !important; }
 .mapFootprintPopupClose { position: absolute !important; right: 10px !important; top: 8px !important; border: none !important; background: transparent !important; color: #9b9da0 !important; font-size: 20px !important; }
-.mapFootprintPhotos { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 6px !important; margin-top: 10px !important; }
+.mapFootprintPhotos { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 3px !important; margin-top: 10px !important; }
 .mapFootprintPhotoButton { border: none !important; background: transparent !important; padding: 0 !important; }
 .mapFootprintPhotos img { width: 100% !important; height: 68px !important; object-fit: cover !important; border-radius: 4px !important; display: block !important; }
 .mapFootprintPopupActions { display: flex !important; gap: 16px !important; margin-top: 12px !important; }
@@ -1435,9 +1435,9 @@
 }
 
 .mapFootprintPopup {
-  top: 54% !important;
+  top: 50% !important;
   width: min(550px, 75vw) !important;
-  max-height: min(105%, 720px) !important;
+  max-height: min(95%, 720px) !important;
   padding: 10px 20px 220px !important;
   border-radius: 18px !important;
   font-size: 15px !important;
@@ -1455,7 +1455,7 @@
 }
 
 .mapFootprintPhotos {
-  gap: 18px !important;
+  gap: 3px !important;
   margin-top: 12px !important;
 }
 
@@ -2226,7 +2226,7 @@ body.futureFootprintPlanOpen .compactFootprintList {
 
 .footprintPhotoPreviewOpen img {
   width: 100% !important;
-  height: 64px !important;
+  height: 72px !important;
   object-fit: cover !important;
   display: block !important;
 }
@@ -2370,3 +2370,109 @@ body.futureFootprintPlanOpen .compactFootprintList {
 .mapFootprintPopup.isMaximized * {
   visibility: visible !important;
 }
+
+/* ======================================================
+   2026-08-02｜足迹照片紧凑排列与小型删除叉
+   微调照片间距：修改 --fp-photo-grid-gap。
+   微调删除叉大小：修改 --fp-photo-delete-size。
+   ====================================================== */
+:root {
+  --fp-photo-grid-gap: 3px;
+  --fp-photo-delete-size: 17px;
+}
+
+.footprintPhotoPreviewGrid,
+.mapFootprintPhotos,
+.mapFootprintPopup.isMaximized .mapFootprintPhotos {
+  gap: var(--fp-photo-grid-gap) !important;
+}
+
+.footprintPhotoPreview {
+  position: relative !important;
+  overflow: visible !important;
+  background: transparent !important;
+}
+
+.footprintPhotoPreviewOpen {
+  overflow: hidden !important;
+  background: #eee !important;
+}
+
+.footprintPhotoPreview .footprintPhotoDeleteButton {
+  position: absolute !important;
+  top: 3px !important;
+  right: 3px !important;
+  z-index: 5 !important;
+  width: var(--fp-photo-delete-size) !important;
+  height: var(--fp-photo-delete-size) !important;
+  min-width: var(--fp-photo-delete-size) !important;
+  min-height: var(--fp-photo-delete-size) !important;
+  display: grid !important;
+  place-items: center !important;
+  margin: 0 !important;
+  padding: 0 0 1px !important;
+  border: 1px solid rgba(128, 134, 140, 0.48) !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: #555d64 !important;
+  font-family: Arial, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.20) !important;
+  cursor: pointer !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.footprintPhotoPreview .footprintPhotoDeleteButton:active {
+  transform: scale(0.92) !important;
+  background: #fff !important;
+}
+
+/* ======================================================
+   2026-08-02｜修复 Android 索引照片删除叉触控
+   可见圆叉仍为 17px，但真实触控区扩大为 30px。
+   避免华为 WebView 把点击落到下层“打开原图”按钮。
+   ====================================================== */
+.footprintPhotoPreview .footprintPhotoDeleteButton {
+  top: -3px !important;
+  right: -3px !important;
+  z-index: 20 !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.footprintPhotoPreview .footprintPhotoDeleteButton > span {
+  width: var(--fp-photo-delete-size, 17px) !important;
+  height: var(--fp-photo-delete-size, 17px) !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 0 1px !important;
+  border: 1px solid rgba(128, 134, 140, 0.48) !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #555d64 !important;
+  font-family: Arial, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.20) !important;
+  pointer-events: none !important;
+}
+
+.footprintPhotoPreview .footprintPhotoDeleteButton:active > span {
+  transform: scale(0.92) !important;
+  background: #fff !important;
+}
+

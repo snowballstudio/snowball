@@ -291,6 +291,34 @@
   margin-bottom: 14px;
 }
 
+.thingDetailPhotoGrid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  margin-bottom: 14px;
+}
+
+.thingDetailPhotoButton {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #eef3f6;
+  box-shadow: none;
+}
+
+.thingDetailPhotoButton img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .thingDetailPhotoEmpty {
   display: grid;
   place-items: center;
@@ -1820,24 +1848,92 @@
   padding: 0 !important;
   font-size: 22px !important;
 }
+.thingPhotoEditor {
+  margin: 10px 0 14px;
+}
+
 .thingPhotoUpload {
   position: relative;
   width: 92px;
   min-height: 76px;
-  margin: 10px 0 14px;
+  margin: 0 0 6px;
   display: grid;
   place-items: center;
-  gap: 2px;
+  align-content: center;
+  gap: 3px;
   border: none;
   border-radius: 14px;
   background: rgba(255,255,255,0.48);
   overflow: hidden;
   cursor: pointer;
 }
-.thingPhotoUpload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.thingPhotoUpload img { width: 100%; height: 76px; object-fit: contain; background: rgba(239,243,246,0.9); }
-.thingFolderIcon { font-size: 34px; line-height: 1; }
-.thingPhotoUpload small { font-size: 11px; color: #788493; }
+
+.thingPhotoUpload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.thingPhotoUploadIcon {
+  display: block;
+  width: 38px !important;
+  height: 38px !important;
+  object-fit: contain !important;
+  background: transparent !important;
+  pointer-events: none;
+}
+
+.thingPhotoUpload small {
+  font-size: 11px;
+  color: #788493;
+}
+
+.thingPhotoDraftGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.thingPhotoDraftItem {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  overflow: visible;
+  background: #eef3f6;
+}
+
+.thingPhotoDraftItem > img {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 4px;
+  background: #eef3f6 !important;
+}
+
+.thingPhotoDeleteButton {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  z-index: 3;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0 0 1px;
+  margin: 0;
+  border: 1px solid rgba(105, 112, 120, 0.45);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.94);
+  color: #59616a;
+  font-size: 15px;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.16);
+  touch-action: manipulation;
+}
 .saveThingBtn { background: rgba(255,255,255,0.72) !important; color: #2a3950 !important; font-weight: 600 !important; }
 
 .thingQuietModal { position: relative; padding-top: 30px !important; }
@@ -2753,6 +2849,13 @@
     height: 176px !important;
     margin-bottom: 8px !important;
     border-radius: 18px !important;
+  }
+
+  .thingsSubPage:not(.isAdding) .thingDetailPhotoGrid {
+    flex: 0 0 auto;
+    width: 100%;
+    gap: 3px !important;
+    margin-bottom: 8px !important;
   }
 
   .thingsSubPage:not(.isAdding) .thingDetailCard h3 {

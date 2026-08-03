@@ -15,9 +15,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "requestAuthorization", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "presentReport", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "presentSevenDayReport", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "refreshSevenDaySummary", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "readActivityData", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "debugReadScreenTimeCache", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "presentSevenDayDailyTable", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startOffscreenMonitoring", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readOffscreenMonitoringData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopOffscreenMonitoring", returnType: CAPPluginReturnPromise),
@@ -179,7 +177,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
 
-    @objc public func refreshSevenDaySummary(
+    @objc public func presentSevenDayDailyTable(
         _ call: CAPPluginCall
     ) {
         guard AuthorizationCenter.shared.authorizationStatus
@@ -229,397 +227,28 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
 
-            let report = DeviceActivityReport(
-                .init("Snowball Seven Day Average"),
-                filter: filter
+            let context = DeviceActivityReport.Context(
+                "Snowball Seven Day Daily Table"
             )
-            let host = UIHostingController(rootView: report)
-
-            presenter.addChild(host)
-            // DeviceActivityReport 必须真正进入可布局的视图层级，
-            // 过小或完全移出屏幕的视图在部分 iPhone 上不会启动 Report Extension。
-            // 这里给它一个屏幕内的有效尺寸，但保持几乎透明且不可交互。
-            let bounds = presenter.view.bounds
-            host.view.frame = CGRect(
-                x: 0,
-                y: 0,
-                width: max(240, bounds.width),
-                height: max(240, min(bounds.height, 420))
-            )
-            host.view.alpha = 0.02
-            host.view.isUserInteractionEnabled = false
-            host.view.backgroundColor = .clear
-            host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            presenter.view.insertSubview(host.view, at: 0)
-            host.didMove(toParent: presenter)
-            host.view.setNeedsLayout()
-            host.view.layoutIfNeeded()
-
-            let startedAt = Date()
-            self.waitForSevenDaySummary(
-                newerThan: startedAt,
-                attemptsRemaining: 80
-            ) { payload in
-                DispatchQueue.main.async {
-                    host.willMove(toParent: nil)
-                    host.view.removeFromSuperview()
-                    host.removeFromParent()
-
-                    if let payload {
-                        call.resolve(payload)
-                    } else {
-                        call.reject(
-                            "苹果七日屏幕时间仍在准备，请稍后重新打开雪球。"
-                        )
+            let reportView = IOSSevenDayDailyTableContainer(
+                context: context,
+                filter: filter,
+                onClose: {
+                    presenter.dismiss(animated: true) {
+                        call.resolve([
+                            "closed": true,
+                            "startDate":
+                                self.formatSnowballDate(start),
+                            "endDate":
+                                self.formatSnowballDate(yesterday)
+                        ])
                     }
                 }
-            }
-        }
-    }
-
-
-
-    private let screenTimeAppGroupIdentifier =
-        "group.com.snowball.health"
-    private let screenTimeDetailFileName =
-        "snowball-ios-screen-time-days-v1.json"
-    private let screenTimeSummaryFileName =
-        "snowball-ios-screen-time-seven-day-summary-v1.json"
-    private let screenTimeDiagnosticFileName =
-        "snowball-ios-screen-time-extension-diagnostic-v1.json"
-
-    private func screenTimeSharedFileData(
-        fileName: String
-    ) -> Data? {
-        guard let containerURL = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier:
-                screenTimeAppGroupIdentifier
-        ) else {
-            return nil
-        }
-
-        return try? Data(
-            contentsOf: containerURL.appendingPathComponent(
-                fileName,
-                isDirectory: false
-            )
-        )
-    }
-
-
-    @objc public func debugReadScreenTimeCache(
-        _ call: CAPPluginCall
-    ) {
-        let appGroupIdentifier = "group.com.snowball.health"
-        let summaryKey =
-            "snowball.ios-screen-time.seven-day-summary.v1"
-        let detailKey =
-            "snowball.ios-screen-time.days.v1"
-
-        guard let defaults = UserDefaults(
-            suiteName: appGroupIdentifier
-        ) else {
-            call.resolve([
-                "groupExists": false,
-                "appGroupIdentifier": appGroupIdentifier,
-                "message": "主 App 无法打开 App Group。"
-            ])
-            return
-        }
-
-        let containerPath = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier:
-                appGroupIdentifier
-        )?.path ?? ""
-
-        let summaryDefaultsData =
-            defaults.data(forKey: summaryKey)
-        let detailDefaultsData =
-            defaults.data(forKey: detailKey)
-        let summaryFileData = screenTimeSharedFileData(
-            fileName: screenTimeSummaryFileName
-        )
-        let detailFileData = screenTimeSharedFileData(
-            fileName: screenTimeDetailFileName
-        )
-        let extensionDiagnosticData =
-            screenTimeSharedFileData(
-                fileName: screenTimeDiagnosticFileName
             )
 
-        let summaryData =
-            summaryFileData ?? summaryDefaultsData
-        let detailData =
-            detailFileData ?? detailDefaultsData
-
-        func dictionary(
-            from data: Data?
-        ) -> [String: Any]? {
-            guard let data else {
-                return nil
-            }
-
-            return try? JSONSerialization
-                .jsonObject(with: data) as? [String: Any]
-        }
-
-        func jsonPreview(
-            _ data: Data?
-        ) -> String {
-            guard let data else {
-                return ""
-            }
-
-            let maximumBytes = 16_000
-            let previewData = data.prefix(maximumBytes)
-            let text = String(
-                data: previewData,
-                encoding: .utf8
-            ) ?? "<无法转换为 UTF-8>"
-
-            return data.count > maximumBytes
-                ? text + "\n…（内容已截断）"
-                : text
-        }
-
-        let summaryObject = dictionary(from: summaryData)
-        let detailObject = dictionary(from: detailData)
-
-        let summaryDays =
-            summaryObject?["days"] as? [[String: Any]] ?? []
-        let detailDays =
-            detailObject?["days"] as? [[String: Any]] ?? []
-
-        let summaryDates = summaryDays.compactMap {
-            $0["date"] as? String
-        }
-        let detailDates = detailDays.compactMap {
-            $0["date"] as? String
-        }
-
-        call.resolve([
-            "groupExists": true,
-            "appGroupIdentifier": appGroupIdentifier,
-            "containerPath": containerPath,
-
-            "summaryKey": summaryKey,
-            "summaryExists": summaryData != nil,
-            "summaryBytes": summaryData?.count ?? 0,
-            "summaryJSONValid": summaryObject != nil,
-            "summaryAverageMinutes":
-                summaryObject?["averageMinutes"] ?? NSNull(),
-            "summaryDayCount":
-                summaryObject?["dayCount"] ?? summaryDays.count,
-            "summaryDaysCount": summaryDays.count,
-            "summaryDates": summaryDates,
-            "summaryUpdatedAt":
-                summaryObject?["updatedAt"] ?? "",
-            "summaryVersion":
-                summaryObject?["version"] ?? NSNull(),
-            "summaryJSONPreview": jsonPreview(summaryData),
-
-            "detailKey": detailKey,
-            "detailExists": detailData != nil,
-            "detailBytes": detailData?.count ?? 0,
-            "detailJSONValid": detailObject != nil,
-            "detailDaysCount": detailDays.count,
-            "detailDates": detailDates,
-            "detailUpdatedAt":
-                detailObject?["updatedAt"] ?? "",
-            "detailVersion":
-                detailObject?["version"] ?? NSNull(),
-            "detailJSONPreview": jsonPreview(detailData),
-
-            "summaryDefaultsExists":
-                summaryDefaultsData != nil,
-            "summaryFileExists":
-                summaryFileData != nil,
-            "summaryFileBytes":
-                summaryFileData?.count ?? 0,
-            "detailDefaultsExists":
-                detailDefaultsData != nil,
-            "detailFileExists":
-                detailFileData != nil,
-            "detailFileBytes":
-                detailFileData?.count ?? 0,
-            "extensionDiagnosticExists":
-                extensionDiagnosticData != nil,
-            "extensionDiagnosticBytes":
-                extensionDiagnosticData?.count ?? 0,
-            "extensionDiagnosticPreview":
-                jsonPreview(extensionDiagnosticData),
-
-            "allSharedDefaultsKeys":
-                Array(defaults.dictionaryRepresentation().keys)
-                    .sorted(),
-            "checkedAt":
-                ISO8601DateFormatter().string(from: Date())
-        ])
-    }
-
-
-    @objc public func readActivityData(_ call: CAPPluginCall) {
-        guard AuthorizationCenter.shared.authorizationStatus
-                == .approved else {
-            call.reject("请先授权苹果屏幕时间。")
-            return
-        }
-
-        guard let defaults = UserDefaults(
-            suiteName: screenTimeAppGroupIdentifier
-        ) else {
-            call.reject("无法打开雪球 App Group 共享容器。")
-            return
-        }
-
-        let detailDefaultsData = defaults.data(
-            forKey: "snowball.ios-screen-time.days.v1"
-        )
-        let summaryDefaultsData = defaults.data(
-            forKey:
-                "snowball.ios-screen-time.seven-day-summary.v1"
-        )
-
-        let detailFileData = screenTimeSharedFileData(
-            fileName: screenTimeDetailFileName
-        )
-        let summaryFileData = screenTimeSharedFileData(
-            fileName: screenTimeSummaryFileName
-        )
-
-        // 共享文件优先，旧 UserDefaults 作为兼容回退。
-        let detailData =
-            detailFileData ?? detailDefaultsData
-        let summaryData =
-            summaryFileData ?? summaryDefaultsData
-
-        do {
-            let detailCache: [String: Any] = {
-                guard let detailData,
-                      let object = try? JSONSerialization
-                        .jsonObject(with: detailData)
-                        as? [String: Any] else {
-                    return [:]
-                }
-                return object
-            }()
-
-            let summaryCache: [String: Any] = {
-                guard let summaryData,
-                      let object = try? JSONSerialization
-                        .jsonObject(with: summaryData)
-                        as? [String: Any] else {
-                    return [:]
-                }
-                return object
-            }()
-
-            var daysByDate: [String: [String: Any]] = [:]
-
-            for day in (
-                detailCache["days"] as? [[String: Any]] ?? []
-            ) {
-                if let date = day["date"] as? String {
-                    daysByDate[date] = day
-                }
-            }
-
-            // 七日汇总包含完整的每日总时长与 App TOP 数据，
-            // 应覆盖旧的空数据；已有分时详情仍保留在 detail cache。
-            for summaryDay in (
-                summaryCache["days"] as? [[String: Any]] ?? []
-            ) {
-                guard let date =
-                    summaryDay["date"] as? String else {
-                    continue
-                }
-
-                if var detailed = daysByDate[date] {
-                    detailed["screenMinutes"] =
-                        summaryDay["screenMinutes"]
-                    detailed["totalActivitySeconds"] =
-                        summaryDay["totalActivitySeconds"]
-                    detailed["apps"] = summaryDay["apps"]
-                    daysByDate[date] = detailed
-                } else {
-                    daysByDate[date] = summaryDay
-                }
-            }
-
-            let allDays = daysByDate.values.sorted {
-                ($0["date"] as? String ?? "")
-                    < ($1["date"] as? String ?? "")
-            }
-            let requestedEndDate =
-                parseSnowballDate(call.getString("startDate"))
-                ?? Date()
-            let requestedCount =
-                max(1, call.getInt("days") ?? 1)
-            let calendar = Calendar.autoupdatingCurrent
-            let endDate = calendar.startOfDay(
-                for: requestedEndDate
-            )
-            let startDate = calendar.date(
-                byAdding: .day,
-                value: -(requestedCount - 1),
-                to: endDate
-            ) ?? endDate
-
-            let filteredDays = allDays.filter { day in
-                guard let text = day["date"] as? String,
-                      let date = self.parseSnowballDate(text)
-                else {
-                    return false
-                }
-
-                let normalized =
-                    calendar.startOfDay(for: date)
-                return normalized >= startDate
-                    && normalized <= endDate
-            }.sorted { left, right in
-                (left["date"] as? String ?? "")
-                    < (right["date"] as? String ?? "")
-            }
-
-            call.resolve([
-                "days": filteredDays,
-                "sevenDayAverageMinutes":
-                    summaryCache["averageMinutes"] ?? 0,
-                "sevenDayCount":
-                    summaryCache["dayCount"] ?? 7,
-                "updatedAt":
-                    summaryCache["updatedAt"]
-                    ?? detailCache["updatedAt"]
-                    ?? "",
-                "version":
-                    summaryCache["version"]
-                    ?? detailCache["version"]
-                    ?? 1,
-                "source":
-                    "ios-device-activity-report-cache",
-                "summaryTransport":
-                    summaryFileData != nil
-                    ? "app-group-file"
-                    : (
-                        summaryDefaultsData != nil
-                        ? "app-group-user-defaults"
-                        : "missing"
-                    ),
-                "detailTransport":
-                    detailFileData != nil
-                    ? "app-group-file"
-                    : (
-                        detailDefaultsData != nil
-                        ? "app-group-user-defaults"
-                        : "missing"
-                    )
-            ])
-        } catch {
-            call.reject(
-                "读取苹果屏幕时间共享数据失败：\(error.localizedDescription)",
-                nil,
-                error
-            )
+            let host = UIHostingController(rootView: reportView)
+            host.modalPresentationStyle = .fullScreen
+            presenter.present(host, animated: true)
         }
     }
 
@@ -1170,68 +799,6 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         ])
     }
 
-    private func waitForSevenDaySummary(
-        newerThan startedAt: Date,
-        attemptsRemaining: Int,
-        completion: @escaping ([String: Any]?) -> Void
-    ) {
-        let defaults = UserDefaults(
-            suiteName: "group.com.snowball.health"
-        )
-
-        if let data = defaults?.data(
-            forKey:
-                "snowball.ios-screen-time.seven-day-summary.v1"
-        ),
-        let object = try? JSONSerialization
-            .jsonObject(with: data) as? [String: Any],
-        let updatedText = object["updatedAt"] as? String,
-        let updatedDate =
-            ISO8601DateFormatter().date(from: updatedText),
-        updatedDate >= startedAt.addingTimeInterval(-1) {
-            let days = object["days"] as? [[String: Any]] ?? []
-            let validDays = days.filter { day in
-                guard let date = day["date"] as? String,
-                      !date.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                else { return false }
-                return day["screenMinutes"] != nil
-                    || day["totalActivitySeconds"] != nil
-                    || day["apps"] != nil
-            }
-
-            // 苹果第一次启动 Report Extension 时，可能先写入一个空快照，
-            // 随后才写入真正的七日结果。空快照不能作为刷新成功返回。
-            if !validDays.isEmpty {
-                completion([
-                    "refreshed": true,
-                    "days": validDays,
-                    "sevenDayAverageMinutes":
-                        object["averageMinutes"] ?? 0,
-                    "sevenDayCount":
-                        object["dayCount"] ?? validDays.count,
-                    "updatedAt": updatedText
-                ])
-                return
-            }
-        }
-
-        guard attemptsRemaining > 0 else {
-            completion(nil)
-            return
-        }
-
-        DispatchQueue.main.asyncAfter(
-            deadline: .now() + 0.25
-        ) {
-            self.waitForSevenDaySummary(
-                newerThan: startedAt,
-                attemptsRemaining:
-                    attemptsRemaining - 1,
-                completion: completion
-            )
-        }
-    }
-
     private func statusPayload() -> [String: Any] {
         let status = AuthorizationCenter.shared.authorizationStatus
 
@@ -1327,6 +894,26 @@ private struct IOSSevenDayReportContainer: View {
         NavigationStack {
             DeviceActivityReport(context, filter: filter)
                 .navigationTitle("七日平均屏时")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("关闭", action: onClose)
+                    }
+                }
+        }
+    }
+}
+
+
+private struct IOSSevenDayDailyTableContainer: View {
+    let context: DeviceActivityReport.Context
+    let filter: DeviceActivityFilter
+    let onClose: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            DeviceActivityReport(context, filter: filter)
+                .navigationTitle("七日屏幕时间")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {

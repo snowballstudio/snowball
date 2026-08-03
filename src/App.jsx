@@ -16,7 +16,6 @@ import IOSScreenTimeDeveloperPanel from './components/ios-screen-time/IOSScreenT
 import ScreenTimeDataPanel from './components/ios-screen-time/ScreenTimeDataPanel.jsx'
 import OffscreenTimeDataPanel from './components/ios-screen-time/OffscreenTimeDataPanel.jsx'
 import {
-  normalizeIOSScreenTimePayload,
   offscreenCalculatedTimeForDate,
   screenSystemTotalMinutesForDate,
 } from './components/ios-screen-time/screenTimeDataService.js'
@@ -24,9 +23,8 @@ import {
   calculateIOSOffscreenDay,
   recalculateIOSOffscreenRecord,
   getIOSScreenTimeStatus,
-  readIOSScreenTimeData,
   openIOSScreenTimeReport,
-  openIOSSevenDayAverageReport,
+  openIOSSevenDayDailyTable,
 } from './components/ios-screen-time/iosScreenTimeService.js'
 import { restoreIOSPlaybackAudioSession } from './components/audio/iosAudioSessionService.js'
 import { isPhotoIndexAvailable, pickPhotoIndexes, presentIndexedPhoto } from './components/photo-index/photoIndexService.js'
@@ -37,7 +35,6 @@ const STORAGE_KEY = 'healthy-snowball-v8'
 const TEST_PASSWORD = 'snowball'
 const CUSTOM_YEARS_BG_IDB_KEY = 'footprint-custom-background'
 const DeviceData = registerPlugin('DeviceData')
-const IOSScreenTimeNative = registerPlugin('IOSScreenTime')
 const DEVICE_USAGE_PROMPT_KEY = 'snowball-device-usage-prompt-v1'
 const DEVICE_INITIAL_IMPORT_DAYS = 7
 
@@ -308,7 +305,8 @@ const DEFAULT = {
   things: [],
   thingsSavedAt: 0,
   people: [],
-  thingDraft: { type: 'wish', year: '', month: '', name: '', reason: '', photo: '', valueType: 'priceless', value: '' },
+  peopleSelfPhotos: [],
+  thingDraft: { type: 'wish', year: '', month: '', name: '', reason: '', photos: [], valueType: 'priceless', value: '' },
   homePosition: null,
   homePositions: { world: null, china: null, local: null },
   deviceDailyInitialImportDone: false,
@@ -327,11 +325,27 @@ function dataForLocalStorage(source) {
     ...value,
     // 物馆照片只保存在 IndexedDB。localStorage 保存轻量记录，避免多张照片触发容量上限。
     things: Array.isArray(value.things)
-      ? value.things.map(item => ({ ...item, photo: '' }))
+      ? value.things.map(item => ({
+          ...item,
+          photos: [],
+        }))
       : [],
     thingDraft: value.thingDraft
-      ? { ...value.thingDraft, photo: '' }
+      ? {
+          ...value.thingDraft,
+          photos: [],
+        }
       : { ...DEFAULT.thingDraft },
+
+    // 人间照片索引与缩略图保存在独立 IndexedDB；
+    // localStorage 只保存人物资料，避免多图造成容量超限。
+    people: Array.isArray(value.people)
+      ? value.people.map(person => ({
+          ...person,
+          photos: [],
+        }))
+      : [],
+    peopleSelfPhotos: [],
   }
 }
 
@@ -1127,7 +1141,8 @@ const FOOD_ALIAS = {
   面包: ['面包', '吐司', '汉堡包', '切片', '菠萝包','肉松包', '白切面包', '三明治', '烤面包'],
   土豆: ['土豆', '马铃薯', '土豆泥','土豆丝','土豆片'],
   薯类: ['红薯', '烤地瓜','山药','凉薯','芋艿','芋头','烤地瓜','地瓜'],
-  其它主食: ['其它主食', '鸡蛋饼', '饼干',  '馅饼', '水晶饺', '烧卖', '燕饺','韭菜盒子', '发糕','窝窝头',  '饼', '鸡蛋灌饼','汤饭','菜饭','皮带面','粉丝','宽粉','鸭血粉丝','肉夹馍','手擀面','手撕饼'],
+  其它主食: ['其它主食', '鸡蛋饼', '饼干',  '馅饼', '水晶饺', '烧卖', '燕饺','韭菜盒子', '发糕','面筋','油面筋','小蛋糕','布丁','纸杯蛋糕',
+    '窝窝头',  '饼', '鸡蛋灌饼','汤饭','菜饭','皮带面','粉丝','宽粉','鸭血粉丝','肉夹馍','手擀面','手撕饼'],
   蛋: ['鸡蛋', '蛋', '鸭蛋', '鹌鹑蛋', '蒸鸡蛋','炖蛋','鹌鹑蛋','煮鸡蛋', '水煮蛋', '煎蛋', '炒蛋', '番茄炒蛋', '番茄炒鸡蛋','辣椒炒鸡蛋','煎鸡蛋', '荷包蛋'],
   奶制品: ['牛奶', '奶', '鲜奶', '酸奶', '起司', '椰奶','豆奶','奶酪', '椰奶', '芝士', '乳酪', '奶昔'],
   豆制品: ['豆浆', '豆奶', '豆腐', '老豆腐', '冻豆腐', '豆腐皮', '豆腐脑', '嫩豆腐', '麻婆豆腐', '家常豆腐', 
@@ -1137,7 +1152,7 @@ const FOOD_ALIAS = {
     '牛腱子','牛肉丝','牛肉丸','烤牛排','和牛','牛肚','百叶','羊排','烤羊排','羊','羊肉','涮羊肉','孜然牛肉','孜然羊肉',
     '牛蹄筋','羊蝎子','烤全羊'],
   猪肉: ['猪肉','蛋饺', '炒肉', '肉','咕咾肉','红烧大排','肉米','炖肉','里脊','里脊肉','肋条','梅头','肉末','红烧肉',
-    '狮子头','红烧狮子头','酱肘子','炒肉丝','辣椒炒肉','青椒炒肉','肉片','猪柳', '蹄膀', '猪皮冻', 
+    '狮子头','红烧狮子头','酱肘子','炒肉丝','辣椒炒肉','青椒炒肉','肉片','猪柳', '蹄膀', '猪皮冻', '排骨', 
     '红烧排骨', '肉汤',  '排骨汤',  '骨头汤',  '蹄膀汤', '猪脚', '猪耳朵', '夫妻肺片', '猪肚', '大排', '小排', '唐排',
      '回锅肉', '肉丝','肉糜','炒肉','五花肉', '肉丸'],
   香肠: ['香肠', '火腿肠', '午餐肉', '腊肠'],
@@ -2311,8 +2326,6 @@ function App() {
 
   const [customYearsBgImage, setCustomYearsBgImage] = useState(() => String(data.customYearsSceneImage || ''))
   const [showDataPanel, setShowDataPanel] = useState(false)
-  const [screenTimeCacheDiagnostic, setScreenTimeCacheDiagnostic] = useState(null)
-  const [screenTimeCacheDiagnosticLoading, setScreenTimeCacheDiagnosticLoading] = useState(false)
   const [installDateUnlocked, setInstallDateUnlocked] = useState(false)
 
   function unlockInstallDate(event) {
@@ -2919,186 +2932,9 @@ function App() {
   }, [homeYesterdaySteps, homeYesterdaySleep, sleepOk, todayDailyRecord, food.good, mood.good, currentBrainScore, data.messages])
 
 
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'ios') return undefined
+  // iPhone 屏幕时间不再导出到 React/localStorage。
+  // 所有苹果屏幕时间内容均由 DeviceActivityReport 原生视图直接显示。
 
-    let alive = true
-
-    async function syncIOSScreenTime() {
-      try {
-        const authorization = await getIOSScreenTimeStatus()
-        if (authorization?.status !== 'approved') return
-
-        const today = formatDateForDaily(todayText())
-        const yesterday = yesterdayText()
-        const current = (() => {
-          try {
-            const saved = localStorage.getItem(STORAGE_KEY)
-            return saved ? normalizeStoredData(JSON.parse(saved)) : data
-          } catch (_) {
-            return data
-          }
-        })()
-
-        const todayRawPayload = await readIOSScreenTimeData({
-          startDate: today,
-          days: 1,
-          cutoffHour: 5,
-          minimumActivitySeconds: 10,
-        })
-        const todayPayload = normalizeIOSScreenTimePayload(
-          todayRawPayload,
-          snowballAppNameFor,
-        )
-
-        // 七日平均属于汇总缓存，不依赖“今天”是否存在每日记录。
-        // 苹果七日报告只包含昨天及之前七个完整自然日，今天请求的 days 为空是正常的。
-        if (alive && Number.isFinite(Number(todayRawPayload?.sevenDayAverageMinutes))) {
-          setData(prev => ({
-            ...prev,
-            iosSevenDayAverageMinutes: Number(
-              todayRawPayload.sevenDayAverageMinutes
-            ),
-          }))
-        }
-
-        if (alive && todayPayload?.days?.length) {
-          setData(prev => {
-            let next = {
-              ...prev,
-              iosSevenDayAverageMinutes:
-                Number(todayRawPayload?.sevenDayAverageMinutes ?? prev.iosSevenDayAverageMinutes),
-            }
-            next = mergeNativeScreenDays(next, todayPayload, {
-              liveToday: true,
-              refreshDates: [today],
-            })
-            next = mergeNativeOffscreenDays(next, todayPayload, {
-              liveToday: true,
-              refreshDates: [today],
-            })
-            return mergeNativeDailyDays(next, todayPayload, {
-              liveToday: true,
-              refreshDates: [today],
-            })
-          })
-        }
-
-        const todayKey = dateKey(today)
-        const firstImport = !current.deviceScreenInitialImportDone
-        const yesterdayNeeded = current.lastDeviceScreenAutoSyncDate !== todayKey
-
-        const yesterdayDate = parseLocalDate(yesterday)
-        const firstDate = new Date(
-          yesterdayDate.getFullYear(),
-          yesterdayDate.getMonth(),
-          yesterdayDate.getDate(),
-        )
-        firstDate.setDate(firstDate.getDate() - (DEVICE_INITIAL_IMPORT_DAYS - 1))
-
-        const historyStart = firstImport
-          ? formatDateForDaily(firstDate)
-          : formatDateForDaily(current.installDate || yesterday)
-
-        const missingDates = (() => {
-          const existing = new Set(
-            (current.screenRecords || []).map(row => dateKey(row?.date))
-          )
-          return dateListInclusive(historyStart, yesterday)
-            .filter(date => !existing.has(dateKey(date)))
-        })()
-
-        let refreshDates = [...new Set([
-          ...(firstImport ? dateListInclusive(firstDate, yesterday) : []),
-          ...(yesterdayNeeded ? [yesterday] : []),
-          ...missingDates,
-        ].map(formatDateForDaily))]
-
-        // 七日报告的固定日期范围始终是“昨天及之前连续七个完整自然日”。
-        // 即使本地曾错误标记为已导入，也重新读取这七天，避免空表永久无法恢复。
-        if (!refreshDates.length) {
-          refreshDates = dateListInclusive(firstDate, yesterday)
-            .map(formatDateForDaily)
-        }
-
-        const oldest = refreshDates.map(parseLocalDate).sort((a, b) => a - b)[0]
-        const days = Math.max(
-          1,
-          Math.floor((yesterdayDate - oldest) / 86400000) + 1,
-        )
-
-        const historyRawPayload = await readIOSScreenTimeData({
-          startDate: yesterday,
-          days,
-          cutoffHour: 5,
-          minimumActivitySeconds: 10,
-        })
-        const historyPayload = normalizeIOSScreenTimePayload(
-          historyRawPayload,
-          snowballAppNameFor,
-        )
-
-        if (!alive) return
-
-        if (!historyPayload?.days?.length) {
-          if (Number.isFinite(Number(historyRawPayload?.sevenDayAverageMinutes))) {
-            setData(prev => ({
-              ...prev,
-              iosSevenDayAverageMinutes: Number(
-                historyRawPayload.sevenDayAverageMinutes
-              ),
-            }))
-          }
-          return
-        }
-
-        setData(prev => {
-          let next = mergeNativeScreenDays(prev, historyPayload, {
-            refreshDates,
-          })
-          next = mergeNativeOffscreenDays(next, historyPayload, {
-            refreshDates,
-          })
-          next = mergeNativeDailyDays(next, historyPayload, {
-            refreshDates,
-          })
-
-          return {
-            ...next,
-            iosSevenDayAverageMinutes:
-              Number(historyRawPayload?.sevenDayAverageMinutes ?? next.iosSevenDayAverageMinutes),
-            deviceScreenInitialImportDone: true,
-            lastDeviceScreenAutoSyncDate: todayKey,
-            lastDeviceAutoSyncAt: Date.now(),
-          }
-        })
-      } catch (error) {
-        console.warn('苹果屏幕时间正式数据同步失败。', error)
-      }
-    }
-
-    // 首次启动时苹果 Report Extension 可能先返回空快照，再在数秒后写入正式结果。
-    // 除立即同步外，主动安排两次回读，避免主页永久停留在第一次的 0 和空表。
-    syncIOSScreenTime()
-    const retryAfterFourSeconds = window.setTimeout(syncIOSScreenTime, 4000)
-    const retryAfterTenSeconds = window.setTimeout(syncIOSScreenTime, 10000)
-
-    function handleResume() {
-      if (document.visibilityState === 'hidden') return
-      syncIOSScreenTime()
-    }
-
-    document.addEventListener('visibilitychange', handleResume)
-    window.addEventListener('focus', handleResume)
-
-    return () => {
-      alive = false
-      window.clearTimeout(retryAfterFourSeconds)
-      window.clearTimeout(retryAfterTenSeconds)
-      document.removeEventListener('visibilitychange', handleResume)
-      window.removeEventListener('focus', handleResume)
-    }
-  }, [])
 
   const dailyMonthGroups = useMemo(() => buildDailyMonthGroups(latestRecords), [latestRecords])
   const dailyMonthKeys = useMemo(() => dailyMonthGroups.map(group => group.key).join('|'), [dailyMonthGroups])
@@ -3660,94 +3496,31 @@ function App() {
     setShowDataPanel(true)
   }
 
-  function openScreenTimeSummary() {
+  async function openScreenTimeSummary() {
+    if (
+      Capacitor.isNativePlatform()
+      && Capacitor.getPlatform() === 'ios'
+    ) {
+      try {
+        await openIOSSevenDayDailyTable()
+      } catch (error) {
+        setDailyNotice({
+          title: '苹果七日屏幕时间表无法打开',
+          text: String(
+            error?.message
+            || error
+            || '请确认已经授权苹果屏幕时间。'
+          ),
+        })
+      }
+      return
+    }
+
+    // Android / 网页开发模式仍保留雪粒自己的 ScreenTimeDataPanel。
     setDailyMode('screen-summary')
     setShowDataPanel(true)
   }
 
-
-  async function inspectIOSScreenTimeCache() {
-    if (
-      !Capacitor.isNativePlatform()
-      || Capacitor.getPlatform() !== 'ios'
-    ) {
-      setScreenTimeCacheDiagnostic({
-        error: '此诊断仅可在安装到 iPhone 的原生 APP 中运行。',
-      })
-      return
-    }
-
-    setScreenTimeCacheDiagnosticLoading(true)
-
-    try {
-      const result =
-        await IOSScreenTimeNative.debugReadScreenTimeCache()
-      setScreenTimeCacheDiagnostic(result || {
-        error: '原生诊断没有返回内容。',
-      })
-    } catch (error) {
-      setScreenTimeCacheDiagnostic({
-        error: String(
-          error?.message
-          || error
-          || '读取苹果共享缓存失败。'
-        ),
-      })
-    } finally {
-      setScreenTimeCacheDiagnosticLoading(false)
-    }
-  }
-
-  async function openSevenDayAverageTestReport() {
-    try {
-      // 显示之前已经成功的原生迷你七日报告。关闭时，Report Extension
-      // 已有机会把平均值和七个自然日写进 App Group。
-      await openIOSSevenDayAverageReport()
-
-      const yesterday = yesterdayText()
-      const rawPayload = await readIOSScreenTimeData({
-        startDate: yesterday,
-        days: 7,
-        cutoffHour: 5,
-        minimumActivitySeconds: 10,
-      })
-      const payload = normalizeIOSScreenTimePayload(
-        rawPayload,
-        snowballAppNameFor,
-      )
-
-      setData(prev => {
-        let next = {
-          ...prev,
-          iosSevenDayAverageMinutes: Number(
-            rawPayload?.sevenDayAverageMinutes ?? 0
-          ),
-        }
-
-        if (payload?.days?.length) {
-          const refreshDates = payload.days
-            .map(day => formatDateForDaily(day.date))
-          next = mergeNativeScreenDays(next, payload, { refreshDates })
-          next = mergeNativeOffscreenDays(next, payload, { refreshDates })
-          next = mergeNativeDailyDays(next, payload, { refreshDates })
-          next.deviceScreenInitialImportDone = true
-          next.lastDeviceScreenAutoSyncDate = dateKey(todayText())
-          next.lastDeviceAutoSyncAt = Date.now()
-        }
-
-        return next
-      })
-    } catch (error) {
-      setDailyNotice({
-        title: '七日平均报告无法打开',
-        text: String(
-          error?.message
-          || error
-          || '请确认已经授权苹果屏幕时间。'
-        ),
-      })
-    }
-  }
 
   async function openScreenDetailFromSummary(date) {
     const selectedDate =
@@ -4477,7 +4250,11 @@ function App() {
     })
   }
 
-  async function openFootprintPhoto(photo) {
+  async function openFootprintPhoto(
+    photo,
+    photoGroup = [],
+    currentIndex = 0,
+  ) {
     if (!photo) return
 
     if (typeof photo === 'string') {
@@ -4487,7 +4264,11 @@ function App() {
 
     if (isPhotoIndexAvailable() && (photo.assetIdentifier || photo.uri)) {
       try {
-        await presentIndexedPhoto(photo)
+        await presentIndexedPhoto(
+          photo,
+          photoGroup,
+          currentIndex,
+        )
       } catch (error) {
         setFootprintModal({
           title: '原照片无法打开',
@@ -4828,6 +4609,7 @@ const homeFloatingFootprintMemory = ''
         body={body}
         openDailyDetail={openDailyDetail}
         openScreenTimeSummary={openScreenTimeSummary}
+        useNativeIOSScreenTime={Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios'}
         homeYesterdaySleep={homeYesterdaySleep}
         furDisplay={furDisplay}
         food={food}
@@ -4853,6 +4635,7 @@ const homeFloatingFootprintMemory = ''
       {showPeoplePanel && (
         <People
           people={data.people || []}
+          selfPhotos={data.peopleSelfPhotos || []}
           birthDate={data.peopleBirthDate || ''}
           setData={setData}
           onClose={() => setShowPeoplePanel(false)}
@@ -5041,10 +4824,6 @@ max-width:78px !important;
               onBackHome={() => setShowDataPanel(false)}
               onOpenTrain={() => openTrainPage('yesterday')}
               onOpenDetailDate={openScreenDetailFromSummary}
-              onOpenSevenDayReport={openSevenDayAverageTestReport}
-              onInspectCache={inspectIOSScreenTimeCache}
-              cacheDiagnostic={screenTimeCacheDiagnostic}
-              cacheDiagnosticLoading={screenTimeCacheDiagnosticLoading}
             />
           ) : dailyMode === 'screen-detail' ? (
             <ScreenTimeDataPanel

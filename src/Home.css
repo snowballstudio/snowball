@@ -2112,3 +2112,38 @@ top: 2px;
     transform: none !important;
   }
 }
+
+/* ======================================================
+   2026-08-03｜主页“道晚安”银苹果图标
+   与通话图标使用相同的 17px 可视尺寸。
+   ====================================================== */
+.homeTodayActionRow .homeTodayEditText::before,
+.homeTodayStatusText::before {
+  content: none !important;
+  display: none !important;
+}
+
+.homeTodayActionRow .homeTodayDataIcon {
+  width: 17px !important;
+  min-width: 17px !important;
+  height: 17px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  line-height: 1 !important;
+}
+
+.homeTodayGoodNightIcon {
+  display: block !important;
+  width: 25px !important;
+  height: 25px !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  position: relative !important;
+  top: -4.5px !important;
+  left: -3px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
