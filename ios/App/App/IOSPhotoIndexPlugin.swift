@@ -527,14 +527,14 @@ private final class SnowballIndexedPhotoViewController:
                 return
             }
             currentIndex += 1
-            loadCurrentPhoto(animatedFrom: .right)
+            loadCurrentPhoto(animatedFrom: .fromRight)
 
         case .right:
             guard currentIndex > 0 else {
                 return
             }
             currentIndex -= 1
-            loadCurrentPhoto(animatedFrom: .left)
+            loadCurrentPhoto(animatedFrom: .fromLeft)
 
         default:
             return
