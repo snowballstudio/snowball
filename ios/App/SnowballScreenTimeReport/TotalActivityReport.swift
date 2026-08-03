@@ -364,8 +364,6 @@ struct SevenDayAverageReport: DeviceActivityReportScene {
             $0 + $1.totalDuration
         }
         let averageDuration = totalDuration / 7.0
-            ]
-        )
 
         return SevenDayAverageConfiguration(
             averageDuration: averageDuration,
@@ -499,8 +497,6 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
             $0 + $1.totalDuration
         }
         let averageDuration = totalDuration / 7.0
-            ]
-        )
 
         return SevenDayAverageConfiguration(
             averageDuration: averageDuration,
