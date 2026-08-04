@@ -2148,11 +2148,29 @@ top: 2px;
 }
 
 /* 苹果主页合并迷你报表：原生 DeviceActivityReport 覆盖到此槽位。 */
-.homeIOSMiniReportSlot {
+.homeIOSMiniReportButton {
+  position: relative;
   display: inline-block;
+  width: 162px;
+  height: 28px;
+  margin: 0 0 0 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  vertical-align: middle;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.homeIOSMiniReportButton:active {
+  opacity: 0.82;
+}
+
+.homeIOSMiniReportSlot {
+  display: block;
   width: 156px;
   height: 24px;
-  vertical-align: middle;
-  margin-left: 2px;
+  margin: 0;
+  pointer-events: none;
 }
 

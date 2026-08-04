@@ -156,6 +156,59 @@ function calendarYesterdayKey(now = new Date()) {
   ].join('/')
 }
 
+function restTimeMinutes(value) {
+  const text = String(value || '')
+    .trim()
+    .replace(/：/g, ':')
+
+  const match = text.match(/^(\d{1,2}):([0-5]\d)$/)
+  if (!match) return null
+
+  return Number(match[1]) * 60 + Number(match[2])
+}
+
+function latestSpokenOffscreenResult(record = {}) {
+  const candidates = [
+    {
+      time: record.androidOffscreenTime,
+      source: '安卓手机',
+    },
+    {
+      time: record.iosCalculatedOffscreenTime,
+      source: '苹果推算',
+    },
+    {
+      time: record.iosGoodNightTime,
+      source: '道晚安',
+    },
+    {
+      time: record.spokenRestTime,
+      source: '通话',
+    },
+  ]
+    .map(item => ({
+      ...item,
+      minutes: restTimeMinutes(item.time),
+    }))
+    .filter(item => item.minutes !== null)
+
+  if (!candidates.length) {
+    return {
+      time: '',
+      source: '',
+    }
+  }
+
+  const latest = candidates.reduce((best, item) =>
+    !best || item.minutes >= best.minutes ? item : best
+  , null)
+
+  return {
+    time: String(latest.time || '').replace(':', '：'),
+    source: latest.source,
+  }
+}
+
 function logicalRestHour(rawHour, text) {
   const hour = Number(rawHour)
   if (!Number.isFinite(hour) || hour < 0 || hour > 28) {
@@ -313,24 +366,37 @@ function updateSpokenRestRecord(data, spokenRest) {
           date: spokenDateKey,
         }
 
-  // 语音内容写入现有“苹果最后长时活动结束时间”字段。
-  // 原有 recalculateIOSOffscreenRecord 会继续把它与道晚安时间、
-  // 最后一小时拿起时间+活动时长进行比较，并取最晚值。
+  /*
+    通话时间单独保存在 spokenRestTime。
+    系统时间、道晚安和通话时间全部参与比较，取最晚值。
+    不区分苹果、安卓或网页用户。
+  */
   const recalculated = recalculateIOSOffscreenRecord({
     ...existing,
-    // 命中已有系统记录时保留它原本的日期显示格式；
-    // 新增时统一使用离机表的 YYYY/M/D 格式。
     date: rowIndex >= 0
       ? existing.date
       : spokenDateKey,
+    // 通话最新时间仍按原设计写入“最后长时活动结束时间”字段，
+    // 这样离机时间表可以直接看到本次通话更新。
     iosLastLongActivityEnd: spokenRest.time,
+    // 同时保留独立通话来源，继续参与系统/晚安/通话三者比较。
+    spokenRestTime: spokenRest.time,
   })
+
+  const latest = latestSpokenOffscreenResult(recalculated)
+  const nextOffscreenRecord = {
+    ...recalculated,
+    spokenRestTime: spokenRest.time,
+    calculatedOffscreenTime: latest.time,
+    dataSource: latest.source,
+    spokenRestUpdatedAt: Date.now(),
+  }
 
   const nextRecords = [...existingRecords]
   if (rowIndex >= 0) {
-    nextRecords[rowIndex] = recalculated
+    nextRecords[rowIndex] = nextOffscreenRecord
   } else {
-    nextRecords.push(recalculated)
+    nextRecords.push(nextOffscreenRecord)
   }
 
   nextRecords.sort((left, right) =>
@@ -339,9 +405,55 @@ function updateSpokenRestRecord(data, spokenRest) {
     ),
   )
 
+  const dailyRecords = Array.isArray(data?.records)
+    ? [...data.records]
+    : []
+
+  const dailyIndex = dailyRecords.findIndex(
+    row => normalizeOffscreenDateKey(row?.date)
+      === spokenDateKey,
+  )
+
+  const dailyCurrent =
+    dailyIndex >= 0
+      ? dailyRecords[dailyIndex]
+      : {
+          id: `daily-${spokenDateKey.replaceAll('/', '-')}`,
+          date: spokenDateKey,
+          steps: 0,
+          screenMinutes: 0,
+          food: '',
+          taste: '',
+          mood: '',
+          brainPercent: 0,
+          healthy: false,
+        }
+
+  const nextDailyRecord = {
+    ...dailyCurrent,
+    date: dailyCurrent.date || spokenDateKey,
+    offscreenTime: latest.time,
+    yesterdaySleep: latest.time,
+    spokenRestUpdatedAt: Date.now(),
+  }
+
+  if (dailyIndex >= 0) {
+    dailyRecords[dailyIndex] = nextDailyRecord
+  } else {
+    dailyRecords.push(nextDailyRecord)
+  }
+
+  dailyRecords.sort((left, right) =>
+    normalizeOffscreenDateKey(right?.date).localeCompare(
+      normalizeOffscreenDateKey(left?.date),
+    ),
+  )
+
   return {
     ...data,
     offscreenRecords: nextRecords,
+    records: dailyRecords,
+    yesterdaySleepTime: latest.time,
     lastSavedAt: Date.now(),
   }
 }

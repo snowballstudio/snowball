@@ -469,7 +469,7 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
 
         var days: [SevenDayScreenSummary] = []
 
-        for offset in stride(from: 6, through: 0, by: -1) {
+        for offset in stride(from: 29, through: 0, by: -1) {
             let date = calendar.date(
                 byAdding: .day,
                 value: -offset,
@@ -508,12 +508,12 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
         let totalDuration = days.reduce(0) {
             $0 + $1.totalDuration
         }
-        let averageDuration = totalDuration / 7.0
+        let averageDuration = totalDuration / 30.0
 
         return SevenDayAverageConfiguration(
             averageDuration: averageDuration,
             totalDuration: totalDuration,
-            dayCount: 7,
+            dayCount: 30,
             days: days
         )
     }

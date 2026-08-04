@@ -738,9 +738,36 @@ html,body{
   background: #071524;
 }
 
+.trainIOSReportPage > .trainBackBtn {
+  position: fixed !important;
+  left: 18px !important;
+  top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
+  z-index: 30 !important;
+  width: 42px !important;
+  height: 42px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: rgba(255,255,255,0.96) !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+  pointer-events: auto !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.trainIOSReportPage > .trainBackBtn::before {
+  content: "‹";
+  display: block;
+  font-size: 34px;
+  font-weight: 300;
+  line-height: 38px;
+}
+
 .trainIOSReportFallback {
   position: fixed;
   inset: 0;
+  z-index: 1;
   display: grid;
   place-items: center;
   padding: 40px;

@@ -977,6 +977,48 @@ function formatClockForDaily(value) {
   return `${hour}：${minute}`
 }
 
+function latestOffscreenResult(record = {}) {
+  const candidates = [
+    {
+      time: record.androidOffscreenTime,
+      source: '安卓手机',
+    },
+    {
+      time: record.iosCalculatedOffscreenTime,
+      source: '苹果推算',
+    },
+    {
+      time: record.iosGoodNightTime,
+      source: '道晚安',
+    },
+    {
+      time: record.spokenRestTime,
+      source: '通话',
+    },
+  ]
+    .map(item => ({
+      ...item,
+      minutes: timeToMinutes(item.time),
+    }))
+    .filter(item => item.minutes !== null)
+
+  if (!candidates.length) {
+    return {
+      time: '',
+      source: '',
+    }
+  }
+
+  const latest = candidates.reduce((best, item) =>
+    !best || item.minutes >= best.minutes ? item : best
+  , null)
+
+  return {
+    time: formatClockForDaily(latest.time),
+    source: latest.source,
+  }
+}
+
 function parseStrictDailyDate(value) {
   const text = String(value || '').trim()
   const match = text.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/)
@@ -2237,24 +2279,26 @@ function mergeNativeOffscreenDays(prev, payload = {}, { force = false, liveToday
       },
     )
 
-    const next = androidTime
-      ? {
-          ...old,
-          id: old.id || `offscreen-${dayKey}`,
-          date: dayDate,
-          calculatedOffscreenTime: androidTime,
-          dataSource: '安卓手机',
-          androidOffscreenTime: androidTime,
-          deviceSyncedAt: Date.now(),
-        }
-      : {
-          ...old,
-          ...(iosResult || {}),
-          id: old.id || `offscreen-${dayKey}`,
-          date: dayDate,
-          iosGoodNightTime: old.iosGoodNightTime || iosResult?.iosGoodNightTime || '',
-          deviceSyncedAt: Date.now(),
-        }
+    const mergedSourceRow = {
+      ...old,
+      ...(iosResult || {}),
+      id: old.id || `offscreen-${dayKey}`,
+      date: dayDate,
+      androidOffscreenTime:
+        androidTime || old.androidOffscreenTime || '',
+      iosGoodNightTime:
+        old.iosGoodNightTime || iosResult?.iosGoodNightTime || '',
+      spokenRestTime:
+        old.spokenRestTime || '',
+      deviceSyncedAt: Date.now(),
+    }
+
+    const latest = latestOffscreenResult(mergedSourceRow)
+    const next = {
+      ...mergedSourceRow,
+      calculatedOffscreenTime: latest.time,
+      dataSource: latest.source,
+    }
 
     if (existingIndex >= 0) offscreenRecords[existingIndex] = next
     else offscreenRecords.push(next)
@@ -2549,12 +2593,15 @@ function App() {
         // 2. 首次导入完成后，昨天的数据每天第一次登录时刷新一次。
         // 3. 安装日至昨天之间若存在缺失日期，继续补齐；已存在的历史日期不反复获取。
         const todayKey = dateKey(today)
+        const afterOffscreenCutoff = new Date().getHours() >= 5
         const dailyFirstImport = dailySupported && !current.deviceDailyInitialImportDone
         const screenFirstImport = screenSupported && !current.deviceScreenInitialImportDone
         const dailyYesterdayNeeded =
           dailySupported && current.lastDeviceDailyAutoSyncDate !== todayKey
         const screenYesterdayNeeded =
-          screenSupported && current.lastDeviceScreenAutoSyncDate !== todayKey
+          screenSupported &&
+          afterOffscreenCutoff &&
+          current.lastDeviceScreenAutoSyncDate !== todayKey
 
         const yesterdayDate = parseLocalDate(yesterday)
         const firstImportStart = new Date(
@@ -2580,7 +2627,14 @@ function App() {
           ? missingHistoricalDates(current.records || [], dailyHistoryStart, yesterday)
           : []
         const screenMissingDates = screenSupported
-          ? missingHistoricalDates(current.screenRecords || [], screenHistoryStart, yesterday)
+          ? missingHistoricalDates(
+              current.screenRecords || [],
+              screenHistoryStart,
+              yesterday,
+            ).filter(date =>
+              afterOffscreenCutoff ||
+              dateKey(date) !== dateKey(yesterday)
+            )
           : []
 
         const dailyRefreshDates = [...new Set([
@@ -2593,11 +2647,21 @@ function App() {
           ...screenMissingDates,
         ].map(formatDateForDaily))]
 
+        const dailyFirstImportDates = dailyFirstImport
+          ? dateListInclusive(firstImportStart, yesterday)
+          : []
+        const screenFirstImportDates = screenFirstImport
+          ? dateListInclusive(firstImportStart, yesterday).filter(date =>
+              afterOffscreenCutoff ||
+              dateKey(date) !== dateKey(yesterday)
+            )
+          : []
+
         const allRefreshDates = [...new Set([
           ...dailyRefreshDates,
           ...screenRefreshDates,
-          ...(dailyFirstImport ? dateListInclusive(firstImportStart, yesterday) : []),
-          ...(screenFirstImport ? dateListInclusive(firstImportStart, yesterday) : []),
+          ...dailyFirstImportDates,
+          ...screenFirstImportDates,
         ].map(formatDateForDaily))]
 
         if (!allRefreshDates.length) return
@@ -2621,10 +2685,10 @@ function App() {
           let next = { ...prev }
 
           const dailyDates = dailyFirstImport
-            ? dateListInclusive(firstImportStart, yesterday)
+            ? dailyFirstImportDates
             : dailyRefreshDates
           const screenDates = screenFirstImport
-            ? dateListInclusive(firstImportStart, yesterday)
+            ? screenFirstImportDates
             : screenRefreshDates
 
           // 先按原有“首次7天、昨日一次、空缺日一次”节奏更新内部源表。
@@ -2661,7 +2725,11 @@ function App() {
                 ? todayKey
                 : prev.lastDeviceDailyAutoSyncDate,
             lastDeviceScreenAutoSyncDate:
-              screenSupported && (screenFirstImport || screenYesterdayNeeded || screenMissingDates.length)
+              screenSupported &&
+              afterOffscreenCutoff &&
+              (screenYesterdayNeeded || screenMissingDates.some(
+                date => dateKey(date) === dateKey(yesterday)
+              ))
                 ? todayKey
                 : prev.lastDeviceScreenAutoSyncDate,
             lastDeviceAutoSyncAt: Date.now(),
@@ -3346,58 +3414,78 @@ function App() {
     setDailyDateModal(null)
   }
 
-  async function refreshDailyRecordForDate(recordOrDate) {
+  async function refreshDailyRecordForDate(recordOrDate, refreshType) {
     const targetDate = formatDateForDaily(
       recordOrDate?.date || recordOrDate || yesterdayText()
     )
+
+    if (!['steps', 'offscreen'].includes(refreshType)) return
 
     try {
       setData(prev => {
         const existing =
           dailyRecordForDate(prev.records || [], targetDate) ||
           emptyDailyRecord(targetDate)
-        const stepValue = stepValueForDate(prev.stepAutoRecords || [], targetDate)
-        const screenValue = screenSystemTotalMinutesForDate(
-          prev.screenRecords || [],
-          targetDate,
-        )
-        const offscreenValue = offscreenCalculatedTimeForDate(
-          prev.offscreenRecords || [],
-          targetDate,
-        )
 
-        const patch = {
-          ...(stepValue !== null ? {
-            steps: stepValue,
-            stepsAutoFetchedAt: Date.now(),
-            stepsAutoImportedAt: Date.now(),
-          } : {}),
-          ...(screenValue !== null ? {
-            screenMinutes: screenValue,
-            screenAutoFetchedAt: Date.now(),
-          } : {}),
-          offscreenTime: formatClockForDaily(offscreenValue || ''),
-          yesterdaySleep: formatClockForDaily(offscreenValue || ''),
-          offscreenAutoFetchedAt: Date.now(),
-          healthy: dailyRecordHealthy({
-            ...existing,
-            ...(stepValue !== null ? { steps: stepValue } : {}),
-            ...(screenValue !== null ? { screenMinutes: screenValue } : {}),
-            offscreenTime: formatClockForDaily(offscreenValue || ''),
-            yesterdaySleep: formatClockForDaily(offscreenValue || ''),
-          }),
+        let patch = {}
+
+        if (refreshType === 'steps') {
+          const stepValue = stepValueForDate(
+            prev.stepAutoRecords || [],
+            targetDate,
+          )
+
+          patch = {
+            ...(stepValue !== null
+              ? {
+                  steps: stepValue,
+                  stepsAutoFetchedAt: Date.now(),
+                  stepsAutoImportedAt: Date.now(),
+                }
+              : {}),
+          }
+        }
+
+        if (refreshType === 'offscreen') {
+          const offscreenValue = offscreenCalculatedTimeForDate(
+            prev.offscreenRecords || [],
+            targetDate,
+          )
+          const formattedOffscreen =
+            formatClockForDaily(offscreenValue || '')
+
+          patch = {
+            offscreenTime: formattedOffscreen,
+            yesterdaySleep: formattedOffscreen,
+            offscreenAutoFetchedAt: Date.now(),
+          }
+        }
+
+        const updatedRecord = {
+          ...existing,
+          ...patch,
         }
 
         return {
           ...prev,
-          records: mergeDailyRecord(prev.records || [], targetDate, patch),
+          records: mergeDailyRecord(
+            prev.records || [],
+            targetDate,
+            {
+              ...patch,
+              healthy: dailyRecordHealthy(updatedRecord),
+            },
+          ),
           lastSavedAt: Date.now(),
         }
       })
 
       setDailyModal({
         title: '重新获取完成',
-        text: `${targetDate} 的步数、屏幕时间和离机时间已从雪粒内部三张自动数据表重新写入日常数据表。`,
+        text:
+          refreshType === 'steps'
+            ? `${targetDate} 的步数已从步数自动获取表重新写入日常数据表，离机时间没有改变。`
+            : `${targetDate} 的离机时间已从离机时间表重新写入日常数据表，步数没有改变。`,
       })
     } catch (error) {
       setDailyModal({
@@ -3567,12 +3655,7 @@ function App() {
       )
       const current = rowIndex >= 0 ? rows[rowIndex] : {}
 
-      /*
-        主页“今日晚安”现在只写入离机时间内部源表。
-        05:00—24:00 写入当日；00:00—05:00 的日期归属与 24+ 小时格式
-        已由 Home.goodNightTimeInfo() 保持原逻辑处理。
-      */
-      const nextRow = recalculateIOSOffscreenRecord({
+      const recalculated = recalculateIOSOffscreenRecord({
         ...current,
         id: current.id || `offscreen-${dateKey(recordDate)}`,
         date: recordDate,
@@ -3580,14 +3663,38 @@ function App() {
         goodNightSavedAt: Date.now(),
       })
 
+      const latest = latestOffscreenResult(recalculated)
+      const nextRow = {
+        ...recalculated,
+        calculatedOffscreenTime: latest.time,
+        dataSource: latest.source,
+      }
+
       if (rowIndex >= 0) rows[rowIndex] = nextRow
       else rows.push(nextRow)
+
+      const nextDailyRecords = mergeDailyRecord(
+        prev.records || [],
+        recordDate,
+        {
+          offscreenTime: latest.time,
+          yesterdaySleep: latest.time,
+          offscreenAutoFetchedAt: Date.now(),
+        },
+      )
+
+      const isYesterday =
+        dateKey(recordDate) === dateKey(yesterdayText())
 
       return {
         ...prev,
         offscreenRecords: rows.sort(
           (a, b) => dateKey(b.date).localeCompare(dateKey(a.date))
         ),
+        records: nextDailyRecords,
+        ...(isYesterday
+          ? { yesterdaySleepTime: latest.time }
+          : {}),
         lastSavedAt: Date.now(),
       }
     })
@@ -4922,7 +5029,20 @@ max-width:78px !important;
                         {expanded && group.records.map((r, i) => (
                           <div className={`dailyTableRow dailyChildRow dailyTableRowV2 dailyUnifiedRow dailyTab-${dailyViewTab}`} key={`${r.date}-${i}`} style={{ gridTemplateColumns: dailyTableGrid }}>
                             {dailyRecordCellsForView(r)}
-                            <button type="button" className="dailyRowEditBtn dailyIconBtn" onClick={() => refreshDailyRecordForDate(r)} title="只重新获取这一天的日常数据">↻</button>
+                            {dailyViewTab === 'steps' || dailyViewTab === 'offscreen' ? (
+                              <button
+                                type="button"
+                                className="dailyRowEditBtn dailyIconBtn"
+                                onClick={() => refreshDailyRecordForDate(r, dailyViewTab)}
+                                title={dailyViewTab === 'steps'
+                                  ? '只重新获取这一天的步数'
+                                  : '只重新获取这一天的离机时间'}
+                              >
+                                ↻
+                              </button>
+                            ) : (
+                              <span aria-hidden="true"></span>
+                            )}
                             <button type="button" className="dailyRowEditBtn dailyIconBtn" onClick={() => beginDailyEdit(r)} title="修改">✎</button>
                             <button type="button" className="dailyRowDeleteBtn dailyIconBtn" onClick={() => requestDailyDelete(r)} title="删除">×</button>
                           </div>

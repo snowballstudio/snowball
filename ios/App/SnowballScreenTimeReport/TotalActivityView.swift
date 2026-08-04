@@ -1,4 +1,18 @@
+import Foundation
 import SwiftUI
+
+private enum SnowballReportNavigationBridge {
+    static let appGroup = "group.com.snowball.health"
+    static let actionKey =
+        "snowball.screenTime.reportNavigationAction.v1"
+
+    static func request(_ action: String) {
+        UserDefaults(suiteName: appGroup)?.set(
+            action,
+            forKey: actionKey
+        )
+    }
+}
 
 struct TotalActivityView: View {
     let configuration: TotalActivityConfiguration
@@ -580,8 +594,34 @@ struct SnowballDashboardView: View {
 
                 Divider()
 
-                Text("类型分布")
-                    .font(.headline)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("类型分布")
+                        .font(.headline)
+
+                    Spacer()
+
+                    Button {
+                        SnowballReportNavigationBridge.request(
+                            "openDailyTable"
+                        )
+                    } label: {
+                        Text("详情")
+                            .font(
+                                .system(
+                                    size: 12,
+                                    weight: .semibold
+                                )
+                            )
+                            .foregroundStyle(
+                                Color(
+                                    red: 0.72,
+                                    green: 0.55,
+                                    blue: 0.18
+                                )
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(configuration.categories) { row in

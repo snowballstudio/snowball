@@ -516,13 +516,20 @@ export default function Home({
           <img className="homeSnowBg" src="/refine/snow_background.png" alt="雪地留痕" />
           <div className="homeTraceText">
             <p>
-              {useNativeIOSScreenTime ? '7日屏幕时间 ' : '日均屏幕时间 '}
+              {useNativeIOSScreenTime ? '日均屏幕时间 ' : '日均屏幕时间 '}
               {useNativeIOSScreenTime ? (
-                <span
-                  ref={iosMiniReportRef}
-                  className="homeIOSMiniReportSlot"
-                  aria-label="苹果七日屏幕时间和末次活动"
-                />
+                <button
+                  type="button"
+                  className="homeIOSMiniReportButton"
+                  onClick={openScreenTimeSummary}
+                  aria-label="打开苹果每日屏幕时间表"
+                >
+                  <span
+                    ref={iosMiniReportRef}
+                    className="homeIOSMiniReportSlot"
+                    aria-hidden="true"
+                  />
+                </button>
               ) : (
                 <button
                   type="button"

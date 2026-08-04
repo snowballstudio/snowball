@@ -2672,8 +2672,8 @@ body.futureFootprintPlanOpen .compactFootprintList {
   gap: 8px !important;
   padding: 4px 6px !important;
   border-radius: 25px !important;
-  background: rgba(177, 192, 179, 0.2) !important;
-  border: 1px solid rgba(155, 159, 156, 0.4) !important;
+  background: rgba(122, 65, 12, 0.05) !important;
+  border: 1px solid rgba(83, 122, 161, 0.3) !important;
 }
 
 .footprintTabsShell .footprintFullTabs,
@@ -2686,9 +2686,9 @@ body.futureFootprintPlanOpen .compactFootprintList {
 .footprintTabsShell .footprintTabs button {
   min-width: 44px !important;
   padding: 5px 10px !important;
-  border: 1px solid rgba(103, 112, 120, 0.12) !important;
+  border: 1px solid rgba(159, 157, 152, 0.2) !important;
   border-radius: 999px !important;
-  background: rgba(255,255,255,0.2) !important;
+  background: rgba(236, 236, 235, 0.1) !important;
   color: #69737d !important;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.48),
@@ -2703,7 +2703,7 @@ body.futureFootprintPlanOpen .compactFootprintList {
 .footprintTabsShell .footprintTextTabs button.active,
 .footprintTabsShell .footprintTabs button.active {
   color: var(--fp-gold) !important;
-  background: rgba(255,255,255,0.75) !important;
+  background: rgba(255,255,255,0.8) !important;
   border-color: rgba(25, 24, 24, 0.2) !important;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.2),
@@ -2720,7 +2720,7 @@ body.futureFootprintPlanOpen .compactFootprintList {
   .footprintTabsShell {
     gap: 6px !important;
     padding: 1px 4px !important;
-    margin-top: -6px;
+    margin-top: -7px;
   }
 
   .footprintTabsShell .footprintFullTabs,
@@ -2732,7 +2732,7 @@ body.futureFootprintPlanOpen .compactFootprintList {
   .footprintTabsShell .footprintTextTabs button,
   .footprintTabsShell .footprintTabs button {
     min-width: 45px !important;
-    padding: 5px 7px !important;
+    padding: 4px 10px !important;
     font-size: 14px !important;
   }
 }

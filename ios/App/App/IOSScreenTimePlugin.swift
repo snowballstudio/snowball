@@ -9,6 +9,12 @@ import UIKit
 public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     private var homeMiniHost: UIViewController?
 
+    fileprivate enum ScreenTimeReportNavigationBridge {
+        static let appGroup = "group.com.snowball.health"
+        static let actionKey =
+            "snowball.screenTime.reportNavigationAction.v1"
+    }
+
     public let identifier = "IOSScreenTimePlugin"
     public let jsName = "IOSScreenTime"
 
@@ -202,7 +208,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             ),
             let start = calendar.date(
                 byAdding: .day,
-                value: -6,
+                value: -29,
                 to: yesterday
             ),
             let end = calendar.date(
@@ -211,7 +217,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 to: yesterday
             )
         else {
-            call.reject("无法计算七日屏幕时间区间。")
+            call.reject("无法计算30日屏幕时间区间。")
             return
         }
 
@@ -247,6 +253,32 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                             "endDate":
                                 self.formatSnowballDate(yesterday)
                         ])
+                    }
+                },
+                onOpenDashboard: {
+                    presenter.dismiss(animated: false) {
+                        let dashboard =
+                            IOSScreenTimeDashboardContainer(
+                                onClose: {
+                                    presenter.dismiss(animated: true) {
+                                        call.resolve([
+                                            "closed": true,
+                                            "openedDashboard": true
+                                        ])
+                                    }
+                                }
+                            )
+
+                        let dashboardHost =
+                            UIHostingController(
+                                rootView: dashboard
+                            )
+                        dashboardHost.modalPresentationStyle =
+                            .fullScreen
+                        presenter.present(
+                            dashboardHost,
+                            animated: false
+                        )
                     }
                 }
             )
@@ -1036,15 +1068,50 @@ private struct IOSSevenDayDailyTableContainer: View {
     let context: DeviceActivityReport.Context
     let filter: DeviceActivityFilter
     let onClose: () -> Void
+    let onOpenDashboard: () -> Void
 
     var body: some View {
         NavigationStack {
             DeviceActivityReport(context, filter: filter)
-                .navigationTitle("七日屏幕时间")
+                .navigationTitle("30日屏幕时间")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(action: onClose) {
+                            Text("‹")
+                                .font(
+                                    .system(
+                                        size: 30,
+                                        weight: .regular
+                                    )
+                                )
+                                .foregroundStyle(
+                                    Color.primary.opacity(0.82)
+                                )
+                                .frame(width: 34, height: 34)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("返回")
+                    }
+
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button("关闭", action: onClose)
+                        Button(
+                            "查看报表",
+                            action: onOpenDashboard
+                        )
+                        .font(
+                            .system(
+                                size: 12,
+                                weight: .semibold
+                            )
+                        )
+                        .foregroundStyle(
+                            Color(
+                                red: 0.72,
+                                green: 0.55,
+                                blue: 0.18
+                            )
+                        )
                     }
                 }
         }
@@ -1099,7 +1166,22 @@ private enum IOSDashboardRange: String, CaseIterable, Identifiable {
 
 private struct IOSScreenTimeDashboardContainer: View {
     let onClose: () -> Void
+
+    private enum Page {
+        case dashboard
+        case help
+        case dailyTable
+    }
+
     @State private var range: IOSDashboardRange = .yesterday
+    @State private var page: Page = .dashboard
+
+    private let navigationDefaults = UserDefaults(
+        suiteName:
+            IOSScreenTimePlugin
+                .ScreenTimeReportNavigationBridge
+                .appGroup
+    )
 
     private var filter: DeviceActivityFilter {
         let calendar = Calendar.autoupdatingCurrent
@@ -1169,7 +1251,7 @@ private struct IOSScreenTimeDashboardContainer: View {
                 to: today
             ) ?? today
             return DeviceActivityFilter(
-                segment: .weekly(
+                segment: .daily(
                     during: DateInterval(start: start, end: today)
                 ),
                 users: .all,
@@ -1178,32 +1260,284 @@ private struct IOSScreenTimeDashboardContainer: View {
         }
     }
 
+    private var dailyTableFilter: DeviceActivityFilter {
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: Date())
+        let yesterday = calendar.date(
+            byAdding: .day,
+            value: -1,
+            to: today
+        ) ?? today
+        let start = calendar.date(
+            byAdding: .day,
+            value: -29,
+            to: yesterday
+        ) ?? yesterday
+        let end = calendar.date(
+            byAdding: .day,
+            value: 1,
+            to: yesterday
+        ) ?? today
+
+        return DeviceActivityFilter(
+            segment: .daily(
+                during: DateInterval(start: start, end: end)
+            ),
+            users: .all,
+            devices: .all
+        )
+    }
+
+    private func clearNavigationAction() {
+        navigationDefaults?.removeObject(
+            forKey:
+                IOSScreenTimePlugin
+                    .ScreenTimeReportNavigationBridge
+                    .actionKey
+        )
+    }
+
+    private func readNavigationAction() {
+        let key =
+            IOSScreenTimePlugin
+                .ScreenTimeReportNavigationBridge
+                .actionKey
+
+        guard let action = navigationDefaults?.string(
+            forKey: key
+        ),
+        !action.isEmpty else {
+            return
+        }
+
+        navigationDefaults?.removeObject(forKey: key)
+
+        if action == "openDailyTable" {
+            page = .dailyTable
+        }
+    }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                Picker("统计范围", selection: $range) {
-                    ForEach(IOSDashboardRange.allCases) { item in
-                        Text(item.title).tag(item)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+            Group {
+                switch page {
+                case .dashboard:
+                    VStack(spacing: 0) {
+                        Picker("统计范围", selection: $range) {
+                            ForEach(
+                                IOSDashboardRange.allCases
+                            ) { item in
+                                Text(item.title).tag(item)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
 
-                DeviceActivityReport(
-                    range.context,
-                    filter: filter
-                )
-                .id(range)
-            }
-            .navigationTitle("苹果屏幕时间")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("关闭", action: onClose)
+                        DeviceActivityReport(
+                            range.context,
+                            filter: filter
+                        )
+                        .id(range)
+                    }
+                    .navigationTitle("苹果屏幕时间")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(
+                            placement: .topBarLeading
+                        ) {
+                            Button(action: onClose) {
+                                Text("‹")
+                                    .font(
+                                        .system(
+                                            size: 30,
+                                            weight: .regular
+                                        )
+                                    )
+                                    .foregroundStyle(
+                                        Color.primary.opacity(0.82)
+                                    )
+                                    .frame(width: 34, height: 34)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("返回")
+                        }
+
+                        ToolbarItem(
+                            placement: .topBarTrailing
+                        ) {
+                            Button {
+                                page = .help
+                            } label: {
+                                Text("说明")
+                                    .font(
+                                        .system(
+                                            size: 12,
+                                            weight: .medium
+                                        )
+                                    )
+                                    .foregroundStyle(
+                                        Color.primary.opacity(0.62)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                case .help:
+                    IOSScreenTimeHelpView {
+                        page = .dashboard
+                    }
+                    .navigationTitle("苹果屏幕时间说明")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(
+                            placement: .topBarLeading
+                        ) {
+                            Button {
+                                page = .dashboard
+                            } label: {
+                                Text("‹")
+                                    .font(
+                                        .system(
+                                            size: 30,
+                                            weight: .regular
+                                        )
+                                    )
+                                    .foregroundStyle(
+                                        Color.primary.opacity(0.82)
+                                    )
+                                    .frame(width: 34, height: 34)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("返回报表")
+                        }
+                    }
+
+                case .dailyTable:
+                    DeviceActivityReport(
+                        DeviceActivityReport.Context(
+                            "Snowball Seven Day Daily Table"
+                        ),
+                        filter: dailyTableFilter
+                    )
+                    .navigationTitle("30日屏幕时间")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(
+                            placement: .topBarLeading
+                        ) {
+                            Button {
+                                page = .dashboard
+                            } label: {
+                                Text("‹")
+                                    .font(
+                                        .system(
+                                            size: 30,
+                                            weight: .regular
+                                        )
+                                    )
+                                    .foregroundStyle(
+                                        Color.primary.opacity(0.82)
+                                    )
+                                    .frame(width: 34, height: 34)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("返回报表")
+                        }
+
+                        ToolbarItem(
+                            placement: .topBarTrailing
+                        ) {
+                            Button {
+                                page = .dashboard
+                            } label: {
+                                Text("查看报表")
+                                    .font(
+                                        .system(
+                                            size: 12,
+                                            weight: .semibold
+                                        )
+                                    )
+                                    .foregroundStyle(
+                                        Color(
+                                            red: 0.72,
+                                            green: 0.55,
+                                            blue: 0.18
+                                        )
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
             }
         }
+        .onAppear {
+            clearNavigationAction()
+        }
+        .task {
+            while !Task.isCancelled {
+                readNavigationAction()
+                try? await Task.sleep(
+                    nanoseconds: 250_000_000
+                )
+            }
+        }
+    }
+}
+
+
+private struct IOSScreenTimeHelpView: View {
+    let onBack: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                Text(
+                    "苹果屏幕时间来自 iPhone 系统提供的使用报告。报告可能需要短暂加载，也可能在刚打开页面时暂时空白，稍后重新进入通常会恢复。"
+                )
+
+                Text(
+                    "“今天”和“昨天”显示对应自然日的使用情况；周均、月均和年均显示所选时间范围内的日平均值。系统报告存在延迟时，最近一天的数据可能稍后补充。"
+                )
+
+                Text(
+                    "应用列表按使用时间排序，最多显示前十项。“其它”汇总未进入前十的应用。合计来自苹果返回的全部活动时间，因此有时会大于列表中可见项目的总和。"
+                )
+
+                Text(
+                    "“打开”表示苹果记录的拿起或进入应用次数，仅用于观察使用频率。个别系统应用、网站和网页活动可能被苹果归入浏览器、其它类别，或者只计入合计，名称不一定与手机系统页面完全一致。"
+                )
+
+                Text(
+                    "“类型分布”按照苹果返回的应用类别进行整理。分类由系统决定，仅用于粗略了解时间主要花在社交、创作、效率、系统或其它活动中的比例。"
+                )
+
+                Text(
+                    "主页显示的“7日屏幕时间”是最近七个完整日期的平均值。“末次”根据系统最后一段明显活动估算，只表示主要手机活动大约结束的时间，不代表用户已经入睡或彻底离开手机。"
+                )
+
+                Text(
+                    "休息时间还可以来自“道晚安”或通话记录。系统时间、道晚安时间和通话时间会进行比较，采用其中较晚的时间。用户也可以在日常数据中手动修改，手动记录用于补充或纠正系统推算。"
+                )
+
+                Text(
+                    "苹果报告由系统生成，雪粒不能保证每次立即显示完整数据。遇到暂时空白、反复进入后消失或稍后重新出现，通常是系统报告仍在准备或刷新。"
+                )
+
+                Text(
+                    "屏幕时间和休息记录仅用于个人生活回顾，不用于医学、睡眠或健康诊断。相关数据保存在设备本机，雪粒不会将完整的应用使用记录上传或公开。"
+                )
+            }
+            .font(.system(size: 14))
+            .foregroundStyle(Color.primary.opacity(0.88))
+            .lineSpacing(5)
+            .padding(.horizontal, 22)
+            .padding(.top, 18)
+            .padding(.bottom, 36)
+        }
+        .background(Color(uiColor: .systemBackground))
     }
 }
 
