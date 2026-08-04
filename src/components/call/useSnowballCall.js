@@ -129,6 +129,18 @@ function chineseTimeNumber(value) {
   return null
 }
 
+function normalizeOffscreenDateKey(value) {
+  const text = String(value || '').trim()
+  const match = text.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/)
+  if (!match) return text
+
+  return [
+    Number(match[1]),
+    Number(match[2]),
+    Number(match[3]),
+  ].join('/')
+}
+
 function calendarYesterdayKey(now = new Date()) {
   const date = new Date(
     now.getFullYear(),
@@ -136,11 +148,12 @@ function calendarYesterdayKey(now = new Date()) {
     now.getDate() - 1,
   )
 
+  // 离机时间表一直使用 YYYY/M/D，例如 2026/8/2。
   return [
     date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0'),
-  ].join('-')
+    date.getMonth() + 1,
+    date.getDate(),
+  ].join('/')
 }
 
 function logicalRestHour(rawHour, text) {
@@ -175,7 +188,13 @@ function logicalRestHour(rawHour, text) {
     || source.includes('夜晚')
     || source.includes('睡')
     || source.includes('休息')
-    || source.includes('晚安')
+    || source.includes('昨天')
+    || source.includes('睡的')
+    || source.includes('才睡')
+    || source.includes('睡下')
+    || source.includes('上床')
+    || source.includes('就睡')
+    || source.includes('歇')
   ) {
     if (hour === 12) return 24
     if (hour >= 5 && hour <= 11) return hour + 12
@@ -224,7 +243,7 @@ function parseSpokenYesterdayRestTime(value) {
   } else {
     // 23点30分、十一点半、三点多、11点
     const pointMatch = compact.match(
-      /([零〇一二两三四五六七八九十\d]{1,3})点(?:(半)|([零〇一二两三四五六七八九十\d]{1,3})分?|([一二三四五六七八九\d])刻|(多))?/,
+      /([零〇一二两三四五六七八九十\d]{1,3})点(?:(半)|([零〇一二两三四五六七八九十\d]{1,3})分?|([一三13])刻(?:钟)?|(多))?/,
     )
 
     if (!pointMatch) return null
@@ -236,7 +255,10 @@ function parseSpokenYesterdayRestTime(value) {
     } else if (pointMatch[3]) {
       minute = chineseTimeNumber(pointMatch[3])
     } else if (pointMatch[4]) {
-      minute = Number(pointMatch[4]) * 15
+      const quarter = chineseTimeNumber(pointMatch[4])
+      minute = Number.isFinite(quarter)
+        ? quarter * 15
+        : null
     } else {
       minute = 0
     }
@@ -274,17 +296,21 @@ function updateSpokenRestRecord(data, spokenRest) {
     ? data.offscreenRecords
     : []
 
+  const spokenDateKey = normalizeOffscreenDateKey(
+    spokenRest.date,
+  )
+
   const rowIndex = existingRecords.findIndex(
-    row => String(row?.date || '').replace(/\//g, '-')
-      === spokenRest.date,
+    row => normalizeOffscreenDateKey(row?.date)
+      === spokenDateKey,
   )
 
   const existing =
     rowIndex >= 0
       ? existingRecords[rowIndex]
       : {
-          id: `offscreen-${spokenRest.date}`,
-          date: spokenRest.date,
+          id: `offscreen-${spokenDateKey.replaceAll('/', '-')}`,
+          date: spokenDateKey,
         }
 
   // 语音内容写入现有“苹果最后长时活动结束时间”字段。
@@ -292,7 +318,11 @@ function updateSpokenRestRecord(data, spokenRest) {
   // 最后一小时拿起时间+活动时长进行比较，并取最晚值。
   const recalculated = recalculateIOSOffscreenRecord({
     ...existing,
-    date: spokenRest.date,
+    // 命中已有系统记录时保留它原本的日期显示格式；
+    // 新增时统一使用离机表的 YYYY/M/D 格式。
+    date: rowIndex >= 0
+      ? existing.date
+      : spokenDateKey,
     iosLastLongActivityEnd: spokenRest.time,
   })
 

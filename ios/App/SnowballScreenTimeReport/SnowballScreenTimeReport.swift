@@ -23,5 +23,29 @@ struct SnowballScreenTimeReport: DeviceActivityReportExtension {
         SevenDayDailyTableReport { configuration in
             SevenDayDailyTableView(configuration: configuration)
         }
+
+        SnowballHomeMiniReport { configuration in
+            SnowballHomeMiniView(configuration: configuration)
+        }
+
+        SnowballDashboardTodayReport { configuration in
+            SnowballDashboardView(configuration: configuration)
+        }
+
+        SnowballDashboardYesterdayReport { configuration in
+            SnowballDashboardView(configuration: configuration)
+        }
+
+        SnowballDashboardWeekReport { configuration in
+            SnowballDashboardView(configuration: configuration)
+        }
+
+        SnowballDashboardMonthReport { configuration in
+            SnowballDashboardView(configuration: configuration)
+        }
+
+        SnowballDashboardYearReport { configuration in
+            SnowballDashboardView(configuration: configuration)
+        }
     }
 }

@@ -62,6 +62,7 @@ export default function Footprint({
   const [footprintPopupMaximized, setFootprintPopupMaximized] = useState(false)
   const [browseSort, setBrowseSort] = useState({ field: 'date', direction: 'desc' })
   const [openFuturePlanType, setOpenFuturePlanType] = useState(null)
+  const [showFootprintInfo, setShowFootprintInfo] = useState(false)
   const [futurePlanInputActive, setFuturePlanInputActive] = useState(false)
   const futurePlanTextareaRef = useRef(null)
   const futurePlanLayerRef = useRef(null)
@@ -534,20 +535,30 @@ export default function Footprint({
               {(yearsMode === 'browseFull' || yearsMode === 'setHome') && (
                 <button type="button" className="footprintBackText" onClick={() => setYearsMode('home')} aria-label="返回足迹">‹</button>
               )}
-              <div className="footprintTabs footprintFullTabs footprintTextTabs">
-                {Object.entries(FOOTPRINT_TYPES).map(([key, label]) => (
-                  <button
-                    key={key}
-                    className={footprintView === key ? 'active' : ''}
-                    onClick={() => {
-                      setFootprintView(key)
-                      if (yearsMode === 'addMap') updateFootprintDraft('type', key)
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className="footprintTabsShell">
+                <div className="footprintTabs footprintFullTabs footprintTextTabs">
+                  {Object.entries(FOOTPRINT_TYPES).map(([key, label]) => (
+                    <button
+                      key={key}
+                      className={footprintView === key ? 'active' : ''}
+                      onClick={() => {
+                        setFootprintView(key)
+                        if (yearsMode === 'addMap') updateFootprintDraft('type', key)
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              <button
+                type="button"
+                className="footprintInfoButton"
+                onClick={() => setShowFootprintInfo(true)}
+              >
+                说明
+              </button>
             </div>
       
             <div className="footprintMapLayout" ref={futurePlanLayerRef}>
@@ -1076,7 +1087,9 @@ export default function Footprint({
                           {open && (
                             <div className="footprintYearItems">
                               {group.items.map(item => {
-                                const thumb = Array.isArray(item.photos) && item.photos.length > 0 ? item.photos[0] : ''
+                                const thumb = Array.isArray(item.photos) && item.photos.length > 0
+                                  ? footprintPhotoThumbnail(item.photos[0])
+                                  : ''
                                 return (
                                   <button type="button" className="footprintHomeRecord" key={item.id} onClick={() => openFootprintRecord(item)}>
                                     <span className="footprintHomeThumb">{thumb ? <img src={thumb} alt="" /> : <span>图</span>}</span>
@@ -1114,6 +1127,49 @@ export default function Footprint({
           </div>
         )}
       </div>
+
+      {showFootprintInfo && (
+        <section className="footprintInfoPage" aria-label="足迹说明">
+          <header className="footprintInfoHeader">
+            <button
+              type="button"
+              className="footprintInfoBack"
+              onClick={() => setShowFootprintInfo(false)}
+              aria-label="返回足迹"
+            >
+              ‹
+            </button>
+            <h2>足迹说明</h2>
+          </header>
+
+          <div className="footprintInfoBody">
+            <p>
+              新增足迹时，可以先选择固定区域，再直接点击地图，把图钉放到更准确的位置。
+              已经保存的记录，可以点击地图上的图钉，或点击下方记录查看详情。
+            </p>
+
+            <p>
+              记录列表中的日期和地名可以点击排序。图钉和详情框尽量放在地图空白处，
+              方便同时看清地点、路线和记录内容。
+            </p>
+
+            <p>
+              行李箱用于记录未来计划。点击行李箱上的纸条可以写计划，
+              拖动行李箱拉杆，可以把它移动到地图上的任意位置。
+            </p>
+
+            <p>
+              照片只保存原图索引和缩略图，不会在雪球里复制一份原图。
+              点击缩略图可以回到相册查看原图，并可左右滑动浏览同一条记录中的照片。
+            </p>
+
+            <p>
+              查看原图时，可以放大照片；长按照片可以打开手机的分享页面，
+              转发到微信、短信或其它支持的应用。原图如果从相册删除，索引也会失效。
+            </p>
+          </div>
+        </section>
+      )}
 
       {openFuturePlanType && (() => {
         const plan = currentFuturePlan(openFuturePlanType)

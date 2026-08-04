@@ -37,6 +37,31 @@ export async function openIOSScreenTimeReport(date) {
   return IOSScreenTime.presentReport({ date: String(date || '') })
 }
 
+
+export async function showIOSHomeMiniReport(rect = {}) {
+  if (!isIOSScreenTimeAvailable()) return { shown: false }
+
+  return IOSScreenTime.showHomeMiniReport({
+    x: Number(rect.x || 0),
+    y: Number(rect.y || 0),
+    width: Number(rect.width || 180),
+    height: Number(rect.height || 26),
+  })
+}
+
+export async function hideIOSHomeMiniReport() {
+  if (!isIOSScreenTimeAvailable()) return { hidden: false }
+  return IOSScreenTime.hideHomeMiniReport()
+}
+
+export async function openIOSScreenTimeDashboard() {
+  if (!isIOSScreenTimeAvailable()) {
+    throw new Error('苹果屏幕时间总览只能在 iPhone 真机打开。')
+  }
+
+  return IOSScreenTime.presentDashboardReport()
+}
+
 export async function openIOSSevenDayDailyTable() {
   if (!isIOSScreenTimeAvailable()) {
     throw new Error('苹果七日屏幕时间表只能在 iPhone 真机打开。')

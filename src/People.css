@@ -1249,6 +1249,7 @@
   text-align: center;
   font-size: 23px;
   font-weight: 600;
+  padding-top: 4px;
 }
 
 .peopleInfoBack {
@@ -1261,6 +1262,7 @@
   line-height: 1;
   padding: 0;
   cursor: pointer;
+  transform: translateY(3px);
 }
 
 .peopleInfoBody p {
@@ -2142,5 +2144,91 @@
     max-height: 86vh;
     border-radius: 26px;
   }
+}
+
+/* ======================================================
+   2026-08-04｜人间说明页全屏纯白背景
+   保留用户已经调好的标题与返回箭头位置。
+   ====================================================== */
+.peopleInfoOverlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  padding: 0 !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.peopleInfoPage {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  max-height: 100dvh !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+@media (max-width: 900px) {
+  .peopleInfoPage {
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+  }
+}
+
+/* ======================================================
+   2026-08-04｜iPhone 人间照片上传误触修复
+   原生版不再使用覆盖式透明 input；网页 fallback 只限图标本身。
+   ====================================================== */
+.peoplePhotoUploadButton {
+  position: relative !important;
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  max-width: 36px !important;
+  height: 36px !important;
+  max-height: 36px !important;
+  overflow: hidden !important;
+  z-index: 1 !important;
+}
+
+.peoplePhotoUploadButton input {
+  width: 36px !important;
+  height: 36px !important;
+  max-width: 36px !important;
+  max-height: 36px !important;
+}
+
+.peoplePhotoIndexUploadButton {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+.peoplePhotoEditButton,
+.peoplePhotoEditActions,
+.peoplePhotoEditActions button {
+  position: relative !important;
+  z-index: 6 !important;
+  pointer-events: auto !important;
+}
+
+.peoplePhotoDelete {
+  z-index: 8 !important;
+  pointer-events: auto !important;
 }
 

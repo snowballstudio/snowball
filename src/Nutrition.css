@@ -1047,4 +1047,217 @@
   }
 }
 
+/* ======================================================
+   营养说明页
+   顶部标题与返回固定，正文独立上下滚动。
+   ====================================================== */
+
+.dailyNutritionPage .nutritionInfoButton {
+  position: absolute !important;
+  right: 20px !important;
+  top: 34px !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 4px 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: rgba(255,255,255,.94) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  text-shadow: 0 2px 8px rgba(0,0,0,.42) !important;
+  box-shadow: none !important;
+  pointer-events: auto !important;
+}
+
+.nutritionInfoPage {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 10095 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  color: #202428 !important;
+}
+
+.nutritionInfoHeader {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  z-index: 3 !important;
+  height: calc(72px + env(safe-area-inset-top)) !important;
+  display: grid !important;
+  grid-template-columns: 54px minmax(0, 1fr) 54px !important;
+  align-items: end !important;
+  padding:
+    env(safe-area-inset-top)
+    18px
+    13px !important;
+  box-sizing: border-box !important;
+  background: rgba(255,255,255,.98) !important;
+  border-bottom: 1px solid rgba(30,36,42,.08) !important;
+}
+
+.nutritionInfoHeader h2 {
+  grid-column: 2 !important;
+  align-self: end !important;
+  margin: 0 !important;
+  color: #17191c !important;
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  text-align: center !important;
+}
+
+.nutritionInfoBack {
+  grid-column: 1 !important;
+  justify-self: start !important;
+  align-self: end !important;
+  width: 36px !important;
+  height: 40px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  color: #202428 !important;
+  font-size: 34px !important;
+  font-weight: 300 !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+}
+
+.nutritionInfoScroll {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: calc(72px + env(safe-area-inset-top)) !important;
+  bottom: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  scrollbar-gutter: stable !important;
+}
+
+.nutritionInfoScroll::-webkit-scrollbar {
+  width: 5px !important;
+}
+
+.nutritionInfoScroll::-webkit-scrollbar-thumb {
+  border-radius: 999px !important;
+  background: rgba(44,52,60,.20) !important;
+}
+
+.nutritionInfoBody {
+  width: min(760px, 100%) !important;
+  margin: 0 auto !important;
+  padding:
+    26px
+    30px
+    calc(42px + env(safe-area-inset-bottom)) !important;
+  box-sizing: border-box !important;
+}
+
+.nutritionInfoIntro,
+.nutritionInfoGroup,
+.nutritionInfoClosing {
+  margin: 0 0 34px !important;
+}
+
+.nutritionInfoBody h3 {
+  margin: 0 0 17px !important;
+  color: #15191d !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.nutritionInfoIntro > p,
+.nutritionInfoClosing > p {
+  margin: 0 0 20px !important;
+  color: #292e33 !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  line-height: 1.9 !important;
+}
+
+.nutritionInfoItems {
+  display: grid !important;
+  gap: 14px !important;
+}
+
+.nutritionInfoItem {
+  padding: 16px 17px !important;
+  border: 1px solid rgba(30,36,42,.09) !important;
+  border-radius: 12px !important;
+  background: #fafafa !important;
+}
+
+.nutritionInfoItem h4 {
+  margin: 0 0 9px !important;
+  color: #171b1f !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.nutritionInfoItem p {
+  margin: 0 0 7px !important;
+  color: #343a40 !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.72 !important;
+}
+
+.nutritionInfoItem p:last-child {
+  margin-bottom: 0 !important;
+}
+
+.nutritionInfoItem strong {
+  color: #20262c !important;
+  font-weight: 700 !important;
+}
+
+@media (max-width: 900px) {
+  .dailyNutritionPage .nutritionInfoButton {
+    right: 22px !important;
+    top: 36px !important;
+  }
+
+  .nutritionInfoBody {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .nutritionInfoBody h3 {
+    font-size: 19px !important;
+  }
+
+  .nutritionInfoIntro > p,
+  .nutritionInfoClosing > p {
+    font-size: 15px !important;
+    line-height: 1.88 !important;
+  }
+
+  .nutritionInfoItem {
+    padding: 15px 15px !important;
+  }
+
+  .nutritionInfoItem h4 {
+    font-size: 16px !important;
+  }
+
+  .nutritionInfoItem p {
+    font-size: 14px !important;
+    line-height: 1.68 !important;
+  }
+}
 

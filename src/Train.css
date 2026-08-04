@@ -732,3 +732,166 @@ html,body{
 .dailyTrainPage .dailyInsightContent{
   overflow:hidden !important;
 }
+
+/* 苹果版列车入口：原有非苹果列车与表格不渲染，原生报表全屏显示。 */
+.trainIOSReportPage {
+  background: #071524;
+}
+
+.trainIOSReportFallback {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 40px;
+  color: rgba(230, 238, 244, 0.76);
+  text-align: center;
+}
+
+.trainIOSReportFallback button {
+  margin-top: 12px;
+  border: none;
+  background: transparent;
+  color: rgba(153, 229, 255, 0.94);
+}
+
+
+/* ======================================================
+   信息说明页｜修复版
+   说明入口不再受返回按钮通用选择器影响；
+   打开时只渲染说明页，列车标题、背景与返回箭头不会覆盖。
+   ====================================================== */
+
+.dailyTrainPage .trainInfoBtn {
+  position: absolute !important;
+  right: 22px !important;
+  top: var(--train-back-top, 35px) !important;
+  z-index: 24 !important;
+  width: auto !important;
+  height: 40px !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: rgba(241,223,177,0.96) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 40px !important;
+  text-shadow: 0 0 8px rgba(241,223,177,.28),
+               0 2px 6px rgba(0,0,0,.45) !important;
+  box-shadow: none !important;
+  pointer-events: auto !important;
+}
+
+.trainInfoPage {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 20000 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  background: #ffffff !important;
+  color: #222222 !important;
+}
+
+.trainInfoHeader {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  z-index: 3 !important;
+  height: calc(72px + env(safe-area-inset-top)) !important;
+  display: grid !important;
+  grid-template-columns: 52px minmax(0, 1fr) 52px !important;
+  align-items: end !important;
+  padding:
+    env(safe-area-inset-top)
+    20px
+    13px !important;
+  box-sizing: border-box !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid rgba(30,36,42,.08) !important;
+}
+
+.trainInfoHeader h2 {
+  grid-column: 2 !important;
+  margin: 0 !important;
+  color: #17191c !important;
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  text-align: center !important;
+}
+
+.trainInfoBack {
+  grid-column: 1 !important;
+  justify-self: start !important;
+  align-self: end !important;
+  width: 36px !important;
+  height: 40px !important;
+  min-width: 36px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  color: #202428 !important;
+  font-size: 34px !important;
+  font-weight: 300 !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+  pointer-events: auto !important;
+}
+
+.trainInfoBody {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: calc(72px + env(safe-area-inset-top)) !important;
+  bottom: 0 !important;
+  width: min(760px, 100%) !important;
+  margin: 0 auto !important;
+  padding:
+    26px
+    28px
+    calc(42px + env(safe-area-inset-bottom)) !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  background: #ffffff !important;
+}
+
+.trainInfoBody p {
+  margin: 0 0 22px !important;
+  color: #292e33 !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  line-height: 1.9 !important;
+}
+
+.trainInfoBody strong {
+  color: #171b1f !important;
+  font-weight: 800 !important;
+}
+
+@media (max-width: 900px) {
+  .dailyTrainPage .trainInfoBtn {
+    right: 22px !important;
+    top: var(--train-back-top, 22px) !important;
+    font-size: 12px !important;
+  }
+
+  .trainInfoBody {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    font-size: 15px !important;
+  }
+}
+

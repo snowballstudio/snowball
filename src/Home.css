@@ -2139,11 +2139,20 @@ top: 2px;
   object-fit: contain !important;
   object-position: center !important;
   position: relative !important;
-  top: -4.5px !important;
+  top: -5px !important;
   left: -3px !important;
   margin: 0 !important;
   padding: 0 !important;
   pointer-events: none !important;
   user-select: none !important;
+}
+
+/* 苹果主页合并迷你报表：原生 DeviceActivityReport 覆盖到此槽位。 */
+.homeIOSMiniReportSlot {
+  display: inline-block;
+  width: 156px;
+  height: 24px;
+  vertical-align: middle;
+  margin-left: 2px;
 }
 

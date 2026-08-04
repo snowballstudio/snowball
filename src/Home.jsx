@@ -1,6 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './Home.css'
 import SnowballCall from './components/call/SnowballCall.jsx'
+import {
+  hideIOSHomeMiniReport,
+  showIOSHomeMiniReport,
+} from './components/ios-screen-time/iosScreenTimeService.js'
 
 const HOME_MOOD_ICON_MAP = {
   blank: '/refine/moodicon_blank.png',
@@ -143,6 +147,41 @@ export default function Home({
   const [goodNightModal, setGoodNightModal] = useState(null)
   const [rememberGoodNightDevice, setRememberGoodNightDevice] = useState(false)
   const moodFlower = homeMoodFlowerState(mood)
+  const iosMiniReportRef = useRef(null)
+
+  useEffect(() => {
+    if (!useNativeIOSScreenTime || !isHomeVisible) {
+      hideIOSHomeMiniReport().catch(() => {})
+      return undefined
+    }
+
+    let cancelled = false
+
+    const placeReport = () => {
+      const element = iosMiniReportRef.current
+      if (!element || cancelled) return
+
+      const rect = element.getBoundingClientRect()
+      showIOSHomeMiniReport({
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height,
+      }).catch(error => {
+        console.warn('主页苹果迷你报表没有显示。', error)
+      })
+    }
+
+    const timer = window.setTimeout(placeReport, 180)
+    window.addEventListener('resize', placeReport)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+      window.removeEventListener('resize', placeReport)
+      hideIOSHomeMiniReport().catch(() => {})
+    }
+  }, [useNativeIOSScreenTime, isHomeVisible])
 
   const homeStatusGoals = {
     steps:
@@ -476,7 +515,37 @@ export default function Home({
         <div className="homeSnowTrace">
           <img className="homeSnowBg" src="/refine/snow_background.png" alt="雪地留痕" />
           <div className="homeTraceText">
-            <p>七日屏幕时间 <button type="button" className="homeTraceLink" onClick={openScreenTimeSummary}>{useNativeIOSScreenTime ? <><strong>查看</strong><span className="homeSnowUnit">报告</span></> : avgScreenPending ? <><span className="homeScreenPendingLine" aria-label="屏幕时间暂无统计" /><span className="homeSnowUnit">小时</span></> : <><strong>{avgScreenNumber}</strong><span className="homeSnowUnit">{avgScreenUnit}</span></>}</button></p>
+            <p>
+              {useNativeIOSScreenTime ? '7日屏幕时间 ' : '日均屏幕时间 '}
+              {useNativeIOSScreenTime ? (
+                <span
+                  ref={iosMiniReportRef}
+                  className="homeIOSMiniReportSlot"
+                  aria-label="苹果七日屏幕时间和末次活动"
+                />
+              ) : (
+                <button
+                  type="button"
+                  className="homeTraceLink"
+                  onClick={openScreenTimeSummary}
+                >
+                  {avgScreenPending ? (
+                    <>
+                      <span
+                        className="homeScreenPendingLine"
+                        aria-label="屏幕时间暂无统计"
+                      />
+                      <span className="homeSnowUnit">小时</span>
+                    </>
+                  ) : (
+                    <>
+                      <strong>{avgScreenNumber}</strong>
+                      <span className="homeSnowUnit">{avgScreenUnit}</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </p>
             <p>去过 <button type="button" className="homeTraceLink" onClick={() => openFootprintPage('world', 'browseFull')}><strong>{homeTraceStats.worldCount}</strong></button> 个国家 ，<button type="button" className="homeTraceLink" onClick={() => openFootprintPage('china', 'browseFull')}><strong>{homeTraceStats.chinaCount}</strong></button> 个省市</p>
             <p>物馆收录 <button type="button" className="homeTraceLink" onClick={() => openThingPage('overview')}><strong>{homeTraceStats.thingsCount}</strong></button> 件物品</p>
             <p>在人间记着 <button type="button" className="homeTraceLink" onClick={openPeoplePage}><strong>{homeTraceStats.peopleCount}</strong></button> 人</p>

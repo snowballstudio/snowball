@@ -8,9 +8,9 @@ import {
 
 const THING_TYPES = { wish: '愿单', treasure: '在手', memory: '舍离' }
 const THING_COPY = {
-  wish: { title: '我的愿单', reasonLabel: '为什么期待', placeholder: '例如：它能改善我的生活，或者它是我长期真正想靠近的物。', catLine: '我理解了，此物值得期待。' },
-  treasure: { title: '此刻拥有', reasonLabel: '为什么珍贵', placeholder: '例如：它正在陪伴我的生活，或者它代表一个阶段的自己。', catLine: '我理解了，此物值得拥有。' },
-  memory: { title: '舍离区', reasonLabel: '为什么难忘', placeholder: '例如：它已经不在了，但它陪过我，所以值得被记住。', catLine: '我理解了，此物值得记住。它离开了，但没有消失。' },
+  wish: { title: '我的愿单', reasonLabel: '为什么期待', placeholder: '例如：改善生活，梦想物品。', catLine: '我理解了，此物值得期待。' },
+  treasure: { title: '此刻拥有', reasonLabel: '为什么珍贵', placeholder: '例如：强大功能，审美价值。', catLine: '我理解了，此物值得拥有。' },
+  memory: { title: '舍离区', reasonLabel: '为什么难忘', placeholder: '例如：独特样式，珍贵回忆。', catLine: '我理解了，此物值得记住。它离开了，但没有消失。' },
 }
 const THING_LIMIT = 300
 const PAW_STEP = 20
@@ -264,28 +264,51 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
       showThingMessage('物名太长', '物名最多填写10个汉字，或20个字母（含空格）。')
       return
     }
-    if (!reasonStrongEnough(reason)) { showThingMessage('雪粒没有盖章', `描述至少需要4个汉字，或8个字母（含空格）。再写清楚一点：为什么它值得${thingTypeVerb(type)}？`); return }
+    if (!reasonStrongEnough(reason)) { showThingMessage(`描述至少需要4个汉字，或8个字母（含空格）。再写清楚一点：为什么它值得${thingTypeVerb(type)}？`); return }
     const line = `雪粒理解了，此物值得${thingTypeVerb(type)}。`
     if (editingThingId) {
       const savedId = editingThingId
       setData(prev => ({ ...prev, things: (prev.things || []).map(item => item.id === savedId ? { ...item, type, year, month, name, reason, valueType, value, photos: Array.isArray(draft.photos) ? draft.photos : [], pawText: line, updatedAt: Date.now() } : item), thingDraft: { ...EMPTY_THING_DRAFT, type }, thingsSavedAt: Date.now(), lastSavedAt: Date.now() }))
-      setEditingThingId(null); setSelectedThingId(savedId); setThingsMode(type); setShowAddForm(false); showThingMessage('已更新', '理解了，雪粒已将记录改好。'); return
+      setEditingThingId(null); setSelectedThingId(savedId); setThingsMode(type); setShowAddForm(false); return
     }
     const item = { id: Date.now(), type, year, month, name, reason, valueType, value, photos: Array.isArray(draft.photos) ? draft.photos : [], pawText: line, pawCount: 1, createdAt: Date.now() }
     setData(prev => ({ ...prev, things: [item, ...(prev.things || [])], thingDraft: { ...EMPTY_THING_DRAFT, type }, thingsSavedAt: Date.now(), lastSavedAt: Date.now() }))
-    setSelectedThingId(item.id); setShowAddForm(false); showThingMessage('已盖章', line)
+    setSelectedThingId(item.id); setShowAddForm(false)
   }
   function applyThingMove(id, nextType) {
     const current = things.find(item => item.id === id); if (!current) return
     const line = nextType === 'treasure' ? `你得到「${current.name}」，雪粒为你高兴。` : `明白了。「${current.name}」进入舍离区，留下记录，也腾出空间。`
     setData(prev => ({ ...prev, things: (prev.things || []).map(item => item.id === id ? { ...item, type: nextType, pawText: line, pawCount: Number(item.pawCount || 0) + 1 } : item), thingsSavedAt: Date.now(), lastSavedAt: Date.now() }))
-    setThingsMode(nextType); setSelectedThingId(id); showThingMessage(nextType === 'treasure' ? '祝贺你' : '确认舍离', line)
+    setThingsMode(nextType); setSelectedThingId(id)
   }
   function moveThing(id, nextType) {
     const current = things.find(item => item.id === id); if (!current) return
     if ((current.type === 'wish' && nextType !== 'treasure') || (current.type === 'treasure' && nextType !== 'memory') || current.type === 'memory') return
-    if (current.type === 'treasure' && nextType === 'memory') { const text = `确定把「${current.name}」放进舍离吗？它将只留在电子空间里，帮助你腾出真实空间。`; setPendingThingMove({ id, nextType, title: '确认舍离', text }); return }
-    applyThingMove(id, nextType)
+
+    if (current.type === 'wish' && nextType === 'treasure') {
+      const text = `确定「${current.name}」已经到手，需要移到在手区吗？它将从愿单进入此刻拥有。`
+      setPendingThingMove({
+        id,
+        nextType,
+        title: '确认拥有',
+        text,
+        confirmLabel: '确认',
+        cancelLabel: '取消',
+      })
+      return
+    }
+
+    if (current.type === 'treasure' && nextType === 'memory') {
+      const text = `确定把「${current.name}」放进舍离吗？它将只留在电子空间里，帮助你腾出真实空间。`
+      setPendingThingMove({
+        id,
+        nextType,
+        title: '确认舍离',
+        text,
+        confirmLabel: '确认舍离',
+        cancelLabel: '暂时留下',
+      })
+    }
   }
   function startEditThing(item) {
     if (!item) return
@@ -432,7 +455,7 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
   }
 
   return <>
-    <div className="thingsOverlay">
+    <div className={`thingsOverlay${showThingsInfo ? ' thingsOverlay-info' : ''}`}>
       <div className={`thingsPanel thingsPanelBlue thingsPanel-${thingsMode}${showThingsInfo ? ' thingsPanel-info' : ''}`}>
         <header className="thingsTopBar thingsUnifiedHeader">
           <button className="thingsBackBtn" type="button" onClick={goBack} aria-label={thingsMode === 'overview' ? '返回主页' : '返回物馆总览'}>‹</button>
@@ -466,7 +489,155 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
         ) : (
           <div className={`thingsSubPage ${showAddForm ? 'isAdding' : ''}`}>
             <div className="thingsLayout">
-              {showAddForm ? <section className="thingsAddCard"><div className="thingsAddCardHead"><h3>{editingThingId ? `${THING_TYPES[thingsMode]} · 编辑记录` : `${THING_TYPES[thingsMode]} · 添加记录`}</h3><button type="button" className="thingsAddClose" onClick={closeThingForm} aria-label="收起添加记录">×</button></div><p className="thingHint">{THING_COPY[thingsMode]?.reasonLabel}是门槛。</p><div className="thingPhotoEditor"><label className="thingPhotoUpload"><img className="thingPhotoUploadIcon" src="/refine/footprint_photoicon.png" alt="" aria-hidden="true" /><small>上传照片</small><input type="file" accept="image/*" multiple onChange={e => { handleThingPhotos(e.target.files); e.currentTarget.value = '' }} /></label>{Array.isArray(thingDraft.photos) && thingDraft.photos.length > 0 && <div className="thingPhotoDraftGrid">{thingDraft.photos.map((photo, index) => <div className="thingPhotoDraftItem" key={photo.id || photo.assetIdentifier || photo.uri || index}><img src={photo.thumbnail} alt={`物品照片${index + 1}`} /><button type="button" className="thingPhotoDeleteButton" onClick={event => { event.preventDefault(); event.stopPropagation(); removeThingDraftPhoto(index) }} aria-label={`删除物品照片${index + 1}`} title="删除照片">×</button></div>)}</div>}</div><label className="thingFieldLabel">物名（不超10汉字或20个字母）<input className="thingNameInput" placeholder="例如 手表 / 旧相机" value={thingDraft.name || ''} onCompositionStart={() => { nameComposingRef.current = true }} onCompositionEnd={e => { nameComposingRef.current = false; updateThingDraft('name', limitThingText(e.currentTarget.value, THING_NAME_MAX_UNITS)) }} onChange={e => updateThingDraft('name', nameComposingRef.current ? e.target.value : limitThingText(e.target.value, THING_NAME_MAX_UNITS))} /></label><label className="thingFieldLabel">起始<div className="thingDateGrid"><input placeholder="年，例如 2026" value={thingDraft.year || ''} onChange={e => updateThingDraft('year', e.target.value)} /><input placeholder="月，例如 7" value={thingDraft.month || ''} onChange={e => updateThingDraft('month', e.target.value)} /></div></label><label className="thingFieldLabel">估值<div className="thingValueGrid"><select value={thingDraft.valueType || 'priceless'} onChange={e => updateThingDraft('valueType', e.target.value)}><option value="priceless">无价</option><option value="gold">金粒</option></select><input className="thingValueInput" type="number" min="0" placeholder="1金粒=1克黄金（约1250元）" value={thingDraft.value || ''} disabled={(thingDraft.valueType || 'priceless') === 'priceless'} onChange={e => updateThingDraft('value', e.target.value)} /></div></label><label className="thingFieldLabel">描述 （不少于4汉字或8个字母）<textarea placeholder={THING_COPY[thingsMode]?.placeholder} value={thingDraft.reason || ''} onChange={e => updateThingDraft('reason', e.target.value)} /></label><div className="thingPawPreview"><span>👁️</span><p>雪粒会查看你的理由。</p></div><button className="saveThingBtn" disabled={(!editingThingId && things.length >= THING_LIMIT) || !thingDraft.year || !thingDraft.month || !thingDraft.name || thingTextUnits(thingDraft.name) > THING_NAME_MAX_UNITS || !thingDraft.reason || thingTextUnits(thingDraft.reason) < THING_REASON_MIN_UNITS || ((thingDraft.valueType || 'priceless') === 'gold' && !thingDraft.value)} onClick={saveThing}>{editingThingId ? '保存修改' : '让雪粒盖章'}</button></section> : <>
+              {showAddForm ? <section className="thingsAddCard">
+                <div className="thingsAddCardHead">
+                  <h3>{editingThingId ? `${THING_TYPES[thingsMode]} · 编辑记录` : `${THING_TYPES[thingsMode]} · 添加记录`}</h3>
+                  <button type="button" className="thingsAddClose" onClick={closeThingForm} aria-label="收起添加记录">×</button>
+                </div>
+
+                <p className="thingHint">{THING_COPY[thingsMode]?.reasonLabel}是门槛。</p>
+
+
+
+                <label className="thingFieldLabel">
+                  物名（不超10汉字或20个字母）
+                  <input
+                    className="thingNameInput"
+                    placeholder="例如 手表 / 旧相机"
+                    value={thingDraft.name || ''}
+                    onCompositionStart={() => { nameComposingRef.current = true }}
+                    onCompositionEnd={e => {
+                      nameComposingRef.current = false
+                      updateThingDraft('name', limitThingText(e.currentTarget.value, THING_NAME_MAX_UNITS))
+                    }}
+                    onChange={e => updateThingDraft(
+                      'name',
+                      nameComposingRef.current
+                        ? e.target.value
+                        : limitThingText(e.target.value, THING_NAME_MAX_UNITS),
+                    )}
+                  />
+                </label>
+
+                <label className="thingFieldLabel thingInlineField">
+                  <span className="thingInlineFieldTitle">起始</span>
+                  <div className="thingDateGrid">
+                    <input
+                      placeholder="年，例如 2026"
+                      value={thingDraft.year || ''}
+                      onChange={e => updateThingDraft('year', e.target.value)}
+                    />
+                    <input
+                      placeholder="月，例如 7"
+                      value={thingDraft.month || ''}
+                      onChange={e => updateThingDraft('month', e.target.value)}
+                    />
+                  </div>
+                </label>
+
+                <label className="thingFieldLabel thingInlineField">
+                  <span className="thingInlineFieldTitle">估值</span>
+                  <div className="thingValueGrid">
+                    <select
+                      value={thingDraft.valueType || 'priceless'}
+                      onChange={e => updateThingDraft('valueType', e.target.value)}
+                    >
+                      <option value="priceless">无价</option>
+                      <option value="gold">金粒</option>
+                    </select>
+                    <input
+                      className="thingValueInput"
+                      type="number"
+                      min="0"
+                      placeholder="1金粒=1克黄金约1250元"
+                      value={thingDraft.value || ''}
+                      disabled={(thingDraft.valueType || 'priceless') === 'priceless'}
+                      onChange={e => updateThingDraft('value', e.target.value)}
+                    />
+                  </div>
+                </label>
+
+                <label className="thingFieldLabel thingReasonField">
+                  描述 （不少于4汉字或8个字母）
+                  <textarea
+                    placeholder={THING_COPY[thingsMode]?.placeholder}
+                    value={thingDraft.reason || ''}
+                    onChange={e => updateThingDraft('reason', e.target.value)}
+                  />
+                </label>
+
+                <div className="thingPhotoActionRow">
+                  {isPhotoIndexAvailable() ? (
+                    <button
+                      type="button"
+                      className="thingPhotoUpload thingPhotoIndexUpload"
+                      onClick={() => handleThingPhotos()}
+                      aria-label="从照片图库选择照片"
+                    >
+                      <img className="thingPhotoUploadIcon" src="/refine/footprint_photoicon.png" alt="" aria-hidden="true" />
+                      <small>上传照片</small>
+                    </button>
+                  ) : (
+                    <label className="thingPhotoUpload">
+                      <img className="thingPhotoUploadIcon" src="/refine/footprint_photoicon.png" alt="" aria-hidden="true" />
+                      <small>上传照片</small>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={e => {
+                          handleThingPhotos(e.target.files)
+                          e.currentTarget.value = ''
+                        }}
+                      />
+                    </label>
+                  )}
+
+                  <button
+                    type="button"
+                    className="saveThingBtn saveThingBtnInline"
+                    disabled={
+                      (!editingThingId && things.length >= THING_LIMIT)
+                      || !thingDraft.year
+                      || !thingDraft.month
+                      || !thingDraft.name
+                      || thingTextUnits(thingDraft.name) > THING_NAME_MAX_UNITS
+                      || !thingDraft.reason
+                      || thingTextUnits(thingDraft.reason) < THING_REASON_MIN_UNITS
+                      || ((thingDraft.valueType || 'priceless') === 'gold' && !thingDraft.value)
+                    }
+                    onClick={saveThing}
+                  >
+                    {editingThingId ? '保存修改' : '保存新增'}
+                  </button>
+                </div>
+
+                {Array.isArray(thingDraft.photos) && thingDraft.photos.length > 0 && (
+                  <div className="thingPhotoDraftGrid">
+                    {thingDraft.photos.map((photo, index) => (
+                      <div
+                        className="thingPhotoDraftItem"
+                        key={photo.id || photo.assetIdentifier || photo.uri || index}
+                      >
+                        <img src={photo.thumbnail} alt={`物品照片${index + 1}`} />
+                        <button
+                          type="button"
+                          className="thingPhotoDeleteButton"
+                          onClick={event => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            removeThingDraftPhoto(index)
+                          }}
+                          aria-label={`删除物品照片${index + 1}`}
+                          title="删除照片"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section> : <>
               <section className="thingsListCard"><div className="thingsListHeader"><span>{currentThingList.length}件 · {thingTotals[thingsMode]?.gold || 0} 金粒 · {thingTotals[thingsMode]?.priceless || 0} 件无价</span></div><div className="thingsList">{currentThingList.map(item => <button key={item.id} className={selectedThing?.id === item.id ? 'thingListItem active' : 'thingListItem'} onClick={() => selectThing(item.id)}><small>{item.year}年{item.month}月</small><strong>{item.name}</strong></button>)}</div></section>
               <section className="thingDetailCard">{selectedThing ? <>{Array.isArray(selectedThing.photos) && selectedThing.photos.length > 0 ? <div className="thingDetailPhotoGrid">{selectedThing.photos.map((photo, index) => <button type="button" className="thingDetailPhotoButton" key={photo.id || photo.assetIdentifier || photo.uri || index} onClick={() => openThingPhoto(photo, selectedThing.photos, index)}><img src={photo.thumbnail} alt={`${selectedThing.name}照片${index + 1}`} /></button>)}</div> : <div className="thingDetailPhoto thingDetailPhotoEmpty">🐾</div>}<h3>{selectedThing.name}</h3><small>{selectedThing.year}年{selectedThing.month}月 · {THING_TYPES[selectedThing.type]} · 估值 {thingValueLabel(selectedThing)}</small><p className="thingReason">{selectedThing.reason}</p><div className="thingPawSeal"><div className="thingSealLine thingVisitLine"><ThingPaws item={selectedThing} className="thingVisitPaws" compact /><p>雪粒已经来看过 {Number(selectedThing.pawCount || 1)} 次。</p></div><div className="thingActionButtons">{selectedThing.type === 'wish' && <button onClick={() => moveThing(selectedThing.id, 'treasure')}>此物到手</button>}{selectedThing.type === 'treasure' && <button onClick={() => moveThing(selectedThing.id, 'memory')}>舍离此物</button>}<button className="thingIconAction deleteThingBtn" title="删除记录" aria-label="删除记录" onClick={() => requestDeleteThing(selectedThing.id)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5" /></svg></button><button className="thingIconAction" title="编辑修改" aria-label="编辑修改" onClick={() => startEditThing(selectedThing)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4Zm9-13 4 4" /></svg></button></div></div></> : null}</section></>}
             </div>
@@ -476,7 +647,7 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
       </div>
     </div>
     {pendingThingDelete && <div className="noticeOverlay"><div className="noticeBox thingConfirmBox thingDeleteConfirmBox"><h2>{pendingThingDelete.title}</h2><p>{pendingThingDelete.text}</p><div className="thingConfirmButtons"><button className="dangerConfirmBtn" onClick={() => confirmDeleteThing(pendingThingDelete.id)}>确认删除</button><button onClick={() => setPendingThingDelete(null)}>再想想</button></div></div></div>}
-    {pendingThingMove && <div className="noticeOverlay"><div className="noticeBox thingConfirmBox"><h2>{pendingThingMove.title}</h2><p>{pendingThingMove.text}</p><div className="thingConfirmButtons"><button onClick={() => { const pending = pendingThingMove; setPendingThingMove(null); applyThingMove(pending.id, pending.nextType) }}>确认舍离</button><button onClick={() => setPendingThingMove(null)}>暂时留下</button></div></div></div>}
+    {pendingThingMove && <div className="noticeOverlay"><div className="noticeBox thingConfirmBox"><h2>{pendingThingMove.title}</h2><p>{pendingThingMove.text}</p><div className="thingConfirmButtons"><button onClick={() => { const pending = pendingThingMove; setPendingThingMove(null); applyThingMove(pending.id, pending.nextType) }}>{pendingThingMove.confirmLabel || '确认'}</button><button onClick={() => setPendingThingMove(null)}>{pendingThingMove.cancelLabel || '取消'}</button></div></div></div>}
     {thingModal && <div className="noticeOverlay"><div className={`noticeBox thingQuietModal${thingModal.title === '确认舍离' ? '' : ' thingActionNotice'}`}><button type="button" className="thingModalClose" onClick={() => setThingModal(null)} aria-label="关闭">×</button><h2>{thingModal.title}</h2><p>{thingModal.text}</p></div></div>}
   </>
 }

@@ -7,6 +7,8 @@ import UIKit
 
 @objc(IOSScreenTimePlugin)
 public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
+    private var homeMiniHost: UIViewController?
+
     public let identifier = "IOSScreenTimePlugin"
     public let jsName = "IOSScreenTime"
 
@@ -16,6 +18,9 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "presentReport", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "presentSevenDayReport", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "presentSevenDayDailyTable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "showHomeMiniReport", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "hideHomeMiniReport", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "presentDashboardReport", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startOffscreenMonitoring", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readOffscreenMonitoringData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopOffscreenMonitoring", returnType: CAPPluginReturnPromise),
@@ -254,6 +259,128 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
 
     // MARK: - Snowball 离机时间 Monitor 测试
+
+    @objc public func showHomeMiniReport(_ call: CAPPluginCall) {
+        guard AuthorizationCenter.shared.authorizationStatus == .approved else {
+            call.reject("请先授权苹果屏幕时间。")
+            return
+        }
+
+        let x = call.getDouble("x") ?? 0
+        let y = call.getDouble("y") ?? 0
+        let width = max(40, call.getDouble("width") ?? 180)
+        let height = max(20, call.getDouble("height") ?? 26)
+
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: Date())
+
+        guard
+            let yesterday = calendar.date(
+                byAdding: .day,
+                value: -1,
+                to: today
+            ),
+            let start = calendar.date(
+                byAdding: .day,
+                value: -6,
+                to: yesterday
+            ),
+            let end = calendar.date(
+                bySettingHour: 5,
+                minute: 0,
+                second: 0,
+                of: today
+            )
+        else {
+            call.reject("无法计算主页迷你报表区间。")
+            return
+        }
+
+        let filter = DeviceActivityFilter(
+            segment: .hourly(
+                during: DateInterval(start: start, end: end)
+            ),
+            users: .all,
+            devices: .all
+        )
+
+        DispatchQueue.main.async {
+            guard let presenter = self.bridge?.viewController else {
+                call.reject("找不到雪球主页面。")
+                return
+            }
+
+            self.removeHomeMiniHost()
+
+            let report = DeviceActivityReport(
+                DeviceActivityReport.Context("Snowball Home Mini"),
+                filter: filter
+            )
+            .background(Color.clear)
+
+            let host = UIHostingController(rootView: report)
+            host.view.backgroundColor = .clear
+            host.view.isOpaque = false
+            host.view.isUserInteractionEnabled = false
+            host.view.frame = CGRect(
+                x: x,
+                y: y,
+                width: width,
+                height: height
+            )
+
+            presenter.addChild(host)
+            presenter.view.addSubview(host.view)
+            host.didMove(toParent: presenter)
+            self.homeMiniHost = host
+
+            call.resolve(["shown": true])
+        }
+    }
+
+    @objc public func hideHomeMiniReport(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            self.removeHomeMiniHost()
+            call.resolve(["hidden": true])
+        }
+    }
+
+    @objc public func presentDashboardReport(_ call: CAPPluginCall) {
+        guard AuthorizationCenter.shared.authorizationStatus == .approved else {
+            call.reject("请先授权苹果屏幕时间。")
+            return
+        }
+
+        DispatchQueue.main.async {
+            guard let presenter = self.bridge?.viewController else {
+                call.reject("找不到雪球主页面。")
+                return
+            }
+
+            let dashboard = IOSScreenTimeDashboardContainer(
+                onClose: {
+                    presenter.dismiss(animated: true) {
+                        call.resolve(["closed": true])
+                    }
+                }
+            )
+
+            let host = UIHostingController(rootView: dashboard)
+            host.modalPresentationStyle = .fullScreen
+            presenter.present(host, animated: true)
+        }
+    }
+
+    private func removeHomeMiniHost() {
+        guard let host = homeMiniHost else {
+            return
+        }
+        host.willMove(toParent: nil)
+        host.view.removeFromSuperview()
+        host.removeFromParent()
+        homeMiniHost = nil
+    }
+
 
     @objc public func startOffscreenMonitoring(_ call: CAPPluginCall) {
         guard AuthorizationCenter.shared.authorizationStatus == .approved else {
@@ -920,6 +1047,162 @@ private struct IOSSevenDayDailyTableContainer: View {
                         Button("关闭", action: onClose)
                     }
                 }
+        }
+    }
+}
+
+
+private enum IOSDashboardRange: String, CaseIterable, Identifiable {
+    case today
+    case yesterday
+    case week
+    case month
+    case year
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .today: return "今天"
+        case .yesterday: return "昨天"
+        case .week: return "周均"
+        case .month: return "月均"
+        case .year: return "年均"
+        }
+    }
+
+    var context: DeviceActivityReport.Context {
+        switch self {
+        case .today:
+            return DeviceActivityReport.Context(
+                "Snowball Dashboard Today"
+            )
+        case .yesterday:
+            return DeviceActivityReport.Context(
+                "Snowball Dashboard Yesterday"
+            )
+        case .week:
+            return DeviceActivityReport.Context(
+                "Snowball Dashboard Week"
+            )
+        case .month:
+            return DeviceActivityReport.Context(
+                "Snowball Dashboard Month"
+            )
+        case .year:
+            return DeviceActivityReport.Context(
+                "Snowball Dashboard Year"
+            )
+        }
+    }
+}
+
+private struct IOSScreenTimeDashboardContainer: View {
+    let onClose: () -> Void
+    @State private var range: IOSDashboardRange = .yesterday
+
+    private var filter: DeviceActivityFilter {
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: Date())
+
+        switch range {
+        case .today:
+            let end = calendar.date(
+                byAdding: .day,
+                value: 1,
+                to: today
+            ) ?? Date()
+            return DeviceActivityFilter(
+                segment: .hourly(
+                    during: DateInterval(start: today, end: end)
+                ),
+                users: .all,
+                devices: .all
+            )
+
+        case .yesterday:
+            let start = calendar.date(
+                byAdding: .day,
+                value: -1,
+                to: today
+            ) ?? today
+            return DeviceActivityFilter(
+                segment: .hourly(
+                    during: DateInterval(start: start, end: today)
+                ),
+                users: .all,
+                devices: .all
+            )
+
+        case .week:
+            let start = calendar.date(
+                byAdding: .day,
+                value: -7,
+                to: today
+            ) ?? today
+            return DeviceActivityFilter(
+                segment: .daily(
+                    during: DateInterval(start: start, end: today)
+                ),
+                users: .all,
+                devices: .all
+            )
+
+        case .month:
+            let start = calendar.date(
+                byAdding: .day,
+                value: -30,
+                to: today
+            ) ?? today
+            return DeviceActivityFilter(
+                segment: .daily(
+                    during: DateInterval(start: start, end: today)
+                ),
+                users: .all,
+                devices: .all
+            )
+
+        case .year:
+            let start = calendar.date(
+                byAdding: .day,
+                value: -365,
+                to: today
+            ) ?? today
+            return DeviceActivityFilter(
+                segment: .weekly(
+                    during: DateInterval(start: start, end: today)
+                ),
+                users: .all,
+                devices: .all
+            )
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Picker("统计范围", selection: $range) {
+                    ForEach(IOSDashboardRange.allCases) { item in
+                        Text(item.title).tag(item)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+
+                DeviceActivityReport(
+                    range.context,
+                    filter: filter
+                )
+                .id(range)
+            }
+            .navigationTitle("苹果屏幕时间")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("关闭", action: onClose)
+                }
+            }
         }
     }
 }

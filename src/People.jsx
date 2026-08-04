@@ -651,7 +651,6 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
     return false
   }
   const [nicknameError, setNicknameError] = useState('')
-  const [witnessPopup, setWitnessPopup] = useState('')
   const [expandedWitnessId, setExpandedWitnessId] = useState(null)
   const [showPeopleInfo, setShowPeopleInfo] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -957,7 +956,6 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
     })
     closeEditor()
     if (!activeBirthDate) window.alert('人物记录已保存。请在“设置”中填写初始年月后再生成人间图。')
-    if (canAddWitness) setWitnessPopup(witnessText)
   }
 
   function requestDelete(person) {
@@ -1319,26 +1317,42 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
             <h3>{photoTarget.name}</h3>
 
             <div className="peoplePhotoToolbar">
-              <label
-                className="peoplePhotoToolButton peoplePhotoUploadButton"
-                title="上传照片"
-                aria-label="上传照片"
-              >
-                <img
-                  src="/refine/footprint_photoicon.png"
-                  alt=""
-                  aria-hidden="true"
-                />
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={event => {
-                    pickPeoplePhotos(event.target.files)
-                    event.currentTarget.value = ''
-                  }}
-                />
-              </label>
+              {isPhotoIndexAvailable() ? (
+                <button
+                  type="button"
+                  className="peoplePhotoToolButton peoplePhotoUploadButton peoplePhotoIndexUploadButton"
+                  title="上传照片"
+                  aria-label="上传照片"
+                  onClick={() => pickPeoplePhotos()}
+                >
+                  <img
+                    src="/refine/footprint_photoicon.png"
+                    alt=""
+                    aria-hidden="true"
+                  />
+                </button>
+              ) : (
+                <label
+                  className="peoplePhotoToolButton peoplePhotoUploadButton"
+                  title="上传照片"
+                  aria-label="上传照片"
+                >
+                  <img
+                    src="/refine/footprint_photoicon.png"
+                    alt=""
+                    aria-hidden="true"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={event => {
+                      pickPeoplePhotos(event.target.files)
+                      event.currentTarget.value = ''
+                    }}
+                  />
+                </label>
+              )}
 
               {!photoEditing ? (
                 <button
@@ -1352,8 +1366,28 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
                 </button>
               ) : (
                 <div className="peoplePhotoEditActions">
-                  <button type="button" onClick={savePhotoEdit}>保存</button>
-                  <button type="button" onClick={cancelPhotoEdit}>取消</button>
+                  <button
+                    type="button"
+                    onPointerDown={event => event.stopPropagation()}
+                    onClick={event => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      savePhotoEdit()
+                    }}
+                  >
+                    保存
+                  </button>
+                  <button
+                    type="button"
+                    onPointerDown={event => event.stopPropagation()}
+                    onClick={event => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      cancelPhotoEdit()
+                    }}
+                  >
+                    取消
+                  </button>
                 </div>
               )}
             </div>
@@ -1395,6 +1429,13 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
                           <button
                             type="button"
                             className="peoplePhotoDelete"
+                            onPointerDown={event => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                            }}
+                            onTouchStart={event => {
+                              event.stopPropagation()
+                            }}
                             onClick={event => {
                               event.preventDefault()
                               event.stopPropagation()
@@ -1456,16 +1497,6 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
               <button type="button" onClick={savePerson}>保存</button>
               <button type="button" onClick={closeEditor}>取消</button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {witnessPopup && (
-        <div className="peopleWitnessPopupOverlay">
-          <div className="peopleWitnessPopup">
-            <button type="button" className="peopleWitnessClose" onClick={() => setWitnessPopup('')} aria-label="关闭">×</button>
-            <img src="/refine/people_background_cat.png" alt="雪粒" />
-            <p>{witnessPopup}</p>
           </div>
         </div>
       )}

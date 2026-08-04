@@ -1,4 +1,8 @@
+import { useEffect, useRef, useState } from 'react'
 import './Train.css'
+import {
+  openIOSScreenTimeDashboard,
+} from './components/ios-screen-time/iosScreenTimeService.js'
 
 
 /* ======================================================
@@ -153,7 +157,97 @@ export default function Train({
   openDailyDetail,
   openScreenTimeSummary,
   onBackHome,
+  useNativeIOSScreenTime = false,
 }) {
+  const [iosReportError, setIOSReportError] = useState('')
+  const iosOpenedRef = useRef(false)
+  const [showTrainInfo, setShowTrainInfo] = useState(false)
+
+  useEffect(() => {
+    if (!useNativeIOSScreenTime || iosOpenedRef.current) {
+      return
+    }
+
+    iosOpenedRef.current = true
+    openIOSScreenTimeDashboard().catch(error => {
+      iosOpenedRef.current = false
+      setIOSReportError(
+        String(error?.message || error || '苹果屏幕时间报表没有打开。'),
+      )
+    })
+  }, [useNativeIOSScreenTime])
+
+  if (showTrainInfo) {
+    return (
+      <section className="trainInfoPage" aria-label="信息说明">
+        <header className="trainInfoHeader">
+          <button
+            type="button"
+            className="trainInfoBack"
+            onClick={() => setShowTrainInfo(false)}
+            aria-label="返回信息列车"
+          >
+            ‹
+          </button>
+          <h2>信息说明</h2>
+        </header>
+
+        <div className="trainInfoBody">
+          <p><strong>信息页面</strong>记录手机使用状态，用于帮助雪粒了解生活节奏，仅供个人参考，不作为医学、法律或行为判断依据。</p>
+
+          <p>所有数据默认保存在你的设备中。雪粒不会读取聊天内容、网页内容、照片内容或应用内容，也不会用于广告或推荐。</p>
+
+          <p><strong>屏幕时间</strong><br />安卓直接读取系统统计。苹果由于系统限制，需要等待系统生成报表，因此刚打开时可能暂时没有结果，稍后通常会自动补充。</p>
+
+          <p><strong>昨日休息</strong><br />记录的是昨天主要使用手机结束的大约时间，而不是准确睡眠时间。安卓依据系统数据；苹果依据最后长时间活动和最后一小时活动推算，仅供参考。</p>
+
+          <p><strong>苹果用户</strong><br />可以通过道晚安、通话告诉雪粒，或手动修改来记录昨天的休息时间。如果存在多个时间，雪粒会按照现有规则采用最终记录。</p>
+
+          <p><strong>待记录</strong><br />如果昨天没有足够数据，雪粒不会自动猜测，而会保持待记录状态。用户也可以选择不记录，只是对应状态不会获得完整数据。</p>
+
+          <p><strong>APP 分类</strong><br />系统返回的 APP 会按照雪粒现有词表归类。无法识别或未单独列出的应用会暂时归入“其它”，因此“其它”只能作为粗略参考。</p>
+
+          <p><strong>苹果报表</strong><br />屏幕时间报表可能有一定滞后。昨天的数据通常比今天更完整；如果暂时没有看到最新统计，可以稍后再次打开，或参考昨天末次活动等补充信息。</p>
+
+          <p><strong>数据参考</strong><br />屏幕时间和离机时间均来自系统数据或合理推算。苹果还可以结合用户主动记录进行补充，但所有结果都不代表绝对准确的事实。</p>
+
+          <p><strong>隐私</strong><br />雪粒只使用系统提供的统计结果和用户主动填写的数据，不读取具体聊天、网页、照片或文件内容，相关数据不会主动外泄。</p>
+
+          <p>雪粒更希望帮助你观察长期生活节奏，而不是追求某一天数字的绝对准确。</p>
+        </div>
+      </section>
+    )
+  }
+
+  if (useNativeIOSScreenTime) {
+    return (
+      <div className="dailyPage dailySubPage dailyTrainPage trainPage trainIOSReportPage">
+        <button type="button" className="trainBackBtn" onClick={onBackHome}>
+          返回主页
+        </button>
+        <div className="trainIOSReportFallback">
+          <p>{iosReportError || '正在打开苹果屏幕时间报表…'}</p>
+          {iosReportError && (
+            <button
+              type="button"
+              onClick={() => {
+                setIOSReportError('')
+                iosOpenedRef.current = false
+                openIOSScreenTimeDashboard().catch(error => {
+                  setIOSReportError(
+                    String(error?.message || error || '苹果屏幕时间报表没有打开。'),
+                  )
+                })
+              }}
+            >
+              重新打开
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="dailyPage dailySubPage dailyTrainPage trainPage">
       <div className="dailySubTop trainSubTop">
@@ -161,6 +255,13 @@ export default function Train({
         <div className="dailySubActions trainSubActions">
           <button type="button" className="trainBackBtn" onClick={onBackHome}>返回主页</button>
         </div>
+        <button
+          type="button"
+          className="trainInfoBtn"
+          onClick={() => setShowTrainInfo(true)}
+        >
+          说明
+        </button>
       </div>
 
       <div className="dailyInsightCard informationTrainCard trainInsightCard">
@@ -173,6 +274,7 @@ export default function Train({
           fallback="/refine/watch01.png"
           ariaLabel="信息列车守望猫"
         />
+
 
         <div className="dailyInsightContent trainInsightContent">
           <div className={`informationTrainStage ${trainIsRunning ? 'isRunning' : 'isWaiting'}`} key={`train-${dailyStatRange}-${trainRunKey}`} aria-hidden="true">

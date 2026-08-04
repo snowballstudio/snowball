@@ -10,6 +10,18 @@ extension DeviceActivityReport.Context {
     static let sevenDayAverage = Self("Snowball Seven Day Average")
     static let sevenDayDailyTable =
         Self("Snowball Seven Day Daily Table")
+    static let homeMini =
+        Self("Snowball Home Mini")
+    static let dashboardToday =
+        Self("Snowball Dashboard Today")
+    static let dashboardYesterday =
+        Self("Snowball Dashboard Yesterday")
+    static let dashboardWeek =
+        Self("Snowball Dashboard Week")
+    static let dashboardMonth =
+        Self("Snowball Dashboard Month")
+    static let dashboardYear =
+        Self("Snowball Dashboard Year")
 }
 
 struct ScreenTimeApplicationRow: Identifiable, Hashable, Sendable {
@@ -506,3 +518,318 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
         )
     }
 }
+
+struct SnowballHomeMiniConfiguration: Sendable {
+    let sevenDayAverageHours: Double
+    let lastActivityDate: Date?
+}
+
+struct SnowballDashboardApplicationRow: Identifiable, Sendable {
+    let id: String
+    let name: String
+    let duration: TimeInterval
+    let pickups: Int
+}
+
+struct SnowballDashboardCategoryRow: Identifiable, Sendable {
+    let id: String
+    let name: String
+    let duration: TimeInterval
+}
+
+struct SnowballDashboardConfiguration: Sendable {
+    let rangeLabel: String
+    let divisor: Double
+    let totalDuration: TimeInterval
+    let applications: [SnowballDashboardApplicationRow]
+    let otherDuration: TimeInterval
+    let categories: [SnowballDashboardCategoryRow]
+}
+
+private enum SnowballReportBuilder {
+    struct AppBucket {
+        var name: String
+        var duration: TimeInterval
+        var pickups: Int
+    }
+
+    static func homeMini(
+        representing data: DeviceActivityResults<DeviceActivityData>
+    ) async -> SnowballHomeMiniConfiguration {
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: Date())
+        let yesterday = calendar.date(
+            byAdding: .day,
+            value: -1,
+            to: today
+        ) ?? today
+        let logicalStart = calendar.date(
+            bySettingHour: 5,
+            minute: 0,
+            second: 0,
+            of: yesterday
+        ) ?? yesterday
+        let logicalEnd = calendar.date(
+            byAdding: .day,
+            value: 1,
+            to: logicalStart
+        ) ?? today
+
+        var totalsByDate: [Date: TimeInterval] = [:]
+        var lastCandidate: Date?
+
+        for await deviceData in data {
+            for await segment in deviceData.activitySegments {
+                let segmentDay = calendar.startOfDay(
+                    for: segment.dateInterval.start
+                )
+                totalsByDate[segmentDay, default: 0] +=
+                    segment.totalActivityDuration
+
+                guard segment.totalActivityDuration > 0 else {
+                    continue
+                }
+
+                let overlapsLogicalDay =
+                    segment.dateInterval.end > logicalStart
+                    && segment.dateInterval.start < logicalEnd
+
+                guard overlapsLogicalDay else {
+                    continue
+                }
+
+                var candidate = segment.longestActivity?.end
+
+                if let firstPickup = segment.firstPickup {
+                    let pickupPlusDuration = firstPickup.addingTimeInterval(
+                        segment.totalActivityDuration
+                    )
+                    if candidate == nil || pickupPlusDuration > candidate! {
+                        candidate = pickupPlusDuration
+                    }
+                }
+
+                if let candidate,
+                   lastCandidate == nil || candidate > lastCandidate! {
+                    lastCandidate = candidate
+                }
+            }
+        }
+
+        var total: TimeInterval = 0
+        for offset in 0..<7 {
+            let date = calendar.date(
+                byAdding: .day,
+                value: -offset,
+                to: yesterday
+            ) ?? yesterday
+            total += totalsByDate[calendar.startOfDay(for: date)] ?? 0
+        }
+
+        return SnowballHomeMiniConfiguration(
+            sevenDayAverageHours: total / 7.0 / 3600.0,
+            lastActivityDate: lastCandidate
+        )
+    }
+
+    static func dashboard(
+        representing data: DeviceActivityResults<DeviceActivityData>,
+        rangeLabel: String,
+        divisor: Double
+    ) async -> SnowballDashboardConfiguration {
+        var totalDuration: TimeInterval = 0
+        var applications: [String: AppBucket] = [:]
+        var categories: [String: TimeInterval] = [:]
+
+        for await deviceData in data {
+            for await segment in deviceData.activitySegments {
+                totalDuration += segment.totalActivityDuration
+
+                for await categoryActivity in segment.categories {
+                    let rawCategory =
+                        categoryActivity.category.localizedDisplayName
+                    let categoryName =
+                        rawCategory?.isEmpty == false
+                        ? rawCategory!
+                        : "其它"
+
+                    var categoryDuration: TimeInterval = 0
+
+                    for await applicationActivity
+                        in categoryActivity.applications {
+                        let application =
+                            applicationActivity.application
+                        let bundle =
+                            application.bundleIdentifier
+                            ?? "unknown"
+                        let rawName =
+                            application.localizedDisplayName
+                        let name =
+                            rawName?.isEmpty == false
+                            ? rawName!
+                            : bundle
+
+                        var bucket = applications[bundle]
+                            ?? AppBucket(
+                                name: name,
+                                duration: 0,
+                                pickups: 0
+                            )
+                        bucket.duration +=
+                            applicationActivity.totalActivityDuration
+                        bucket.pickups +=
+                            applicationActivity.numberOfPickups
+                        applications[bundle] = bucket
+
+                        categoryDuration +=
+                            applicationActivity.totalActivityDuration
+                    }
+
+                    categories[categoryName, default: 0] += categoryDuration
+                }
+            }
+        }
+
+        let safeDivisor = max(1.0, divisor)
+        let sortedApps = applications
+            .map { key, bucket in
+                SnowballDashboardApplicationRow(
+                    id: key,
+                    name: bucket.name,
+                    duration: bucket.duration / safeDivisor,
+                    pickups: Int(
+                        (Double(bucket.pickups) / safeDivisor).rounded()
+                    )
+                )
+            }
+            .sorted { left, right in
+                if left.duration != right.duration {
+                    return left.duration > right.duration
+                }
+                return left.name < right.name
+            }
+
+        let top = Array(sortedApps.prefix(10))
+        let otherDuration = sortedApps
+            .dropFirst(min(10, sortedApps.count))
+            .reduce(0) { $0 + $1.duration }
+
+        let categoryRows = categories
+            .map { key, duration in
+                SnowballDashboardCategoryRow(
+                    id: key,
+                    name: key,
+                    duration: duration / safeDivisor
+                )
+            }
+            .filter { $0.duration > 0 }
+            .sorted { left, right in
+                if left.duration != right.duration {
+                    return left.duration > right.duration
+                }
+                return left.name < right.name
+            }
+
+        return SnowballDashboardConfiguration(
+            rangeLabel: rangeLabel,
+            divisor: safeDivisor,
+            totalDuration: totalDuration / safeDivisor,
+            applications: top,
+            otherDuration: otherDuration,
+            categories: categoryRows
+        )
+    }
+}
+
+struct SnowballHomeMiniReport: DeviceActivityReportScene {
+    let context: DeviceActivityReport.Context = .homeMini
+    let content:
+        (SnowballHomeMiniConfiguration) -> SnowballHomeMiniView
+
+    func makeConfiguration(
+        representing data: DeviceActivityResults<DeviceActivityData>
+    ) async -> SnowballHomeMiniConfiguration {
+        await SnowballReportBuilder.homeMini(representing: data)
+    }
+}
+
+struct SnowballDashboardTodayReport: DeviceActivityReportScene {
+    let context: DeviceActivityReport.Context = .dashboardToday
+    let content:
+        (SnowballDashboardConfiguration) -> SnowballDashboardView
+
+    func makeConfiguration(
+        representing data: DeviceActivityResults<DeviceActivityData>
+    ) async -> SnowballDashboardConfiguration {
+        await SnowballReportBuilder.dashboard(
+            representing: data,
+            rangeLabel: "今天",
+            divisor: 1
+        )
+    }
+}
+
+struct SnowballDashboardYesterdayReport: DeviceActivityReportScene {
+    let context: DeviceActivityReport.Context = .dashboardYesterday
+    let content:
+        (SnowballDashboardConfiguration) -> SnowballDashboardView
+
+    func makeConfiguration(
+        representing data: DeviceActivityResults<DeviceActivityData>
+    ) async -> SnowballDashboardConfiguration {
+        await SnowballReportBuilder.dashboard(
+            representing: data,
+            rangeLabel: "昨天",
+            divisor: 1
+        )
+    }
+}
+
+struct SnowballDashboardWeekReport: DeviceActivityReportScene {
+    let context: DeviceActivityReport.Context = .dashboardWeek
+    let content:
+        (SnowballDashboardConfiguration) -> SnowballDashboardView
+
+    func makeConfiguration(
+        representing data: DeviceActivityResults<DeviceActivityData>
+    ) async -> SnowballDashboardConfiguration {
+        await SnowballReportBuilder.dashboard(
+            representing: data,
+            rangeLabel: "周均",
+            divisor: 7
+        )
+    }
+}
+
+struct SnowballDashboardMonthReport: DeviceActivityReportScene {
+    let context: DeviceActivityReport.Context = .dashboardMonth
+    let content:
+        (SnowballDashboardConfiguration) -> SnowballDashboardView
+
+    func makeConfiguration(
+        representing data: DeviceActivityResults<DeviceActivityData>
+    ) async -> SnowballDashboardConfiguration {
+        await SnowballReportBuilder.dashboard(
+            representing: data,
+            rangeLabel: "月均",
+            divisor: 30
+        )
+    }
+}
+
+struct SnowballDashboardYearReport: DeviceActivityReportScene {
+    let context: DeviceActivityReport.Context = .dashboardYear
+    let content:
+        (SnowballDashboardConfiguration) -> SnowballDashboardView
+
+    func makeConfiguration(
+        representing data: DeviceActivityResults<DeviceActivityData>
+    ) async -> SnowballDashboardConfiguration {
+        await SnowballReportBuilder.dashboard(
+            representing: data,
+            rangeLabel: "年均",
+            divisor: 365
+        )
+    }
+}
+

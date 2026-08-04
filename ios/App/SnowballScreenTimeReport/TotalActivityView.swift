@@ -456,3 +456,172 @@ struct SevenDayDailyTableView: View {
     }
 }
 
+struct SnowballHomeMiniView: View {
+    let configuration: SnowballHomeMiniConfiguration
+
+    private let clockFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "H：mm"
+        return formatter
+    }()
+
+    var body: some View {
+        let average = String(
+            format: "%.1f",
+            configuration.sevenDayAverageHours
+        )
+        let last = configuration.lastActivityDate.map {
+            clockFormatter.string(from: $0)
+        } ?? "—"
+
+        Text("\(average)，末次\(last)")
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(Color(red: 0.09, green: 0.64, blue: 0.86))
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .background(Color.clear)
+    }
+}
+
+struct SnowballDashboardView: View {
+    let configuration: SnowballDashboardConfiguration
+
+    private func durationText(_ seconds: TimeInterval) -> String {
+        let minutes = max(0, Int((seconds / 60).rounded()))
+        if minutes < 60 {
+            return "\(minutes)分"
+        }
+        return String(format: "%.1f小时", Double(minutes) / 60.0)
+    }
+
+    private var maximumCategoryDuration: TimeInterval {
+        max(
+            configuration.categories.map(\.duration).max() ?? 0,
+            1
+        )
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(configuration.rangeLabel)
+                        .font(.title2.weight(.semibold))
+                    Spacer()
+                    Text("合计 \(durationText(configuration.totalDuration))")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(spacing: 0) {
+                    HStack {
+                        Text("APP")
+                        Spacer()
+                        Text("时间")
+                            .frame(width: 82, alignment: .trailing)
+                        Text("打开")
+                            .frame(width: 54, alignment: .trailing)
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 8)
+
+                    Divider()
+
+                    ForEach(
+                        Array(configuration.applications.enumerated()),
+                        id: \.element.id
+                    ) { index, row in
+                        HStack {
+                            Text("\(index + 1). \(row.name)")
+                                .lineLimit(1)
+                            Spacer()
+                            Text(durationText(row.duration))
+                                .frame(width: 82, alignment: .trailing)
+                            Text("\(row.pickups)")
+                                .frame(width: 54, alignment: .trailing)
+                        }
+                        .font(.subheadline)
+                        .padding(.vertical, 7)
+
+                        Divider()
+                    }
+
+                    if configuration.otherDuration > 0 {
+                        HStack {
+                            Text("其它")
+                            Spacer()
+                            Text(durationText(configuration.otherDuration))
+                                .frame(width: 82, alignment: .trailing)
+                            Text("—")
+                                .frame(width: 54, alignment: .trailing)
+                        }
+                        .font(.subheadline)
+                        .padding(.vertical, 7)
+
+                        Divider()
+                    }
+
+                    HStack {
+                        Text("合计")
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Text(durationText(configuration.totalDuration))
+                            .fontWeight(.semibold)
+                            .frame(width: 82, alignment: .trailing)
+                        Text("")
+                            .frame(width: 54)
+                    }
+                    .font(.subheadline)
+                    .padding(.vertical, 8)
+                }
+
+                Divider()
+
+                Text("类型分布")
+                    .font(.headline)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(configuration.categories) { row in
+                        VStack(alignment: .leading, spacing: 5) {
+                            HStack {
+                                Text(row.name)
+                                    .font(.caption)
+                                Spacer()
+                                Text(durationText(row.duration))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            GeometryReader { proxy in
+                                let ratio = max(
+                                    0,
+                                    min(
+                                        1,
+                                        row.duration / maximumCategoryDuration
+                                    )
+                                )
+
+                                ZStack(alignment: .leading) {
+                                    Capsule()
+                                        .fill(Color.secondary.opacity(0.14))
+                                    Capsule()
+                                        .fill(Color.accentColor.opacity(0.82))
+                                        .frame(
+                                            width: proxy.size.width * ratio
+                                        )
+                                }
+                            }
+                            .frame(height: 9)
+                        }
+                    }
+                }
+            }
+            .padding(18)
+        }
+        .background(Color(.systemBackground))
+    }
+}
+
