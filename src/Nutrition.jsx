@@ -256,6 +256,7 @@ function buildDailyNutritionSummary(detailRows = []) {
   return [...byDate.values()]
     .map(item => ({
       ...item,
+      hasFoodRecord: true,
       vitaminTypeCount: Object.keys(item.vitamins).length,
       microTypeCount: Object.keys(item.microNutrition).length,
     }))
@@ -267,11 +268,26 @@ function roundedAverage(value) {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
 }
 
+function validNutritionDays(days = []) {
+  return (days || []).filter(day =>
+    day &&
+    String(day.dateKey || day.date || '').trim() &&
+    (
+      Number(day.vitaminTypeCount || 0) > 0 ||
+      Number(day.microTypeCount || 0) > 0 ||
+      Object.keys(day.vitamins || {}).length > 0 ||
+      Object.keys(day.microNutrition || {}).length > 0 ||
+      day.hasFoodRecord === true
+    )
+  )
+}
+
 function averageNutrientCounts(days, field) {
-  const divisor = Math.max(1, days.length)
+  const validDays = validNutritionDays(days)
+  const divisor = Math.max(1, validDays.length)
   const totals = new Map()
 
-  days.forEach(day => {
+  validDays.forEach(day => {
     Object.entries(day?.[field] || {}).forEach(([name, count]) => {
       totals.set(name, (totals.get(name) || 0) + Number(count || 0))
     })
@@ -284,11 +300,16 @@ function averageNutrientCounts(days, field) {
 }
 
 function periodNutritionItem(days, field, countField, key, label) {
-  const divisor = Math.max(1, days.length)
-  const value = days.length
-    ? days.reduce((sum, day) => sum + Number(day?.[countField] || 0), 0) / divisor
+  const validDays = validNutritionDays(days)
+  const divisor = Math.max(1, validDays.length)
+  const value = validDays.length
+    ? validDays.reduce(
+        (sum, day) =>
+          sum + Number(day?.[countField] || 0),
+        0,
+      ) / divisor
     : 0
-  const sources = averageNutrientCounts(days, field)
+  const sources = averageNutrientCounts(validDays, field)
   const note = sources.map(item => {
     const amount = roundedAverage(item.value)
     return amount === '1' ? item.name : `${item.name}×${amount}`

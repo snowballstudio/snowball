@@ -688,15 +688,67 @@ function recordScreenMinutes(record) {
   return 0
 }
 
+function hasRecordedValue(value) {
+  return value !== null &&
+    value !== undefined &&
+    String(value).trim() !== ''
+}
+
+function firstRecordedValue(...values) {
+  return values.find(hasRecordedValue)
+}
+
 function recordBrainPercent(record) {
-  const direct = Number(record?.brainPercent ?? record?.brain ?? record?.brainScore ?? record?.interactionPercent)
-  if (Number.isFinite(direct) && direct >= 0) return Math.min(100, Math.max(0, Math.round(direct)))
-  return 0
+  const raw = firstRecordedValue(
+    record?.brainPercent,
+    record?.brain,
+    record?.brainScore,
+    record?.interactionPercent,
+  )
+  if (!hasRecordedValue(raw)) return null
+
+  const direct = Number(raw)
+  if (Number.isFinite(direct) && direct >= 0) {
+    return Math.min(100, Math.max(0, Math.round(direct)))
+  }
+  return null
+}
+
+function recordScreenMinutesOrNull(record) {
+  const directMinutes = firstRecordedValue(record?.screenMinutes)
+  if (hasRecordedValue(directMinutes)) {
+    const numeric = Number(directMinutes)
+    return Number.isFinite(numeric)
+      ? Math.max(0, Math.round(numeric))
+      : null
+  }
+
+  const directHours = firstRecordedValue(record?.screenHours)
+  if (hasRecordedValue(directHours)) {
+    const numeric = Number(directHours)
+    return Number.isFinite(numeric)
+      ? Math.max(0, Math.round(numeric * 60))
+      : null
+  }
+
+  const legacy = firstRecordedValue(
+    record?.screenTime,
+    record?.screen,
+  )
+  return hasRecordedValue(legacy)
+    ? minutesFromValue(legacy)
+    : null
 }
 
 function recordOffscreenMinutes(record) {
-  const value = record?.offscreenTime ?? record?.offscreen ?? record?.yesterdaySleep ?? record?.todaySleep
-  if (String(value ?? '').trim() === '0') return 0
+  const value = firstRecordedValue(
+    record?.offscreenTime,
+    record?.offscreen,
+    record?.yesterdaySleep,
+    record?.todaySleep,
+  )
+  if (!hasRecordedValue(value)) return null
+  if (String(value).trim() === '0') return 0
   return minutesFromValue(value)
 }
 
@@ -748,10 +800,26 @@ function buildDailyMonthGroups(records = []) {
   return [...buckets.entries()]
     .sort((a, b) => b[0].localeCompare(a[0]))
     .map(([key, items]) => {
-      const steps = items.map(item => Number(item.steps || item.yesterdaySteps || 0)).filter(n => n > 0)
-      const offscreens = items.map(recordOffscreenMinutes).filter(n => n !== null)
-      const screens = items.map(recordScreenMinutes).filter(n => n !== null)
-      const brains = items.map(recordBrainPercent).filter(n => Number.isFinite(n))
+      const steps = items
+        .map(item => firstRecordedValue(
+          item?.steps,
+          item?.yesterdaySteps,
+        ))
+        .filter(hasRecordedValue)
+        .map(Number)
+        .filter(n => Number.isFinite(n) && n >= 0)
+
+      const offscreens = items
+        .map(recordOffscreenMinutes)
+        .filter(n => n !== null)
+
+      const screens = items
+        .map(recordScreenMinutesOrNull)
+        .filter(n => n !== null)
+
+      const brains = items
+        .map(recordBrainPercent)
+        .filter(n => n !== null)
 
       return {
         key,
@@ -1179,7 +1247,7 @@ function daysFromYesterdayBackTo(records = [], today = new Date()) {
 }
 
 const FOOD_ALIAS = {
-  米饭: ['米饭', '白米饭', '大米', '香米','八宝饭','白米饭', '米豆腐','炒饭', '蛋炒饭', '八宝粥','腊八粥','血糯米','崇明糕','盖交饭', '糯米饭','糯米饼','糯米粥','糯米','米饼','寿司', '饭团', '粥',  '小米粥', '粽子', '年糕', '松糕','米糕','糍粑',  '皮蛋瘦肉粥',  '菜饭', '稀饭'],
+  米饭: ['米饭', '白米饭', '大米', '香米','八宝饭','白米饭', '米豆腐','炒饭', '红米','蛋炒饭', '八宝粥','腊八粥','血糯米','崇明糕','盖交饭', '糯米饭','糯米饼','糯米粥','糯米','米饼','寿司', '饭团', '粥',  '小米粥', '粽子', '年糕', '松糕','米糕','糍粑',  '皮蛋瘦肉粥',  '菜饭', '稀饭'],
   面食: ['面食', '面条', '拉面', '牛肉拉面', '螺蛳粉', '肠粉','河粉','炒河粉','炒面','馒头', '包子', '肉包', '菜包', '馍馍', '小笼包','生煎','米线','饺子', '馄饨', '云吞','抄手','云吞面','小馄饨','意大利面','葱油饼','煎饼','意面', '披萨', '汉堡'],
   面包: ['面包', '吐司', '汉堡包', '切片', '菠萝包','肉松包', '白切面包', '三明治', '烤面包'],
   土豆: ['土豆', '马铃薯', '土豆泥','土豆丝','土豆片'],
@@ -1199,7 +1267,7 @@ const FOOD_ALIAS = {
     '红烧排骨', '肉汤',  '排骨汤',  '骨头汤',  '蹄膀汤', '猪脚', '猪耳朵', '夫妻肺片', '猪肚', '大排', '小排', '唐排',
      '回锅肉', '肉丝','肉糜','炒肉','五花肉', '肉丸'],
   香肠: ['香肠', '火腿肠', '午餐肉', '腊肠'],
-  鱼虾蟹贝: ['虾蟹', '虾', '虾饺',  '鱼','老虎虾', '基围虾', '香蕉虾', '蛤蜊', '田螺', '淡菜', '鱿鱼', '墨鱼', '小河虾','明虾', '斑节虾',  '琵琶虾', '桂鱼', '鲈鱼', '生蚝', '扇贝', '泥蟹', '青蟹', '蟹', '鱼', '草鱼', '黑鱼', '鳊鱼', '多宝鱼', '鸦片鱼', '大闸蟹', '海鲜', '鲫鱼', '三文鱼','黄鱼', '带鱼', '鳕鱼', '海鱼', '鲍鱼', '胖头鱼', '河鱼',  '活鱼','鱼片', '鱼丸', '水煮鱼', '烤鱼', '小龙虾',  '金枪鱼', '螃蟹', '龙虾'],
+  鱼虾蟹贝: ['虾蟹', '虾', '虾饺',  '鱼','小鱼','小虾','虾米','老虎虾', '基围虾', '香蕉虾', '蛤蜊', '田螺', '淡菜', '鱿鱼', '墨鱼', '小河虾','明虾', '斑节虾',  '琵琶虾', '桂鱼', '鲈鱼', '生蚝', '扇贝', '泥蟹', '青蟹', '蟹', '鱼', '草鱼', '黑鱼', '鳊鱼', '多宝鱼', '鸦片鱼', '大闸蟹', '海鲜', '鲫鱼', '三文鱼','黄鱼', '带鱼', '鳕鱼', '海鱼', '鲍鱼', '胖头鱼', '河鱼',  '活鱼','鱼片', '鱼丸', '水煮鱼', '烤鱼', '小龙虾',  '金枪鱼', '螃蟹', '龙虾'],
   其它蛋白: ['其它蛋白'],
   白菜: ['白菜', '黄牙菜','卷心菜','包心白菜','娃娃菜','大白菜'],
   绿叶菜: ['青菜', '小青菜', '油菜', '上海青', '芥蓝', '鸡毛菜', '羽衣甘蓝', '奶油小白菜', '青梗菜', '荠菜', '萝卜缨子','塌棵菜','塔菜','菊花菜','菜心','油麦菜', '菠菜', '米苋', '空心菜', '茼蒿', '芥兰', '芥菜', '西洋菜', '香菜', '生菜', '木耳菜', '秋葵', '蒜苔'],
@@ -1222,7 +1290,7 @@ const FOOD_ALIAS = {
   海带: ['海带','海苔','海参','海蜇','海蜇皮'],
   紫菜: ['紫菜'],
   菌类: ['菌类', '蘑菇', '香菇', '杏鲍菇', '鸡腿菇', '圆蘑菇', '花菇', '木耳', '野山菌', '牛肝菌', '银耳','草菇', '金针菇'],
-  粗粮杂粮: ['其它杂粮', '燕麦', '小米', '糙米', '粟米', '黑豆', '红豆', '绿豆', '赤豆', '薏米', '莲子', '荞麦', '黑米', '云豆', '西米'],
+  粗粮杂粮: ['其它杂粮', '燕麦', '小米', '小米粥','燕麦粥','糙米', '麦片','粟米', '黑豆', '红豆', '绿豆', '赤豆', '薏米', '莲子', '荞麦', '黑米', '云豆', '西米'],
   VC: ['VC', '维C'], VD: ['VD', '维D'], VE: ['VE', '维E'], 
   其它维生素: ['其它维生素'], 鱼油: ['鱼油'], 钙片: ['钙片'], 铁片: ['铁片'], 其它微量元素: ['其它微量元素'],
 }
@@ -1555,12 +1623,29 @@ function tasteStatsFromRecords(records = [], range = 'today') {
 
 function nutritionStatsFromRecords(records = [], range = 'today') {
   const scoped = filterDailyRange(records, range)
-  const divisor = rangeAverageDivisor(scoped, range)
+
+  /*
+    营养平均只统计真正留下食物记录的日期。
+    空白饮食日不进入分母；有饮食记录但某一类营养为0，
+    该日仍进入该类平均的分母。
+  */
+  const recordedFoodDays = scoped.filter(record =>
+    splitTags(
+      record?.food ||
+      record?.foodKeyword ||
+      record?.foodText ||
+      ''
+    ).length > 0
+  )
+  const divisor = rangeAverageDivisor(
+    recordedFoodDays,
+    range,
+  )
 
   return Object.entries(NUTRITION_TYPES).map(([key, label]) => {
     const foodCounts = {}
 
-    const total = scoped.reduce((sum, record) => {
+    const total = recordedFoodDays.reduce((sum, record) => {
       const foods = splitTags(record.food || record.foodKeyword || record.foodText || '')
 
       /*

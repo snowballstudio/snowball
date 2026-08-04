@@ -1164,6 +1164,50 @@ private enum IOSDashboardRange: String, CaseIterable, Identifiable {
     }
 }
 
+private final class SnowballReportNavigationObserver:
+    ObservableObject {
+    @Published var requestedAction: String = ""
+
+    private static let notificationName =
+        "com.snowball.health.screenTime.openDailyTable"
+
+    init() {
+        let pointer = Unmanaged.passUnretained(self).toOpaque()
+
+        CFNotificationCenterAddObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            pointer,
+            { _, observer, _, _, _ in
+                guard let observer else { return }
+
+                let object = Unmanaged<
+                    SnowballReportNavigationObserver
+                >
+                .fromOpaque(observer)
+                .takeUnretainedValue()
+
+                DispatchQueue.main.async {
+                    object.requestedAction =
+                        "openDailyTable-\(Date().timeIntervalSince1970)"
+                }
+            },
+            Self.notificationName as CFString,
+            nil,
+            .deliverImmediately
+        )
+    }
+
+    deinit {
+        CFNotificationCenterRemoveObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            Unmanaged.passUnretained(self).toOpaque(),
+            nil,
+            nil
+        )
+    }
+}
+
+
 private struct IOSScreenTimeDashboardContainer: View {
     let onClose: () -> Void
 
@@ -1175,6 +1219,8 @@ private struct IOSScreenTimeDashboardContainer: View {
 
     @State private var range: IOSDashboardRange = .yesterday
     @State private var page: Page = .dashboard
+    @StateObject private var navigationObserver =
+        SnowballReportNavigationObserver()
 
     private let navigationDefaults = UserDefaults(
         suiteName:
@@ -1475,6 +1521,12 @@ private struct IOSScreenTimeDashboardContainer: View {
         }
         .onAppear {
             clearNavigationAction()
+        }
+        .onChange(
+            of: navigationObserver.requestedAction
+        ) { _, _ in
+            readNavigationAction()
+            page = .dailyTable
         }
         .task {
             while !Task.isCancelled {

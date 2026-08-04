@@ -5,11 +5,22 @@ private enum SnowballReportNavigationBridge {
     static let appGroup = "group.com.snowball.health"
     static let actionKey =
         "snowball.screenTime.reportNavigationAction.v1"
+    static let darwinNotification =
+        "com.snowball.health.screenTime.openDailyTable"
 
     static func request(_ action: String) {
-        UserDefaults(suiteName: appGroup)?.set(
-            action,
-            forKey: actionKey
+        let defaults = UserDefaults(suiteName: appGroup)
+        defaults?.set(action, forKey: actionKey)
+        defaults?.synchronize()
+
+        CFNotificationCenterPostNotification(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            CFNotificationName(
+                darwinNotification as CFString
+            ),
+            nil,
+            nil,
+            true
         )
     }
 }
@@ -357,13 +368,98 @@ struct SevenDayDailyTableView: View {
         .padding(.vertical, 8)
     }
 
+    private var tableHeader: some View {
+        HStack(spacing: 0) {
+            Text("日期")
+                .frame(width: 58, alignment: .leading)
+            Text("总时长")
+                .frame(width: 70, alignment: .leading)
+
+            ForEach(1...10, id: \.self) { index in
+                Text("TOP \(index)")
+                    .frame(
+                        width: 102,
+                        alignment: .leading
+                    )
+            }
+
+            Text("其他")
+                .frame(width: 102, alignment: .leading)
+        }
+        .font(.system(size: 11, weight: .bold))
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
+        .background(
+            Color(uiColor: .secondarySystemBackground)
+        )
+    }
+
+    private var tableRows: some View {
+        LazyVStack(spacing: 0) {
+            ForEach(
+                configuration.days.reversed(),
+                id: \.date
+            ) { day in
+                let apps = topApps(for: day)
+                let other = otherApp(for: day)
+
+                HStack(spacing: 0) {
+                    Text(dateFormatter.string(from: day.date))
+                        .font(
+                            .system(
+                                size: 12,
+                                weight: .semibold,
+                                design: .rounded
+                            )
+                        )
+                        .frame(
+                            width: 58,
+                            alignment: .leading
+                        )
+
+                    Text(
+                        compactDuration(day.totalDuration)
+                    )
+                    .font(
+                        .system(
+                            size: 12,
+                            weight: .semibold,
+                            design: .rounded
+                        )
+                    )
+                    .frame(
+                        width: 70,
+                        alignment: .leading
+                    )
+
+                    ForEach(0..<10, id: \.self) { index in
+                        appCell(
+                            index < apps.count
+                            ? apps[index]
+                            : nil
+                        )
+                    }
+
+                    appCell(other)
+                }
+                .padding(.horizontal, 10)
+                .background(
+                    Color(uiColor: .systemBackground)
+                )
+
+                Divider()
+            }
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("每日屏幕时间")
                         .font(.headline)
-                    Text("昨日及之前七个完整自然日")
+                    Text("昨日及之前30个完整自然日")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -383,85 +479,16 @@ struct SevenDayDailyTableView: View {
 
             Divider()
 
-            ScrollView([.horizontal, .vertical]) {
+            /*
+             横向滚动包住表头和表身，保证列始终同步；
+             纵向滚动只作用于数据行，因此表头固定。
+            */
+            ScrollView(.horizontal, showsIndicators: true) {
                 VStack(spacing: 0) {
-                    HStack(spacing: 0) {
-                        Text("日期")
-                            .frame(width: 58, alignment: .leading)
-                        Text("总时长")
-                            .frame(width: 70, alignment: .leading)
+                    tableHeader
 
-                        ForEach(1...10, id: \.self) { index in
-                            Text("TOP \(index)")
-                                .frame(
-                                    width: 102,
-                                    alignment: .leading
-                                )
-                        }
-
-                        Text("其他")
-                            .frame(width: 102, alignment: .leading)
-                    }
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 9)
-                    .background(
-                        Color(uiColor: .secondarySystemBackground)
-                    )
-
-                    ForEach(
-                        configuration.days.reversed(),
-                        id: \.date
-                    ) { day in
-                        let apps = topApps(for: day)
-                        let other = otherApp(for: day)
-
-                        HStack(spacing: 0) {
-                            Text(dateFormatter.string(from: day.date))
-                                .font(
-                                    .system(
-                                        size: 12,
-                                        weight: .semibold,
-                                        design: .rounded
-                                    )
-                                )
-                                .frame(
-                                    width: 58,
-                                    alignment: .leading
-                                )
-
-                            Text(
-                                compactDuration(day.totalDuration)
-                            )
-                            .font(
-                                .system(
-                                    size: 12,
-                                    weight: .semibold,
-                                    design: .rounded
-                                )
-                            )
-                            .frame(
-                                width: 70,
-                                alignment: .leading
-                            )
-
-                            ForEach(0..<10, id: \.self) { index in
-                                appCell(
-                                    index < apps.count
-                                    ? apps[index]
-                                    : nil
-                                )
-                            }
-
-                            appCell(other)
-                        }
-                        .padding(.horizontal, 10)
-                        .background(
-                            Color(uiColor: .systemBackground)
-                        )
-
-                        Divider()
+                    ScrollView(.vertical, showsIndicators: true) {
+                        tableRows
                     }
                 }
             }
@@ -605,10 +632,10 @@ struct SnowballDashboardView: View {
                             "openDailyTable"
                         )
                     } label: {
-                        Text("详情")
+                        Text("查看详情")
                             .font(
                                 .system(
-                                    size: 12,
+                                    size: 14,
                                     weight: .semibold
                                 )
                             )
