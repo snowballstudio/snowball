@@ -1524,7 +1524,7 @@ private struct IOSScreenTimeDashboardContainer: View {
         }
         .onChange(
             of: navigationObserver.requestedAction
-        ) { _, _ in
+        ) { _ in
             readNavigationAction()
             page = .dailyTable
         }
