@@ -244,20 +244,7 @@ export default function ScreenTimeDataPanel({
 
           <div className="screenDetailBody">
             {rows.map(({ row, index }) => (
-              isScreenSystemTotalRow(row) ? (
-                <div
-                  className="screenDetailRow screenDetailEditRow screenSystemTotalRow"
-                  key={row.id || `screen-total-${selectedDate}`}
-                >
-                  <span>{row.date || selectedDate}</span>
-                  <strong>屏幕时间小计</strong>
-                  <span>手机系统屏幕时间</span>
-                  <span>—</span>
-                  <strong>{screenDurationText(screenMinutesForDetailRow(row))}</strong>
-                  <span>—</span>
-                  <span />
-                </div>
-              ) : (
+              isScreenSystemTotalRow(row) ? null : (
                 <div
                   className="screenDetailRow screenDetailEditRow"
                   key={row.id || index}

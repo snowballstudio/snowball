@@ -9,11 +9,6 @@ import UIKit
 public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     private var homeMiniHost: UIViewController?
 
-    fileprivate enum ScreenTimeReportNavigationBridge {
-        static let appGroup = "group.com.snowball.health"
-        static let actionKey =
-            "snowball.screenTime.reportNavigationAction.v1"
-    }
 
     public let identifier = "IOSScreenTimePlugin"
     public let jsName = "IOSScreenTime"
@@ -1164,50 +1159,6 @@ private enum IOSDashboardRange: String, CaseIterable, Identifiable {
     }
 }
 
-private final class SnowballReportNavigationObserver:
-    ObservableObject {
-    @Published var requestedAction: String = ""
-
-    private static let notificationName =
-        "com.snowball.health.screenTime.openDailyTable"
-
-    init() {
-        let pointer = Unmanaged.passUnretained(self).toOpaque()
-
-        CFNotificationCenterAddObserver(
-            CFNotificationCenterGetDarwinNotifyCenter(),
-            pointer,
-            { _, observer, _, _, _ in
-                guard let observer else { return }
-
-                let object = Unmanaged<
-                    SnowballReportNavigationObserver
-                >
-                .fromOpaque(observer)
-                .takeUnretainedValue()
-
-                DispatchQueue.main.async {
-                    object.requestedAction =
-                        "openDailyTable-\(Date().timeIntervalSince1970)"
-                }
-            },
-            Self.notificationName as CFString,
-            nil,
-            .deliverImmediately
-        )
-    }
-
-    deinit {
-        CFNotificationCenterRemoveObserver(
-            CFNotificationCenterGetDarwinNotifyCenter(),
-            Unmanaged.passUnretained(self).toOpaque(),
-            nil,
-            nil
-        )
-    }
-}
-
-
 private struct IOSScreenTimeDashboardContainer: View {
     let onClose: () -> Void
 
@@ -1215,19 +1166,20 @@ private struct IOSScreenTimeDashboardContainer: View {
         case dashboard
         case help
         case dailyTable
+        case dayDetail
     }
 
     @State private var range: IOSDashboardRange = .yesterday
     @State private var page: Page = .dashboard
-    @StateObject private var navigationObserver =
-        SnowballReportNavigationObserver()
-
-    private let navigationDefaults = UserDefaults(
-        suiteName:
-            IOSScreenTimePlugin
-                .ScreenTimeReportNavigationBridge
-                .appGroup
-    )
+    @State private var selectedDetailDate: Date = {
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: Date())
+        return calendar.date(
+            byAdding: .day,
+            value: -1,
+            to: today
+        ) ?? today
+    }()
 
     private var filter: DeviceActivityFilter {
         let calendar = Calendar.autoupdatingCurrent
@@ -1334,33 +1286,48 @@ private struct IOSScreenTimeDashboardContainer: View {
         )
     }
 
-    private func clearNavigationAction() {
-        navigationDefaults?.removeObject(
-            forKey:
-                IOSScreenTimePlugin
-                    .ScreenTimeReportNavigationBridge
-                    .actionKey
+    private var dayDetailFilter: DeviceActivityFilter {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(
+            for: selectedDetailDate
+        )
+        let end = calendar.date(
+            byAdding: .day,
+            value: 1,
+            to: start
+        ) ?? start.addingTimeInterval(86400)
+
+        return DeviceActivityFilter(
+            segment: .hourly(
+                during: DateInterval(start: start, end: end)
+            ),
+            users: .all,
+            devices: .all
         )
     }
 
-    private func readNavigationAction() {
-        let key =
-            IOSScreenTimePlugin
-                .ScreenTimeReportNavigationBridge
-                .actionKey
+    private var detailDateRange: ClosedRange<Date> {
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: Date())
+        let yesterday = calendar.date(
+            byAdding: .day,
+            value: -1,
+            to: today
+        ) ?? today
+        let start = calendar.date(
+            byAdding: .day,
+            value: -29,
+            to: yesterday
+        ) ?? yesterday
+        return start...yesterday
+    }
 
-        guard let action = navigationDefaults?.string(
-            forKey: key
-        ),
-        !action.isEmpty else {
-            return
-        }
-
-        navigationDefaults?.removeObject(forKey: key)
-
-        if action == "openDailyTable" {
-            page = .dailyTable
-        }
+    private var detailDateTitle: String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.autoupdatingCurrent
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "M月d日"
+        return formatter.string(from: selectedDetailDate)
     }
 
     var body: some View {
@@ -1378,13 +1345,46 @@ private struct IOSScreenTimeDashboardContainer: View {
                         }
                         .pickerStyle(.segmented)
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
+                        .padding(.top, 10)
+                        .padding(.bottom, 4)
 
-                        DeviceActivityReport(
-                            range.context,
-                            filter: filter
-                        )
-                        .id(range)
+                        /*
+                         按钮属于主 App 容器，点击可靠。
+                         它相对报表自身右上角定位，不依赖跨进程通知。
+                        */
+                        ZStack(alignment: .topTrailing) {
+                            DeviceActivityReport(
+                                range.context,
+                                filter: filter
+                            )
+                            .id(range)
+
+                            Button {
+                                page = .dailyTable
+                            } label: {
+                                Text("查看详情")
+                                    .font(
+                                        .system(
+                                            size: 12,
+                                            weight: .semibold
+                                        )
+                                    )
+                                    .foregroundStyle(
+                                        Color(
+                                            red: 0.72,
+                                            green: 0.55,
+                                            blue: 0.18
+                                        )
+                                    )
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 18)
+                            .padding(.trailing, 18)
+                            .zIndex(10)
+                        }
                     }
                     .navigationTitle("苹果屏幕时间")
                     .navigationBarTitleDisplayMode(.inline)
@@ -1461,12 +1461,62 @@ private struct IOSScreenTimeDashboardContainer: View {
                     }
 
                 case .dailyTable:
-                    DeviceActivityReport(
-                        DeviceActivityReport.Context(
-                            "Snowball Seven Day Daily Table"
-                        ),
-                        filter: dailyTableFilter
-                    )
+                    VStack(spacing: 0) {
+                        HStack(spacing: 10) {
+                            Text("查看某日详情")
+                                .font(
+                                    .system(
+                                        size: 12,
+                                        weight: .medium
+                                    )
+                                )
+                                .foregroundStyle(.secondary)
+
+                            DatePicker(
+                                "",
+                                selection: $selectedDetailDate,
+                                in: detailDateRange,
+                                displayedComponents: .date
+                            )
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+
+                            Button("查看") {
+                                page = .dayDetail
+                            }
+                            .font(
+                                .system(
+                                    size: 12,
+                                    weight: .semibold
+                                )
+                            )
+                            .foregroundStyle(
+                                Color(
+                                    red: 0.72,
+                                    green: 0.55,
+                                    blue: 0.18
+                                )
+                            )
+                            .buttonStyle(.plain)
+
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            Color(
+                                uiColor:
+                                    .secondarySystemBackground
+                            )
+                        )
+
+                        DeviceActivityReport(
+                            DeviceActivityReport.Context(
+                                "Snowball Seven Day Daily Table"
+                            ),
+                            filter: dailyTableFilter
+                        )
+                    }
                     .navigationTitle("30日屏幕时间")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
@@ -1516,28 +1566,48 @@ private struct IOSScreenTimeDashboardContainer: View {
                             .buttonStyle(.plain)
                         }
                     }
+
+                case .dayDetail:
+                    DeviceActivityReport(
+                        DeviceActivityReport.Context(
+                            "Total Activity"
+                        ),
+                        filter: dayDetailFilter
+                    )
+                    .id(selectedDetailDate)
+                    .navigationTitle(
+                        "\(detailDateTitle)屏幕时间"
+                    )
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(
+                            placement: .topBarLeading
+                        ) {
+                            Button {
+                                page = .dailyTable
+                            } label: {
+                                Text("‹")
+                                    .font(
+                                        .system(
+                                            size: 30,
+                                            weight: .regular
+                                        )
+                                    )
+                                    .foregroundStyle(
+                                        Color.primary.opacity(0.82)
+                                    )
+                                    .frame(width: 34, height: 34)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("返回30日列表")
+                        }
+                    }
                 }
-            }
-        }
-        .onAppear {
-            clearNavigationAction()
-        }
-        .onChange(
-            of: navigationObserver.requestedAction
-        ) { _ in
-            readNavigationAction()
-            page = .dailyTable
-        }
-        .task {
-            while !Task.isCancelled {
-                readNavigationAction()
-                try? await Task.sleep(
-                    nanoseconds: 250_000_000
-                )
             }
         }
     }
 }
+
 
 
 private struct IOSScreenTimeHelpView: View {

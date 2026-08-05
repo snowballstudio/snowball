@@ -549,7 +549,7 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
                       className="thingValueInput"
                       type="number"
                       min="0"
-                      placeholder="1金粒=1克黄金约1250元"
+                      placeholder="1金粒=￥1000元"
                       value={thingDraft.value || ''}
                       disabled={(thingDraft.valueType || 'priceless') === 'priceless'}
                       onChange={e => updateThingDraft('value', e.target.value)}

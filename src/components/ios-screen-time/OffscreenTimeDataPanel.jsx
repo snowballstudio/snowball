@@ -113,11 +113,11 @@ export default function OffscreenTimeDataPanel({
             <span>计算离机时间</span>
             <span>数据来源</span>
             <span>安卓手机离机时间</span>
-            <span>苹果最后长时活动结束时间</span>
-            <span>苹果最后活动小时内第一次拿起手机时间</span>
-            <span>苹果最后一小时活动时长</span>
-            <span>苹果用户道晚安时间</span>
-            <span>苹果计算离机时间</span>
+            <span>通话识别的休息时间</span>
+            <span>苹果最后活动小时内第一次拿起手机时间（删）</span>
+            <span>苹果最后一小时活动时长（删）</span>
+            <span>用户道晚安时间</span>
+            <span>计算离机时间（删）</span>
           </div>
 
           <div className="offscreenTimeBody">

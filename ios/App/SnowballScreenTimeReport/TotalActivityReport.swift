@@ -323,6 +323,33 @@ struct SevenDayAverageReport: DeviceActivityReportScene {
                         dayBuckets[key] = bucket
                         appsByDate[day] = dayBuckets
                     }
+
+                    for await webDomainActivity
+                        in categoryActivity.webDomains {
+                        let domain =
+                            webDomainActivity.webDomain.domain
+                        let name =
+                            domain.isEmpty
+                            ? "未命名网站"
+                            : domain
+                        let key = "web|" + name
+
+                        var bucket = appsByDate[day]?[key]
+                            ?? MutableAppBucket(
+                                displayName: name,
+                                bundleIdentifier: key,
+                                categoryName: categoryName,
+                                duration: 0,
+                                pickups: 0
+                            )
+
+                        bucket.duration +=
+                            webDomainActivity.totalActivityDuration
+
+                        var dayBuckets = appsByDate[day] ?? [:]
+                        dayBuckets[key] = bucket
+                        appsByDate[day] = dayBuckets
+                    }
                 }
             }
         }
@@ -451,6 +478,33 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
                             applicationActivity.totalActivityDuration
                         bucket.pickups +=
                             applicationActivity.numberOfPickups
+
+                        var dayBuckets = appsByDate[day] ?? [:]
+                        dayBuckets[key] = bucket
+                        appsByDate[day] = dayBuckets
+                    }
+
+                    for await webDomainActivity
+                        in categoryActivity.webDomains {
+                        let domain =
+                            webDomainActivity.webDomain.domain
+                        let name =
+                            domain.isEmpty
+                            ? "未命名网站"
+                            : domain
+                        let key = "web|" + name
+
+                        var bucket = appsByDate[day]?[key]
+                            ?? MutableAppBucket(
+                                displayName: name,
+                                bundleIdentifier: key,
+                                categoryName: categoryName,
+                                duration: 0,
+                                pickups: 0
+                            )
+
+                        bucket.duration +=
+                            webDomainActivity.totalActivityDuration
 
                         var dayBuckets = appsByDate[day] ?? [:]
                         dayBuckets[key] = bucket
@@ -635,15 +689,23 @@ private enum SnowballReportBuilder {
     static func dashboard(
         representing data: DeviceActivityResults<DeviceActivityData>,
         rangeLabel: String,
-        divisor: Double
+        divisor: Double,
+        useReturnedDayCount: Bool = false
     ) async -> SnowballDashboardConfiguration {
+        let calendar = Calendar.autoupdatingCurrent
         var totalDuration: TimeInterval = 0
         var applications: [String: AppBucket] = [:]
         var categories: [String: TimeInterval] = [:]
+        var returnedDates = Set<Date>()
 
         for await deviceData in data {
             for await segment in deviceData.activitySegments {
                 totalDuration += segment.totalActivityDuration
+                returnedDates.insert(
+                    calendar.startOfDay(
+                        for: segment.dateInterval.start
+                    )
+                )
 
                 for await categoryActivity in segment.categories {
                     let rawCategory =
@@ -685,12 +747,41 @@ private enum SnowballReportBuilder {
                             applicationActivity.totalActivityDuration
                     }
 
+                    for await webDomainActivity
+                        in categoryActivity.webDomains {
+                        let domain =
+                            webDomainActivity.webDomain.domain
+                        let name =
+                            domain.isEmpty
+                            ? "未命名网站"
+                            : domain
+                        let key = "web|" + name
+
+                        var bucket = applications[key]
+                            ?? AppBucket(
+                                name: name,
+                                duration: 0,
+                                pickups: 0
+                            )
+                        bucket.duration +=
+                            webDomainActivity.totalActivityDuration
+                        applications[key] = bucket
+
+                        categoryDuration +=
+                            webDomainActivity.totalActivityDuration
+                    }
+
                     categories[categoryName, default: 0] += categoryDuration
                 }
             }
         }
 
-        let safeDivisor = max(1.0, divisor)
+        let returnedDayDivisor = Double(
+            max(1, returnedDates.count)
+        )
+        let safeDivisor = useReturnedDayCount
+            ? returnedDayDivisor
+            : max(1.0, divisor)
         let sortedApps = applications
             .map { key, bucket in
                 SnowballDashboardApplicationRow(
@@ -828,7 +919,8 @@ struct SnowballDashboardYearReport: DeviceActivityReportScene {
         await SnowballReportBuilder.dashboard(
             representing: data,
             rangeLabel: "年均",
-            divisor: 365
+            divisor: 365,
+            useReturnedDayCount: true
         )
     }
 }

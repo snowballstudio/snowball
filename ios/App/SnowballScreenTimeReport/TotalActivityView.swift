@@ -1,30 +1,6 @@
 import Foundation
 import SwiftUI
 
-private enum SnowballReportNavigationBridge {
-    static let appGroup = "group.com.snowball.health"
-    static let actionKey =
-        "snowball.screenTime.reportNavigationAction.v1"
-    static let darwinNotification =
-        "com.snowball.health.screenTime.openDailyTable"
-
-    static func request(_ action: String) {
-        let defaults = UserDefaults(suiteName: appGroup)
-        defaults?.set(action, forKey: actionKey)
-        defaults?.synchronize()
-
-        CFNotificationCenterPostNotification(
-            CFNotificationCenterGetDarwinNotifyCenter(),
-            CFNotificationName(
-                darwinNotification as CFString
-            ),
-            nil,
-            nil,
-            true
-        )
-    }
-}
-
 struct TotalActivityView: View {
     let configuration: TotalActivityConfiguration
 
@@ -507,6 +483,18 @@ struct SnowballHomeMiniView: View {
         return formatter
     }()
 
+    private let labelColor = Color(
+        red: 0.72,
+        green: 0.75,
+        blue: 0.78
+    )
+
+    private let valueColor = Color(
+        red: 0.05,
+        green: 0.72,
+        blue: 0.96
+    )
+
     var body: some View {
         let average = String(
             format: "%.1f",
@@ -516,13 +504,68 @@ struct SnowballHomeMiniView: View {
             clockFormatter.string(from: $0)
         } ?? "—"
 
-        Text("\(average)，末次\(last)")
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(Color(red: 0.09, green: 0.64, blue: 0.86))
-            .lineLimit(1)
-            .minimumScaleFactor(0.72)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .background(Color.clear)
+        HStack(
+            alignment: .firstTextBaseline,
+            spacing: 5
+        ) {
+            Text("屏幕时间")
+                .font(
+                    .system(
+                        size: 12,
+                        weight: .medium
+                    )
+                )
+                .foregroundStyle(labelColor)
+
+            Text(average)
+                .font(
+                    .system(
+                        size: 15,
+                        weight: .semibold,
+                        design: .rounded
+                    )
+                )
+                .monospacedDigit()
+                .foregroundStyle(valueColor)
+
+            Text("·")
+                .font(
+                    .system(
+                        size: 10,
+                        weight: .semibold
+                    )
+                )
+                .foregroundStyle(labelColor.opacity(0.72))
+                .padding(.horizontal, 5)
+
+            Text("末次活动")
+                .font(
+                    .system(
+                        size: 12,
+                        weight: .medium
+                    )
+                )
+                .foregroundStyle(labelColor)
+
+            Text(last)
+                .font(
+                    .system(
+                        size: 15,
+                        weight: .semibold,
+                        design: .rounded
+                    )
+                )
+                .monospacedDigit()
+                .foregroundStyle(valueColor)
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.78)
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: .infinity,
+            alignment: .center
+        )
+        .background(Color.clear)
     }
 }
 
@@ -551,9 +594,6 @@ struct SnowballDashboardView: View {
                     Text(configuration.rangeLabel)
                         .font(.title2.weight(.semibold))
                     Spacer()
-                    Text("合计 \(durationText(configuration.totalDuration))")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
                 }
 
                 VStack(spacing: 0) {
@@ -621,34 +661,8 @@ struct SnowballDashboardView: View {
 
                 Divider()
 
-                HStack(alignment: .firstTextBaseline) {
-                    Text("类型分布")
-                        .font(.headline)
-
-                    Spacer()
-
-                    Button {
-                        SnowballReportNavigationBridge.request(
-                            "openDailyTable"
-                        )
-                    } label: {
-                        Text("查看详情")
-                            .font(
-                                .system(
-                                    size: 14,
-                                    weight: .semibold
-                                )
-                            )
-                            .foregroundStyle(
-                                Color(
-                                    red: 0.72,
-                                    green: 0.55,
-                                    blue: 0.18
-                                )
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
+                Text("类型分布")
+                    .font(.headline)
 
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(configuration.categories) { row in
