@@ -2151,7 +2151,7 @@ top: 2px;
 .homeIOSMiniReportButton {
   position: relative;
   display: inline-block;
-  width: 162px;
+  width: 196px;
   height: 28px;
   margin: 0 0 0 2px;
   padding: 0;
@@ -2168,7 +2168,7 @@ top: 2px;
 
 .homeIOSMiniReportSlot {
   display: block;
-  width: 156px;
+  width: 190px;
   height: 24px;
   margin: 0;
   pointer-events: none;

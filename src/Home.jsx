@@ -515,9 +515,8 @@ export default function Home({
         <div className="homeSnowTrace">
           <img className="homeSnowBg" src="/refine/snow_background.png" alt="雪地留痕" />
           <div className="homeTraceText">
-            <p>
-              {useNativeIOSScreenTime ? '日均屏幕时间 ' : '日均屏幕时间 '}
-              {useNativeIOSScreenTime ? (
+            {useNativeIOSScreenTime && (
+              <p>
                 <button
                   type="button"
                   className="homeIOSMiniReportButton"
@@ -530,29 +529,8 @@ export default function Home({
                     aria-hidden="true"
                   />
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  className="homeTraceLink"
-                  onClick={openScreenTimeSummary}
-                >
-                  {avgScreenPending ? (
-                    <>
-                      <span
-                        className="homeScreenPendingLine"
-                        aria-label="屏幕时间暂无统计"
-                      />
-                      <span className="homeSnowUnit">小时</span>
-                    </>
-                  ) : (
-                    <>
-                      <strong>{avgScreenNumber}</strong>
-                      <span className="homeSnowUnit">{avgScreenUnit}</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </p>
+              </p>
+            )}
             <p>去过 <button type="button" className="homeTraceLink" onClick={() => openFootprintPage('world', 'browseFull')}><strong>{homeTraceStats.worldCount}</strong></button> 个国家 ，<button type="button" className="homeTraceLink" onClick={() => openFootprintPage('china', 'browseFull')}><strong>{homeTraceStats.chinaCount}</strong></button> 个省市</p>
             <p>物馆收录 <button type="button" className="homeTraceLink" onClick={() => openThingPage('overview')}><strong>{homeTraceStats.thingsCount}</strong></button> 件物品</p>
             <p>在人间记着 <button type="button" className="homeTraceLink" onClick={openPeoplePage}><strong>{homeTraceStats.peopleCount}</strong></button> 人</p>

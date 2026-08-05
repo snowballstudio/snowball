@@ -895,6 +895,7 @@ struct SnowballDashboardWeekReport: DeviceActivityReportScene {
     }
 }
 
+
 struct SnowballDashboardPreviousWeekReport: DeviceActivityReportScene {
     let context: DeviceActivityReport.Context = .dashboardPreviousWeek
     let content:
@@ -926,6 +927,3 @@ struct SnowballDashboardMonthReport: DeviceActivityReportScene {
         )
     }
 }
-
-
-

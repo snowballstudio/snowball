@@ -169,13 +169,16 @@ export default function Train({
     }
 
     iosOpenedRef.current = true
-    openIOSScreenTimeDashboard().catch(error => {
+    openIOSScreenTimeDashboard().then(() => {
+      iosOpenedRef.current = false
+      onBackHome()
+    }).catch(error => {
       iosOpenedRef.current = false
       setIOSReportError(
         String(error?.message || error || '苹果屏幕时间报表没有打开。'),
       )
     })
-  }, [useNativeIOSScreenTime])
+  }, [useNativeIOSScreenTime, onBackHome])
 
   if (showTrainInfo) {
     return (
@@ -232,8 +235,12 @@ export default function Train({
               type="button"
               onClick={() => {
                 setIOSReportError('')
-                iosOpenedRef.current = false
-                openIOSScreenTimeDashboard().catch(error => {
+                iosOpenedRef.current = true
+                openIOSScreenTimeDashboard().then(() => {
+                  iosOpenedRef.current = false
+                  onBackHome()
+                }).catch(error => {
+                  iosOpenedRef.current = false
                   setIOSReportError(
                     String(error?.message || error || '苹果屏幕时间报表没有打开。'),
                   )

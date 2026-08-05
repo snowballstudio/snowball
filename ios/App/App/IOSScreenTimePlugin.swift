@@ -243,37 +243,12 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                     presenter.dismiss(animated: true) {
                         call.resolve([
                             "closed": true,
+                            "returnedHome": true,
                             "startDate":
                                 self.formatSnowballDate(start),
                             "endDate":
                                 self.formatSnowballDate(yesterday)
                         ])
-                    }
-                },
-                onOpenDashboard: {
-                    presenter.dismiss(animated: false) {
-                        let dashboard =
-                            IOSScreenTimeDashboardContainer(
-                                onClose: {
-                                    presenter.dismiss(animated: true) {
-                                        call.resolve([
-                                            "closed": true,
-                                            "openedDashboard": true
-                                        ])
-                                    }
-                                }
-                            )
-
-                        let dashboardHost =
-                            UIHostingController(
-                                rootView: dashboard
-                            )
-                        dashboardHost.modalPresentationStyle =
-                            .fullScreen
-                        presenter.present(
-                            dashboardHost,
-                            animated: false
-                        )
                     }
                 }
             )
@@ -1063,56 +1038,126 @@ private struct IOSSevenDayDailyTableContainer: View {
     let context: DeviceActivityReport.Context
     let filter: DeviceActivityFilter
     let onClose: () -> Void
-    let onOpenDashboard: () -> Void
+
+    private enum Page {
+        case table
+        case detail
+    }
+
+    @State private var page: Page = .table
+    @State private var selectedDate: Date = {
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: Date())
+        return calendar.date(byAdding: .day, value: -1, to: today) ?? today
+    }()
+
+    private var detailDateRange: ClosedRange<Date> {
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: Date())
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+        let start = calendar.date(byAdding: .day, value: -29, to: yesterday) ?? yesterday
+        return start...yesterday
+    }
+
+    private var detailFilter: DeviceActivityFilter {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: selectedDate)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? Date()
+        return DeviceActivityFilter(
+            segment: .hourly(during: DateInterval(start: start, end: end)),
+            users: .all,
+            devices: .all
+        )
+    }
+
+    private var detailTitle: String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.autoupdatingCurrent
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "M月d日"
+        return formatter.string(from: selectedDate)
+    }
 
     var body: some View {
         NavigationStack {
-            DeviceActivityReport(context, filter: filter)
-                .navigationTitle("30日屏幕时间")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button(action: onClose) {
-                            Text("‹")
-                                .font(
-                                    .system(
-                                        size: 30,
-                                        weight: .regular
-                                    )
-                                )
-                                .foregroundStyle(
-                                    Color.primary.opacity(0.82)
-                                )
-                                .frame(width: 34, height: 34)
+            Group {
+                switch page {
+                case .table:
+                    VStack(spacing: 0) {
+                        HStack(spacing: 8) {
+                            Text("查看某日详情")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.secondary)
+
+                            DatePicker(
+                                "",
+                                selection: $selectedDate,
+                                in: detailDateRange,
+                                displayedComponents: .date
+                            )
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            .font(.system(size: 11))
+
+                            Button("查看") {
+                                page = .detail
+                            }
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(
+                                Color(red: 0.72, green: 0.55, blue: 0.18)
+                            )
+                            .buttonStyle(.plain)
+
+                            Spacer(minLength: 0)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("返回")
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color(uiColor: .secondarySystemBackground))
+
+                        DeviceActivityReport(context, filter: filter)
+                    }
+                    .navigationTitle("30日屏幕时间")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button(action: onClose) {
+                                Text("‹")
+                                    .font(.system(size: 30, weight: .regular))
+                                    .foregroundStyle(Color.primary.opacity(0.82))
+                                    .frame(width: 34, height: 34)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("返回主页")
+                        }
                     }
 
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button(
-                            "查看报表",
-                            action: onOpenDashboard
-                        )
-                        .font(
-                            .system(
-                                size: 12,
-                                weight: .semibold
-                            )
-                        )
-                        .foregroundStyle(
-                            Color(
-                                red: 0.72,
-                                green: 0.55,
-                                blue: 0.18
-                            )
-                        )
+                case .detail:
+                    DeviceActivityReport(
+                        DeviceActivityReport.Context("Total Activity"),
+                        filter: detailFilter
+                    )
+                    .id(selectedDate)
+                    .navigationTitle(detailTitle)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button {
+                                page = .table
+                            } label: {
+                                Text("‹")
+                                    .font(.system(size: 30, weight: .regular))
+                                    .foregroundStyle(Color.primary.opacity(0.82))
+                                    .frame(width: 34, height: 34)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("返回30日列表")
+                        }
                     }
                 }
+            }
         }
     }
 }
-
 
 private enum IOSDashboardRange: String, CaseIterable, Identifiable {
     case today
@@ -1260,7 +1305,6 @@ private struct IOSScreenTimeDashboardContainer: View {
                 users: .all,
                 devices: .all
             )
-
         }
     }
 
@@ -1486,6 +1530,7 @@ private struct IOSScreenTimeDashboardContainer: View {
                             )
                             .labelsHidden()
                             .datePickerStyle(.compact)
+                            .font(.system(size: 11))
 
                             Button("查看") {
                                 page = .dayDetail
@@ -1627,7 +1672,7 @@ private struct IOSScreenTimeHelpView: View {
                 )
 
                 Text(
-                    "“今天”和“昨天”显示对应自然日的使用情况；“周均”统计昨天及之前七个完整自然日，“前周”统计再往前的七个完整自然日，“月均”统计最近三十个完整自然日。周均、前周和月均均显示所选范围内的日平均值。系统报告存在延迟时，最近一天的数据可能稍后补充。"
+                    "“今天”和“昨天”显示对应自然日的使用情况；周均、前周和月均显示所选时间范围内的日平均值。系统报告存在延迟时，最近一天的数据可能稍后补充。"
                 )
 
                 Text(

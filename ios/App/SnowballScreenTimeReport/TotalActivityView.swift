@@ -432,14 +432,6 @@ struct SevenDayDailyTableView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("每日屏幕时间")
-                        .font(.headline)
-                    Text("昨日及之前30个完整自然日")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
                 Spacer()
 
                 Text(
@@ -451,7 +443,7 @@ struct SevenDayDailyTableView: View {
                 .font(.caption.weight(.semibold))
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 8)
 
             Divider()
 
@@ -505,9 +497,15 @@ struct SnowballHomeMiniView: View {
         } ?? "—"
 
         HStack(
-            alignment: .firstTextBaseline,
+            alignment: .center,
             spacing: 5
         ) {
+            Image("main_icon_screen")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 17, height: 17)
+                .accessibilityHidden(true)
+
             Text("屏幕时间")
                 .font(
                     .system(
@@ -590,15 +588,9 @@ struct SnowballDashboardView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                HStack(alignment: .center, spacing: 8) {
-                    Image(systemName: "iphone")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
-
+                HStack(alignment: .firstTextBaseline) {
                     Text(configuration.rangeLabel)
                         .font(.title2.weight(.semibold))
-
                     Spacer()
                 }
 
