@@ -160,6 +160,7 @@ export default function Home({
   const [rememberGoodNightDevice, setRememberGoodNightDevice] = useState(false)
   const moodFlower = homeMoodFlowerState(mood)
   const iosMiniReportRef = useRef(null)
+  const homeSnowTraceRef = useRef(null)
 
   useEffect(() => {
     if (!useNativeIOSScreenTime || !isHomeVisible) {
@@ -168,32 +169,55 @@ export default function Home({
     }
 
     let cancelled = false
+    const timers = []
 
     const placeReport = () => {
-      const element = iosMiniReportRef.current
-      if (!element || cancelled) return
+      const snow = homeSnowTraceRef.current
+      const slot = iosMiniReportRef.current
+      if (!snow || !slot || cancelled) return
 
-      const rect = element.getBoundingClientRect()
+      const snowRect = snow.getBoundingClientRect()
+      const slotRect = slot.getBoundingClientRect()
+
+      // iOS 原生覆盖层直接以雪地图为参照，固定在左 6%、上 6%。
+      // 不再使用页面初次排版时可能尚未稳定的旧槽位 y 坐标。
       showIOSHomeMiniReport({
-        x: rect.left,
-        y: rect.top,
-        width: rect.width,
-        height: rect.height,
+        x: snowRect.left + snowRect.width * 0.06,
+        y: snowRect.top + snowRect.height * 0.06,
+        width: Math.max(220, slotRect.width),
+        height: Math.max(30, slotRect.height),
       }).catch(error => {
         console.warn('主页苹果迷你报表没有显示。', error)
       })
     }
 
-    const timer = window.setTimeout(placeReport, 180)
+    const schedulePlacement = delay => {
+      timers.push(window.setTimeout(placeReport, delay))
+    }
+
+    // 首次渲染、原生安全区完成、字体及五区布局稳定后分别校准。
+    schedulePlacement(80)
+    schedulePlacement(260)
+    schedulePlacement(700)
+
+    const resizeObserver = new ResizeObserver(placeReport)
+    if (homeSnowTraceRef.current) {
+      resizeObserver.observe(homeSnowTraceRef.current)
+    }
+
     window.addEventListener('resize', placeReport)
+    window.visualViewport?.addEventListener('resize', placeReport)
 
     return () => {
       cancelled = true
-      window.clearTimeout(timer)
+      timers.forEach(timer => window.clearTimeout(timer))
+      resizeObserver.disconnect()
       window.removeEventListener('resize', placeReport)
+      window.visualViewport?.removeEventListener('resize', placeReport)
       hideIOSHomeMiniReport().catch(() => {})
     }
   }, [useNativeIOSScreenTime, isHomeVisible])
+
 
   const homeStatusGoals = {
     steps:
@@ -524,22 +548,29 @@ export default function Home({
           </button>
         </div>
 
-        <div className="homeSnowTrace">
+        <div ref={homeSnowTraceRef} className="homeSnowTrace">
           <img className="homeSnowBg" src="/refine/snow_background.png" alt="雪地留痕" />
           <p className="homeDeviceSummaryLine">
             {useNativeIOSScreenTime ? (
-              <button
-                type="button"
-                className="homeIOSMiniReportButton"
-                onClick={openScreenTimeSummary}
-                aria-label="打开苹果每日屏幕时间表"
-              >
+              <span className="homeIOSMiniReportButton">
                 <span
                   ref={iosMiniReportRef}
                   className="homeIOSMiniReportSlot"
                   aria-hidden="true"
                 />
-              </button>
+                <button
+                  type="button"
+                  className="homeIOSMiniValueLink homeIOSMiniAverageLink"
+                  onClick={openScreenTimeSummary}
+                  aria-label="打开苹果每日屏幕时间表"
+                />
+                <button
+                  type="button"
+                  className="homeIOSMiniValueLink homeIOSMiniLastLink"
+                  onClick={openOffscreenTable}
+                  aria-label="打开离机时间表"
+                />
+              </span>
             ) : (
               <span className="homeNonIOSDeviceSummary">
                 <img

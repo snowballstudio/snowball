@@ -421,6 +421,21 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
     let context: DeviceActivityReport.Context = .sevenDayDailyTable
     let content: (SevenDayAverageConfiguration) -> SevenDayDailyTableView
 
+    private func logicalDay(
+        for date: Date,
+        calendar: Calendar
+    ) -> Date {
+        let day = calendar.startOfDay(for: date)
+        if calendar.component(.hour, from: date) < 5 {
+            return calendar.date(
+                byAdding: .day,
+                value: -1,
+                to: day
+            ) ?? day
+        }
+        return day
+    }
+
     func makeConfiguration(
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> SevenDayAverageConfiguration {
@@ -436,32 +451,52 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
 
         var totalsByDate: [Date: TimeInterval] = [:]
         var appsByDate: [Date: [String: MutableAppBucket]] = [:]
+
+        // 每个雪粒日只保留最后一个有活动的小时。
+        var lastActiveHourByDate: [Date: Date] = [:]
         var lastActivityByDate: [Date: Date] = [:]
 
         for await deviceData in data {
             for await segment in deviceData.activitySegments {
-                let day = calendar.startOfDay(
-                    for: segment.dateInterval.start
+                let day = logicalDay(
+                    for: segment.dateInterval.start,
+                    calendar: calendar
                 )
+
                 totalsByDate[day, default: 0] +=
                     segment.totalActivityDuration
 
-                // 与昨日末次活动相同：长时活动结束点，和首次拿起时间
-                // 加本小时活动时长，取较晚者。30 日表改用 hourly filter。
                 if segment.totalActivityDuration > 0 {
+                    let hourStart = segment.dateInterval.start
                     var candidate = segment.longestActivity?.end
+
                     if let firstPickup = segment.firstPickup {
-                        let pickupPlusDuration = firstPickup.addingTimeInterval(
-                            segment.totalActivityDuration
-                        )
-                        if candidate == nil || pickupPlusDuration > candidate! {
+                        let pickupPlusDuration =
+                            firstPickup.addingTimeInterval(
+                                segment.totalActivityDuration
+                            )
+                        if candidate == nil ||
+                            pickupPlusDuration > candidate! {
                             candidate = pickupPlusDuration
                         }
                     }
-                    if let candidate,
-                       lastActivityByDate[day] == nil ||
-                       candidate > lastActivityByDate[day]! {
-                        lastActivityByDate[day] = candidate
+
+                    if let candidate {
+                        let currentLastHour =
+                            lastActiveHourByDate[day]
+
+                        if currentLastHour == nil ||
+                            hourStart > currentLastHour! {
+                            // 进入更晚的活动小时：旧小时结果作废。
+                            lastActiveHourByDate[day] = hourStart
+                            lastActivityByDate[day] = candidate
+                        } else if hourStart == currentLastHour!,
+                                  candidate >
+                                    (lastActivityByDate[day]
+                                        ?? Date.distantPast) {
+                            // 多设备落在同一最后活动小时，取更晚结果。
+                            lastActivityByDate[day] = candidate
+                        }
                     }
                 }
 
@@ -538,21 +573,20 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
             }
         }
 
-        let today = calendar.startOfDay(for: Date())
-        let yesterday = calendar.date(
-            byAdding: .day,
-            value: -1,
-            to: today
-        ) ?? today
+        let logicalToday = logicalDay(
+            for: Date(),
+            calendar: calendar
+        )
 
         var days: [SevenDayScreenSummary] = []
 
+        // 30 行：今天 + 之前 29 个雪粒日。
         for offset in stride(from: 29, through: 0, by: -1) {
             let date = calendar.date(
                 byAdding: .day,
                 value: -offset,
-                to: yesterday
-            ) ?? yesterday
+                to: logicalToday
+            ) ?? logicalToday
 
             let normalized = calendar.startOfDay(for: date)
             let apps = (appsByDate[normalized] ?? [:])
@@ -585,24 +619,29 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
             )
         }
 
-        let totalDuration = days.reduce(0) {
-            $0 + $1.totalDuration
+        // 平均仍只取昨天及之前七个完整雪粒日，不包含今天。
+        let completedDays = (1...7).compactMap { offset in
+            calendar.date(
+                byAdding: .day,
+                value: -offset,
+                to: logicalToday
+            ).map { calendar.startOfDay(for: $0) }
         }
-        let averageDuration = totalDuration / 30.0
+        let completedTotal = completedDays.reduce(0) {
+            $0 + (totalsByDate[$1] ?? 0)
+        }
 
         return SevenDayAverageConfiguration(
-            averageDuration: averageDuration,
-            totalDuration: totalDuration,
+            averageDuration: completedTotal / 7.0,
+            totalDuration: days.reduce(0) {
+                $0 + $1.totalDuration
+            },
             dayCount: 30,
             days: days
         )
     }
 }
 
-struct SnowballHomeMiniConfiguration: Sendable {
-    let sevenDayAverageHours: Double
-    let lastActivityDate: Date?
-}
 
 struct SnowballDashboardApplicationRow: Identifiable, Sendable {
     let id: String

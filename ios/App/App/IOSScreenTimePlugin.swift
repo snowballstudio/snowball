@@ -193,31 +193,29 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         let calendar = Calendar.autoupdatingCurrent
-        let today = calendar.startOfDay(for: Date())
+        let logicalToday = snowballDayStart(for: Date(), calendar: calendar)
 
         guard
-            let yesterday = calendar.date(
-                byAdding: .day,
-                value: -1,
-                to: today
-            ),
-            let start = calendar.date(
+            let firstDay = calendar.date(
                 byAdding: .day,
                 value: -29,
-                to: yesterday
+                to: logicalToday
             ),
-            let end = calendar.date(
+            let dayAfterToday = calendar.date(
                 byAdding: .day,
                 value: 1,
-                to: yesterday
+                to: logicalToday
             )
         else {
             call.reject("无法计算30日屏幕时间区间。")
             return
         }
 
+        let start = snowballBoundary(for: firstDay, calendar: calendar)
+        let end = snowballBoundary(for: dayAfterToday, calendar: calendar)
+
         let filter = DeviceActivityFilter(
-            segment: .daily(
+            segment: .hourly(
                 during: DateInterval(
                     start: start,
                     end: end
@@ -247,7 +245,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                             "startDate":
                                 self.formatSnowballDate(start),
                             "endDate":
-                                self.formatSnowballDate(yesterday)
+                                self.formatSnowballDate(logicalToday)
                         ])
                     }
                 },
@@ -397,6 +395,34 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             host.modalPresentationStyle = .fullScreen
             presenter.present(host, animated: true)
         }
+    }
+
+    private func snowballDayStart(
+        for date: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Date {
+        let calendarDay = calendar.startOfDay(for: date)
+        let hour = calendar.component(.hour, from: date)
+        if hour < 5 {
+            return calendar.date(
+                byAdding: .day,
+                value: -1,
+                to: calendarDay
+            ) ?? calendarDay
+        }
+        return calendarDay
+    }
+
+    private func snowballBoundary(
+        for day: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Date {
+        calendar.date(
+            bySettingHour: 5,
+            minute: 0,
+            second: 0,
+            of: calendar.startOfDay(for: day)
+        ) ?? calendar.startOfDay(for: day)
     }
 
     private func removeHomeMiniHost() {
@@ -1242,7 +1268,30 @@ private enum IOSDashboardRange: String, CaseIterable, Identifiable {
     }
 }
 
-private struct IOSScreenTimeDashboardContainer: View {
+private func snowballLogicalDay(
+    for date: Date,
+    calendar: Calendar = .autoupdatingCurrent
+) -> Date {
+    let day = calendar.startOfDay(for: date)
+    if calendar.component(.hour, from: date) < 5 {
+        return calendar.date(byAdding: .day, value: -1, to: day) ?? day
+    }
+    return day
+}
+
+private func snowballFiveAM(
+    for day: Date,
+    calendar: Calendar = .autoupdatingCurrent
+) -> Date {
+    calendar.date(
+        bySettingHour: 5,
+        minute: 0,
+        second: 0,
+        of: calendar.startOfDay(for: day)
+    ) ?? calendar.startOfDay(for: day)
+}
+
+struct IOSScreenTimeDashboardContainer: View {
     let onClose: () -> Void
 
     private enum Page {
@@ -1348,26 +1397,24 @@ private struct IOSScreenTimeDashboardContainer: View {
 
     private var dailyTableFilter: DeviceActivityFilter {
         let calendar = Calendar.autoupdatingCurrent
-        let today = calendar.startOfDay(for: Date())
-        let yesterday = calendar.date(
-            byAdding: .day,
-            value: -1,
-            to: today
-        ) ?? today
-        let start = calendar.date(
+        let logicalToday = snowballLogicalDay(for: Date(), calendar: calendar)
+        let firstDay = calendar.date(
             byAdding: .day,
             value: -29,
-            to: yesterday
-        ) ?? yesterday
-        let end = calendar.date(
+            to: logicalToday
+        ) ?? logicalToday
+        let nextDay = calendar.date(
             byAdding: .day,
             value: 1,
-            to: yesterday
-        ) ?? today
+            to: logicalToday
+        ) ?? logicalToday
 
         return DeviceActivityFilter(
             segment: .hourly(
-                during: DateInterval(start: start, end: end)
+                during: DateInterval(
+                    start: snowballFiveAM(for: firstDay, calendar: calendar),
+                    end: snowballFiveAM(for: nextDay, calendar: calendar)
+                )
             ),
             users: .all,
             devices: .all
@@ -1376,14 +1423,14 @@ private struct IOSScreenTimeDashboardContainer: View {
 
     private var dayDetailFilter: DeviceActivityFilter {
         let calendar = Calendar.autoupdatingCurrent
-        let start = calendar.startOfDay(
-            for: selectedDetailDate
-        )
-        let end = calendar.date(
+        let logicalDay = calendar.startOfDay(for: selectedDetailDate)
+        let nextDay = calendar.date(
             byAdding: .day,
             value: 1,
-            to: start
-        ) ?? start.addingTimeInterval(86400)
+            to: logicalDay
+        ) ?? logicalDay
+        let start = snowballFiveAM(for: logicalDay, calendar: calendar)
+        let end = snowballFiveAM(for: nextDay, calendar: calendar)
 
         return DeviceActivityFilter(
             segment: .hourly(
@@ -1396,18 +1443,13 @@ private struct IOSScreenTimeDashboardContainer: View {
 
     private var detailDateRange: ClosedRange<Date> {
         let calendar = Calendar.autoupdatingCurrent
-        let today = calendar.startOfDay(for: Date())
-        let yesterday = calendar.date(
-            byAdding: .day,
-            value: -1,
-            to: today
-        ) ?? today
+        let logicalToday = snowballLogicalDay(for: Date(), calendar: calendar)
         let start = calendar.date(
             byAdding: .day,
             value: -29,
-            to: yesterday
-        ) ?? yesterday
-        return start...yesterday
+            to: logicalToday
+        ) ?? logicalToday
+        return start...logicalToday
     }
 
     private var detailDateTitle: String {

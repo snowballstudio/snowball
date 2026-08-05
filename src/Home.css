@@ -39,8 +39,13 @@
       inset 0 -1px 0 rgba(0,0,0,0.72),
       0 14px 30px rgba(0,0,0,0.38);
 
-    /* 状态行：高度、行距、字体都改这里 */
-    --m-home-row-height: 43px;
+    /* 状态栏灰黑外框：四边可分别调整；默认均为 6px */
+    --m-home-status-frame-top: 11px;
+    --m-home-status-frame-right: 11px;
+    --m-home-status-frame-bottom: 11px;
+    --m-home-status-frame-left: 11px;
+
+    /* 状态行内部文字留白；不负责决定行高 */
     --m-home-row-padding-y: 6px;
     --m-home-row-padding-x: 13px;
     --m-home-icon-size: 25px;
@@ -439,7 +444,6 @@ top: 6px;
 
   .homeCausalStatus {
     margin: 0 !important;
-    padding: 0 !important;
     border-radius: var(--m-home-panel-radius) var(--m-home-panel-radius) 0 0 !important;
     background: var(--m-home-panel-bg) !important;
     border: 1px solid var(--m-home-panel-border) !important;
@@ -450,7 +454,6 @@ top: 6px;
 
   .homeCausalRow {
     grid-template-columns: 34px minmax(0, 1.35fr) 26px minmax(0, 1fr) !important;
-    height: var(--m-home-row-height) !important;
     min-height: 0 !important;
     box-sizing: border-box !important;
     padding: var(--m-home-row-padding-y) var(--m-home-row-padding-x) !important;
@@ -1242,19 +1245,31 @@ top: 2px;
     gap: 0 !important;
   }
 
-  /* 状态区：近似直角、深色外框、较浅内层。 */
+  /* 状态区：四周灰黑外框独立可调，四行均分内部剩余高度。 */
   .homeCausalStatus {
     margin: 0 !important;
-    padding: 7px !important;
+    padding:
+      var(--m-home-status-frame-top)
+      var(--m-home-status-frame-right)
+      var(--m-home-status-frame-bottom)
+      var(--m-home-status-frame-left) !important;
     border: 0 !important;
     border-radius: var(--m-home-panel-radius) !important;
     background: #202932 !important;
     box-shadow: none !important;
     overflow: hidden !important;
+    box-sizing: border-box !important;
+    display: grid !important;
+    grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
+    gap: 0 !important;
   }
 
   .homeCausalRow {
-    min-height: var(--m-home-row-height) !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    align-self: stretch !important;
     grid-template-columns: var(--m-home-icon-size) minmax(0, 1.64fr) 24px minmax(0, 1fr) !important;
     gap: 8px !important;
     padding: var(--m-home-row-padding-y) var(--m-home-row-padding-x) !important;
@@ -1377,11 +1392,6 @@ top: 2px;
    V1 HOME 90.5｜主页最后一轮细调
    ====================================================== */
 @media (max-width: 900px) {
-  /* 状态栏灰黑外框加厚为上一版的两倍。 */
-  .homeCausalStatus {
-    padding: 14px !important;
-  }
-
   /* 中间三组只保留 JSX 中的一套图标，清除旧伪元素图标。 */
   .homeTodayActionRow .homeTodayEditText::before,
   .homeTodayStatusText::before {
@@ -1471,14 +1481,8 @@ top: 2px;
    ====================================================== */
 @media (max-width: 900px) {
   :root {
-    /* 状态栏整体约压缩 3%。 */
-    --m-home-row-height: 41px;
+    /* 保留目前每行文字的上下留白；行高由状态栏内部自动均分。 */
     --m-home-row-padding-y: 5.8px;
-  }
-
-  /* 灰黑外框厚度由 14px 轻压约 3%。 */
-  .homeCausalStatus {
-    padding: 12.5px !important;
   }
 
   /* 五个导航按钮等宽、各自在自己的格子里居中。 */
@@ -2066,27 +2070,52 @@ top: 2px;
 .homeIOSMiniReportButton {
   position: relative;
   display: inline-block;
-  width: 196px;
-  height: 28px;
-  margin: 0 0 0 2px;
+  width: 230px;
+  height: 32px;
+  margin: 0;
   padding: 0;
   border: 0;
   background: transparent;
   vertical-align: middle;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.homeIOSMiniReportSlot {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 230px;
+  height: 32px;
+  margin: 0;
+  pointer-events: none;
+}
+
+/* 原生报表不接收触摸；链接只覆盖金色数字和末次时间。 */
+.homeIOSMiniValueLink {
+  position: absolute;
+  top: 0;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  z-index: 2;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-.homeIOSMiniReportButton:active {
-  opacity: 0.82;
+.homeIOSMiniAverageLink {
+  left: 57px;
+  width: 45px;
 }
 
-.homeIOSMiniReportSlot {
-  display: block;
-  width: 190px;
-  height: 24px;
-  margin: 0;
-  pointer-events: none;
+.homeIOSMiniLastLink {
+  left: 157px;
+  width: 70px;
+}
+
+.homeIOSMiniValueLink:active {
+  background: rgba(255,255,255,0.04);
 }
 
 
@@ -2098,7 +2127,7 @@ top: 2px;
 .homeDeviceSummaryLine {
   position: absolute;
   left: 6%;
-  top: 8%;
+  top: 6%;
   z-index: 6;
   min-height: 28px;
   margin: 0;
@@ -2184,10 +2213,10 @@ top: 2px;
   :root {
     /* 五个数字合计建议保持 100。 */
     --home-area-hero: 27.5fr;
-    --home-area-status: 24fr;
+    --home-area-status: 23fr;
     --home-area-actions: 5.5fr;
-    --home-area-snow: 35fr;
-    --home-area-nav: 8fr;
+    --home-area-snow: 36.5fr;
+    --home-area-nav: 7.5fr;
   }
 
   html,
@@ -2235,7 +2264,12 @@ top: 2px;
 
   .homePage:not(.callMode) .homeCausalStatus {
     grid-row: 2 !important;
+    width: 100% !important;
+    height: 100% !important;
     min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
     overflow: hidden !important;
   }
 

@@ -170,26 +170,23 @@ export default function Train({
 
     iosOpenedRef.current = true
 
-    // 先让网页层稳定回到主页，再打开原生汇总表。
-    // 原生插件会在呈现汇总表前移除主页 Mini Report，
-    // 避免两个 DeviceActivityReport 同时请求而一直转圈。
+    // 必须先同步调用原生呈现，再把网页底层切回主页。
+    // 如果先返回主页，Train 会立即卸载，延时任务也会被清除，信息页就无法打开。
+    const opening = openIOSScreenTimeDashboard()
     onBackHome()
 
-    const timer = window.setTimeout(() => {
-      openIOSScreenTimeDashboard().then(() => {
-        iosOpenedRef.current = false
-      }).catch(error => {
-        iosOpenedRef.current = false
-        console.warn(
-          '苹果屏幕时间报表没有打开。',
-          error,
-        )
-      })
-    }, 220)
-
-    return () => {
-      window.clearTimeout(timer)
-    }
+    opening.then(() => {
+      iosOpenedRef.current = false
+    }).catch(error => {
+      iosOpenedRef.current = false
+      setIOSReportError(
+        String(error?.message || error || '苹果屏幕时间报表无法打开')
+      )
+      console.warn(
+        '苹果屏幕时间报表没有打开。',
+        error,
+      )
+    })
   }, [useNativeIOSScreenTime, onBackHome])
 
   if (showTrainInfo) {

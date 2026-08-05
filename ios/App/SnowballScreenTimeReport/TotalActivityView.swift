@@ -528,9 +528,11 @@ struct SnowballHomeMiniView: View {
             Image("main_icon_screen")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 14, height: 14)
-                .scaleEffect(x: 1.5, y: 1.0, anchor: .center)
-                .frame(width: 21, height: 14)
+                // 素材画布内有留白：以 13pt 为基准放大可见内容，
+                // 横纵缩放比保持 1.5，使手机轮廓明显但不挤压文字。
+                .frame(width: 13, height: 13)
+                .scaleEffect(x: 1.8, y: 1.2, anchor: .center)
+                .frame(width: 24, height: 18)
                 .padding(.trailing, 10)
                 .accessibilityHidden(true)
 
