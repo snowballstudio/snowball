@@ -170,20 +170,26 @@ export default function Train({
 
     iosOpenedRef.current = true
 
-    // 先把网页层切回主页，再由 iOS 在主页上方呈现原生报表。
-    // 这样关闭原生报表时，底下已经是主页，不会闪现黑色占位页。
-    const opening = openIOSScreenTimeDashboard()
+    // 先让网页层稳定回到主页，再打开原生汇总表。
+    // 原生插件会在呈现汇总表前移除主页 Mini Report，
+    // 避免两个 DeviceActivityReport 同时请求而一直转圈。
     onBackHome()
 
-    opening.then(() => {
-      iosOpenedRef.current = false
-    }).catch(error => {
-      iosOpenedRef.current = false
-      console.warn(
-        '苹果屏幕时间报表没有打开。',
-        error,
-      )
-    })
+    const timer = window.setTimeout(() => {
+      openIOSScreenTimeDashboard().then(() => {
+        iosOpenedRef.current = false
+      }).catch(error => {
+        iosOpenedRef.current = false
+        console.warn(
+          '苹果屏幕时间报表没有打开。',
+          error,
+        )
+      })
+    }, 220)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
   }, [useNativeIOSScreenTime, onBackHome])
 
   if (showTrainInfo) {

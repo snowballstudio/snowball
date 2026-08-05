@@ -245,7 +245,7 @@ function parseSpokenYesterdayRestTime(value) {
   } else {
     // 23点30分、十一点半、三点多、11点
     const pointMatch = compact.match(
-      /([零〇一二两三四五六七八九十\d]{1,3})点(?:(半)|([零〇一二两三四五六七八九十\d]{1,3})分?|([一三13])刻(?:钟)?|(多))?/,
+      /([零〇一二两三四五六七八九十\d]{1,3})点(?:(半)|([一三13])刻(?:钟)?|([零〇一二两三四五六七八九十\d]{1,3})(?:分|分钟)?|(多))?/,
     )
 
     if (!pointMatch) return null
@@ -255,12 +255,12 @@ function parseSpokenYesterdayRestTime(value) {
     if (pointMatch[2]) {
       minute = 30
     } else if (pointMatch[3]) {
-      minute = chineseTimeNumber(pointMatch[3])
-    } else if (pointMatch[4]) {
-      const quarter = chineseTimeNumber(pointMatch[4])
+      const quarter = chineseTimeNumber(pointMatch[3])
       minute = Number.isFinite(quarter)
         ? quarter * 15
         : null
+    } else if (pointMatch[4]) {
+      minute = chineseTimeNumber(pointMatch[4])
     } else {
       minute = 0
     }

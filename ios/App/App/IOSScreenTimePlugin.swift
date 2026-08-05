@@ -253,6 +253,8 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 },
                 onOpenDashboard: {
                     presenter.dismiss(animated: false) {
+                        self.removeHomeMiniHost()
+
                         let dashboard = IOSScreenTimeDashboardContainer(
                             onClose: {
                                 presenter.dismiss(animated: true) {
@@ -378,6 +380,10 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 call.reject("找不到雪球主页面。")
                 return
             }
+
+            // Dashboard 与主页 Mini Report 都属于 DeviceActivityReport。
+            // 呈现汇总表前必须先释放 Mini Report，避免系统同时生成两份报告而卡在加载中。
+            self.removeHomeMiniHost()
 
             let dashboard = IOSScreenTimeDashboardContainer(
                 onClose: {

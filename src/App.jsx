@@ -5114,7 +5114,14 @@ max-width:78px !important;
                         </button>
 
                         {expanded && group.records.map((r, i) => (
-                          <div className={`dailyTableRow dailyChildRow dailyTableRowV2 dailyUnifiedRow dailyTab-${dailyViewTab}`} key={`${r.date}-${i}`} style={{ gridTemplateColumns: dailyTableGrid }}>
+                          <div
+                            className={`dailyTableRow dailyChildRow dailyTableRowV2 dailyUnifiedRow dailyTab-${dailyViewTab}`}
+                            key={`${r.date}-${i}`}
+                            style={{
+                              gridTemplateColumns: dailyTableGrid,
+                              position: 'relative',
+                            }}
+                          >
                             {dailyRecordCellsForView(r)}
                             {dailyHasRefreshAction && (
                               <button
@@ -5128,32 +5135,58 @@ max-width:78px !important;
                                 ↻
                               </button>
                             )}
-                            <button
-                              type="button"
-                              className="dailyRowModifyBtn dailyIconBtn"
-                              onClick={() => beginDailyEdit(r)}
-                              title="修改"
-                              aria-label="修改这一天的日常数据"
-                              style={{
-                                display: 'grid',
-                                placeItems: 'center',
-                                visibility: 'visible',
-                                opacity: 1,
-                                minWidth: '38px',
-                                minHeight: '38px',
-                                padding: 0,
-                                border: 'none',
-                                background: 'transparent',
-                                color: '#f1dfb1',
-                                fontSize: '18px',
-                                lineHeight: 1,
-                                cursor: 'pointer',
-                                touchAction: 'manipulation',
-                                WebkitTapHighlightColor: 'transparent',
-                              }}
-                            >
-                              ✎
-                            </button>
+
+                            {dailyHasRefreshAction ? (
+                              <button
+                                type="button"
+                                className="dailyRowEditBtn dailyIconBtn"
+                                onClick={() => beginDailyEdit(r)}
+                                title="修改"
+                                aria-label="修改这一天的日常数据"
+                              >
+                                ✎
+                              </button>
+                            ) : (
+                              <>
+                                <span aria-hidden="true"></span>
+                                <button
+                                  type="button"
+                                  onClick={() => beginDailyEdit(r)}
+                                  title="修改"
+                                  aria-label="修改这一天的日常数据"
+                                  style={{
+                                    position: 'absolute',
+                                    right: '48px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    zIndex: 30,
+                                    width: '42px',
+                                    height: '42px',
+                                    display: 'grid',
+                                    placeItems: 'center',
+                                    margin: 0,
+                                    padding: 0,
+                                    border: 'none',
+                                    borderRadius: '50%',
+                                    background: 'transparent',
+                                    color: '#f1dfb1',
+                                    fontSize: '19px',
+                                    fontWeight: 700,
+                                    lineHeight: 1,
+                                    visibility: 'visible',
+                                    opacity: 1,
+                                    overflow: 'visible',
+                                    pointerEvents: 'auto',
+                                    cursor: 'pointer',
+                                    touchAction: 'manipulation',
+                                    WebkitTapHighlightColor: 'transparent',
+                                  }}
+                                >
+                                  ✎
+                                </button>
+                              </>
+                            )}
+
                             <button type="button" className="dailyRowDeleteBtn dailyIconBtn" onClick={() => requestDailyDelete(r)} title="删除">×</button>
                           </div>
                         ))}

@@ -498,20 +498,21 @@ struct SnowballHomeMiniView: View {
     private let clockFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "H：mm"
+        formatter.dateFormat = "HH：mm"
         return formatter
     }()
 
+    // 与主页网页版本一致：说明文字浅灰白，数据使用状态栏金色。
     private let labelColor = Color(
-        red: 0.72,
-        green: 0.75,
-        blue: 0.78
-    )
+        red: 225.0 / 255.0,
+        green: 228.0 / 255.0,
+        blue: 231.0 / 255.0
+    ).opacity(0.90)
 
     private let valueColor = Color(
-        red: 0.05,
-        green: 0.72,
-        blue: 0.96
+        red: 241.0 / 255.0,
+        green: 223.0 / 255.0,
+        blue: 177.0 / 255.0
     )
 
     var body: some View {
@@ -523,72 +524,61 @@ struct SnowballHomeMiniView: View {
             clockFormatter.string(from: $0)
         } ?? "—"
 
-        HStack(
-            alignment: .center,
-            spacing: 5
-        ) {
+        HStack(alignment: .center, spacing: 0) {
             Image("main_icon_screen")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 17, height: 17)
+                .frame(width: 14, height: 14)
+                .scaleEffect(x: 1.5, y: 1.0, anchor: .center)
+                .frame(width: 21, height: 14)
+                .padding(.trailing, 10)
                 .accessibilityHidden(true)
 
-            Text("屏幕时间")
-                .font(
-                    .system(
-                        size: 12,
-                        weight: .medium
-                    )
-                )
-                .foregroundStyle(labelColor)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text("日均")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(labelColor)
 
-            Text(average)
-                .font(
-                    .system(
-                        size: 15,
-                        weight: .semibold,
-                        design: .rounded
+                Text(average)
+                    .font(
+                        .system(
+                            size: 14,
+                            weight: .bold,
+                            design: .rounded
+                        )
                     )
-                )
-                .monospacedDigit()
-                .foregroundStyle(valueColor)
+                    .monospacedDigit()
+                    .foregroundStyle(valueColor)
+            }
 
             Text("·")
-                .font(
-                    .system(
-                        size: 10,
-                        weight: .semibold
-                    )
-                )
-                .foregroundStyle(labelColor.opacity(0.72))
-                .padding(.horizontal, 5)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(labelColor.opacity(0.64))
+                .padding(.horizontal, 7)
 
-            Text("末次活动")
-                .font(
-                    .system(
-                        size: 12,
-                        weight: .medium
-                    )
-                )
-                .foregroundStyle(labelColor)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text("末次")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(labelColor)
 
-            Text(last)
-                .font(
-                    .system(
-                        size: 15,
-                        weight: .semibold,
-                        design: .rounded
+                Text(last)
+                    .font(
+                        .system(
+                            size: 14,
+                            weight: .bold,
+                            design: .rounded
+                        )
                     )
-                )
-                .monospacedDigit()
-                .foregroundStyle(valueColor)
+                    .monospacedDigit()
+                    .foregroundStyle(valueColor)
+            }
         }
         .lineLimit(1)
-        .minimumScaleFactor(0.78)
+        .minimumScaleFactor(0.82)
         .frame(
             maxWidth: .infinity,
             maxHeight: .infinity,
-            alignment: .center
+            alignment: .leading
         )
         .background(Color.clear)
     }
