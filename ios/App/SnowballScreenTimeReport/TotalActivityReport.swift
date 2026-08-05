@@ -643,6 +643,12 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
 }
 
 
+struct SnowballHomeMiniConfiguration: Sendable {
+    let sevenDayAverageHours: Double
+    let lastActivityDate: Date?
+}
+
+
 struct SnowballDashboardApplicationRow: Identifiable, Sendable {
     let id: String
     let name: String
