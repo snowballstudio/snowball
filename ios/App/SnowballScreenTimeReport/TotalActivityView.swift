@@ -260,6 +260,14 @@ struct SevenDayDailyTableView: View {
         return formatter
     }()
 
+    private let lastActivityFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.autoupdatingCurrent
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
+
     private func compactDuration(
         _ duration: TimeInterval
     ) -> String {
@@ -348,6 +356,8 @@ struct SevenDayDailyTableView: View {
         HStack(spacing: 0) {
             Text("日期")
                 .frame(width: 58, alignment: .leading)
+            Text("末次活动时间")
+                .frame(width: 96, alignment: .leading)
             Text("总时长")
                 .frame(width: 70, alignment: .leading)
 
@@ -393,6 +403,23 @@ struct SevenDayDailyTableView: View {
                             width: 58,
                             alignment: .leading
                         )
+
+                    Text(
+                        day.lastActivityDate.map {
+                            lastActivityFormatter.string(from: $0)
+                        } ?? "—"
+                    )
+                    .font(
+                        .system(
+                            size: 11,
+                            weight: .medium,
+                            design: .rounded
+                        )
+                    )
+                    .frame(
+                        width: 96,
+                        alignment: .leading
+                    )
 
                     Text(
                         compactDuration(day.totalDuration)

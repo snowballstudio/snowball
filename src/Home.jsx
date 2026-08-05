@@ -75,6 +75,17 @@ function formatHomeRestTime(value) {
   return `${displayHour} : ${minute}`
 }
 
+function formatHomeRawActivityTime(value) {
+  const text = String(value || '').trim()
+  const match = text.match(/^(\d{1,2})\s*[:：]\s*(\d{2})$/)
+  if (!match) return text || '—'
+
+  const rawHour = Number(match[1])
+  const minute = match[2]
+  const displayHour = rawHour >= 24 ? rawHour % 24 : rawHour
+  return `${String(displayHour).padStart(2, '0')}：${minute}`
+}
+
 function homeRestTimeReachedGoal(value) {
   const text = String(value || '').trim()
   const match = text.match(/^(\d{1,2})\s*[:：]\s*(\d{2})$/)
@@ -115,8 +126,10 @@ export default function Home({
   body,
   openDailyDetail,
   openScreenTimeSummary,
+  openOffscreenTable,
   useNativeIOSScreenTime = false,
   homeYesterdaySleep,
+  homeAndroidLastActivity = '—',
   furDisplay,
   food,
   mood,
@@ -141,7 +154,6 @@ export default function Home({
   const avgScreenPending = avgScreenText.trim() === '待记录'
   const avgScreenMatch = avgScreenText.match(/^([0-9.]+)\s*(.*)$/)
   const avgScreenNumber = avgScreenMatch ? avgScreenMatch[1] : avgScreenText
-  const avgScreenUnit = avgScreenMatch && avgScreenMatch[2] ? avgScreenMatch[2] : ''
   const isHomeVisible = !showDataPanel && !showYearsPanel && !showThingsPanel && !showPeoplePanel
   const GOOD_NIGHT_DEVICE_KEY = 'snowball-good-night-device-v1'
   const [goodNightModal, setGoodNightModal] = useState(null)
@@ -514,23 +526,56 @@ export default function Home({
 
         <div className="homeSnowTrace">
           <img className="homeSnowBg" src="/refine/snow_background.png" alt="雪地留痕" />
-          <div className="homeTraceText">
-            {useNativeIOSScreenTime && (
-              <p>
+          <p className="homeDeviceSummaryLine">
+            {useNativeIOSScreenTime ? (
+              <button
+                type="button"
+                className="homeIOSMiniReportButton"
+                onClick={openScreenTimeSummary}
+                aria-label="打开苹果每日屏幕时间表"
+              >
+                <span
+                  ref={iosMiniReportRef}
+                  className="homeIOSMiniReportSlot"
+                  aria-hidden="true"
+                />
+              </button>
+            ) : (
+              <span className="homeNonIOSDeviceSummary">
+                <img
+                  className="homeNonIOSDeviceIcon"
+                  src="/refine/main_icon_screen.png"
+                  alt=""
+                  aria-hidden="true"
+                  draggable="false"
+                />
                 <button
                   type="button"
-                  className="homeIOSMiniReportButton"
+                  className="homeDeviceMetricButton"
                   onClick={openScreenTimeSummary}
-                  aria-label="打开苹果每日屏幕时间表"
+                  aria-label="打开每日屏幕时间表"
                 >
-                  <span
-                    ref={iosMiniReportRef}
-                    className="homeIOSMiniReportSlot"
-                    aria-hidden="true"
-                  />
+                  <span className="homeDeviceMetricLabel">日均</span>
+                  <strong className="homeDeviceMetricValue">
+                    {avgScreenPending ? '—' : avgScreenNumber}
+                  </strong>
                 </button>
-              </p>
+                <span className="homeDeviceMetricDot" aria-hidden="true">·</span>
+                <button
+                  type="button"
+                  className="homeDeviceMetricButton"
+                  onClick={openOffscreenTable}
+                  aria-label="打开离机时间表"
+                >
+                  <span className="homeDeviceMetricLabel">末次</span>
+                  <strong className="homeDeviceMetricValue">
+                    {formatHomeRawActivityTime(homeAndroidLastActivity)}
+                  </strong>
+                </button>
+              </span>
             )}
+          </p>
+          <div className="homeTraceText">
             <p>去过 <button type="button" className="homeTraceLink" onClick={() => openFootprintPage('world', 'browseFull')}><strong>{homeTraceStats.worldCount}</strong></button> 个国家 ，<button type="button" className="homeTraceLink" onClick={() => openFootprintPage('china', 'browseFull')}><strong>{homeTraceStats.chinaCount}</strong></button> 个省市</p>
             <p>物馆收录 <button type="button" className="homeTraceLink" onClick={() => openThingPage('overview')}><strong>{homeTraceStats.thingsCount}</strong></button> 件物品</p>
             <p>在人间记着 <button type="button" className="homeTraceLink" onClick={openPeoplePage}><strong>{homeTraceStats.peopleCount}</strong></button> 人</p>

@@ -11,8 +11,10 @@
    ====================================================== */
 @media (max-width: 900px) {
   :root {
+    /* 通话模式顶部图高度（不参与固定主页五区分配） */
+    --m-home-call-hero-height: 224px;
+
     /* 顶部猫背景 */
-    --m-home-hero-height: 224px;
     --m-home-hero-blur: 2.5px;
     --m-home-hero-brightness: 0.90;
     --m-home-hero-saturate: 0.90;
@@ -53,30 +55,21 @@
     --m-home-edit-size: 12px;
 
     /* 雪地地图：高度、文字位置、数字颜色都改这里 */
-    --m-home-snow-height: 285px;
     --m-home-snow-top-gap: 6px;
-    --m-home-snow-text-left: 24px;
-    --m-home-snow-text-top: 28px;
+    --m-home-snow-text-left: 6%;
+    --m-home-snow-text-top: 25%;
     --m-home-snow-text-size: 14px;
     --m-home-snow-number-size: 19px;
     --m-home-snow-number-color: #18c7ff;
     --m-home-snow-number-shadow: 0 0 7px rgba(24,199,255,0.38);
     --m-home-snow-cat-width: 27%;
-    --m-home-snow-cat-bottom: 11%;
+    --m-home-snow-cat-bottom: 5%;
     --m-home-cat-walk-seconds: 36s;
 
     /* 底栏 */
     --m-home-nav-bg: #000;
     --m-home-nav-icon-size: 20px;
     --m-home-nav-label-size: 12px;
-  }
-}
-
-@media (max-width: 430px) {
-  :root {
-    /* 小屏目前不再单独覆盖状态栏和雪地图参数。
-       以后如果你改上方参数没反应，优先检查这里。 */
-    --m-home-hero-height: 204px;
   }
 }
 
@@ -189,7 +182,6 @@
 
 @media (max-width: 900px) {
   .heroCard {
-    height: var(--m-home-hero-height) !important;
     background: #000 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
@@ -527,7 +519,6 @@ top: 2px;
    ====================================================== */
 .homeSnowTrace {
   position: relative;
-  min-height: 320px;
   border-radius: 0;
   overflow: hidden;
   border: none;
@@ -616,7 +607,6 @@ top: 2px;
 
 @media (max-width: 900px) {
   .homeSnowTrace {
-    min-height: var(--m-home-snow-height) !important;
     margin: var(--m-home-snow-top-gap) 0 0 !important;
     border: none !important;
     border-radius: 0 !important;
@@ -1454,7 +1444,7 @@ top: 2px;
   /* 通话框保持在顶部背景图之后，不再被自动滚到屏幕顶端。 */
   .heroCard + .chatCard {
     margin-top: 9px !important;
-    scroll-margin-top: calc(var(--m-home-hero-height) + 9px) !important;
+    scroll-margin-top: calc(var(--m-home-call-hero-height) + 9px) !important;
   }
 }
 
@@ -1519,12 +1509,6 @@ top: 2px;
    V92｜主页固定顶部与底部导航
    ====================================================== */
 @media (max-width: 900px) {
-  .homePage {
-    padding-top: calc(42px + env(safe-area-inset-top)) !important;
-    padding-bottom: 62px !important;
-    overflow-x: hidden !important;
-  }
-
   .homeFixedTopBar {
     position: fixed;
     left: 0;
@@ -1559,22 +1543,6 @@ top: 2px;
     text-shadow: 0 2px 8px rgba(0,0,0,.65);
   }
 
-  .homeBottomNav {
-    position: fixed !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    z-index: 120 !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 5px 4px !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    background: rgba(0,0,0,.92) !important;
-    border-top: 1px solid rgba(255,255,255,.13) !important;
-    box-shadow: 0 -8px 24px rgba(0,0,0,.28) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-  }
 
   .homeBottomNav button {
     min-width: 0 !important;
@@ -1597,10 +1565,6 @@ top: 2px;
    V93｜顶部三组文字原位冻结，不再复制主页文字
    ====================================================== */
 @media (max-width: 900px) {
-  .homePage {
-    padding-top: 0 !important;
-  }
-
   .homeFixedTopBar {
     top: 0 !important;
     height: 78px !important;
@@ -1653,54 +1617,6 @@ top: 2px;
 }
 
 
-/* ======================================================
-   V1.1｜主页外壳固定、正文局部滚动、底栏真正冻结
-   ====================================================== */
-@media (max-width: 900px) {
-  .phoneShell {
-    position: fixed !important;
-    inset: 0 !important;
-    width: 100% !important;
-    height: 100dvh !important;
-    min-height: 0 !important;
-    max-height: 100dvh !important;
-    box-sizing: border-box !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior-y: contain !important;
-    -webkit-overflow-scrolling: touch !important;
-    padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important;
-  }
-
-  .homeBottomNav {
-    position: fixed !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0px !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    z-index: 12000 !important;
-    transform: translateZ(0);
-  }
-}
-
-
-/* ======================================================
-   V1.1｜Home 底部导航位置微调
-   仅调整主页底部冻结导航。
-   ====================================================== */
-@media (max-width: 900px) {
-  .homeBottomNav {
-    bottom: -7px !important;
-    padding-bottom: 1px !important;
-  }
-
-  @supports (padding-bottom: env(safe-area-inset-bottom)) {
-    .homeBottomNav {
-      padding-bottom: max(2px, calc(env(safe-area-inset-bottom) * 0.22)) !important;
-    }
-  }
-}
 
 /* ======================================================
    主页心情玫瑰：只读取当日日常数据表 mood 关键词
@@ -1824,10 +1740,9 @@ top: 2px;
   }
 
   .homePage.callMode > .heroCard {
-    flex: 0 0 var(--m-home-hero-height) !important;
+    flex: 0 0 var(--m-home-call-hero-height) !important;
     width: 100% !important;
-    height: var(--m-home-hero-height) !important;
-    min-height: var(--m-home-hero-height) !important;
+    min-height: var(--m-home-call-hero-height) !important;
     position: relative !important;
     top: auto !important;
     transform: none !important;
@@ -2174,3 +2089,187 @@ top: 2px;
   pointer-events: none;
 }
 
+
+
+/* ======================================================
+   主页非苹果设备：屏幕时间 + 原始末次活动
+   苹果迷你报表继续使用独立的 homeIOSMiniReport* 样式。
+   ====================================================== */
+.homeDeviceSummaryLine {
+  position: absolute;
+  left: 6%;
+  top: 8%;
+  z-index: 6;
+  min-height: 28px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.homeNonIOSDeviceSummary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  white-space: nowrap;
+}
+
+.homeNonIOSDeviceIcon {
+  display: block;
+  width: 15px;
+  height: 22px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.homeDeviceMetricButton {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.homeDeviceMetricButton:active {
+  opacity: 0.72;
+}
+
+.homeDeviceMetricLabel {
+  color: rgba(225, 228, 231, 0.9);
+  font-size: var(--m-home-text-size, 12px);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.homeDeviceMetricValue {
+  padding: 0;
+  color: var(--m-home-gold, #f1dfb1) !important;
+  font-size: var(--m-home-value-size, 13.5px);
+  font-weight: 760;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.homeDeviceMetricDot {
+  color: rgba(225, 228, 231, 0.58);
+  font-size: 12px;
+  line-height: 1;
+}
+
+@media (max-width: 430px) {
+  .homeNonIOSDeviceSummary {
+    gap: 10px;
+  }
+
+  .homeNonIOSDeviceIcon {
+    width: 13px;
+    height: auto;
+    transform: scaleX(1.5);
+  }
+}
+
+/* ======================================================
+   V1.2｜主页固定视口比例布局
+   这一段只管理五个大区域的高度和整页滚动。
+   不覆盖状态栏、按钮、字体、颜色、边框、行高或图标尺寸。
+   ====================================================== */
+@media (max-width: 900px) {
+  :root {
+    /* 五个数字合计建议保持 100。 */
+    --home-area-hero: 27.5fr;
+    --home-area-status: 24fr;
+    --home-area-actions: 5.5fr;
+    --home-area-snow: 35fr;
+    --home-area-nav: 8fr;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden !important;
+    overscroll-behavior: none;
+  }
+
+  .phoneShell.homePage:not(.callMode) {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows:
+      var(--home-area-hero)
+      var(--home-area-status)
+      var(--home-area-actions)
+      var(--home-area-snow)
+      var(--home-area-nav) !important;
+  }
+
+  .homePage:not(.callMode) > .heroCard {
+    grid-row: 1 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 让原有三个区域直接参加主页五行网格；不改变它们内部设计。 */
+  .homePage:not(.callMode) > .statusCards.homeDashboard {
+    display: contents !important;
+  }
+
+  .homePage:not(.callMode) .homeCausalStatus {
+    grid-row: 2 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .homePage:not(.callMode) .homeTodayActionRow {
+    grid-row: 3 !important;
+    min-height: 0 !important;
+  }
+
+  .homePage:not(.callMode) .homeSnowTrace {
+    grid-row: 4 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin-top: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .homePage:not(.callMode) .heroCard .sceneBg,
+  .homePage:not(.callMode) .homeSnowBg {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: fill !important;
+  }
+
+  .homePage:not(.callMode) > .homeBottomNav {
+    grid-row: 5 !important;
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+}

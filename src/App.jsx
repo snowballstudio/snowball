@@ -1130,6 +1130,15 @@ function yesterdayText(base = new Date()) {
   return formatDateForDaily(d)
 }
 
+function snowballYesterdayText(base = new Date()) {
+  const d = new Date(base.getFullYear(), base.getMonth(), base.getDate())
+
+  // 雪粒以凌晨 05:00 为换日点：
+  // 05:00 前仍属于前一个雪粒自然日，因此“昨天”需要再向前一天。
+  d.setDate(d.getDate() - (base.getHours() < 5 ? 2 : 1))
+  return formatDateForDaily(d)
+}
+
 function dailyRecordForDate(records = [], date = todayText()) {
   const key = dateKey(formatDateForDaily(date))
   return (records || []).find(record => dateKey(record?.date) === key) || null
@@ -1723,10 +1732,34 @@ function buildScreenEntries(screenRecords = [], dailyRecords = []) {
     .filter(item => item.recordType !== 'screen-total')
 }
 
-function appStatsFromEntries(entries = [], range = 'today', dailyRecords = []) {
+function screenTotalRecordsForRange(screenRecords = [], range = 'today') {
+  return (screenRecords || [])
+    .map(normalizeScreenRecord)
+    .filter(item => item.recordType === 'screen-total')
+    .filter(item => filterDailyRange([item], range).length > 0)
+}
+
+function screenAverageDivisor(screenRecords = [], range = 'today') {
+  if (range === 'today' || range === 'yesterday') return 1
+
+  // 有 screen-total 记录的自然日进入分母：
+  // 0 分钟属于有效记录，保留；完全没有记录的日期不进入分母。
+  const recordedDates = new Set(
+    screenTotalRecordsForRange(screenRecords, range)
+      .map(item => dateKey(item.date))
+      .filter(Boolean)
+  )
+  return Math.max(1, recordedDates.size)
+}
+
+function screenTotalMinutesForRange(screenRecords = [], range = 'today') {
+  return screenTotalRecordsForRange(screenRecords, range)
+    .reduce((sum, item) => sum + Math.max(0, Number(item.minutes || 0)), 0)
+}
+
+function appStatsFromEntries(entries = [], range = 'today', screenRecords = []) {
   const scoped = filterDailyRange(entries, range)
-  const dateCount = new Set(scoped.map(item => dateKey(item.date))).size
-  const divisor = (range === 'today' || range === 'yesterday') ? 1 : Math.max(1, dateCount || (range === 'week' ? 7 : range === 'month' ? 30 : 365))
+  const divisor = screenAverageDivisor(screenRecords, range)
   const base = Object.fromEntries(Object.keys(APP_CATEGORY_MAP).map(key => [key, { key, label: APP_CATEGORY_MAP[key].label, minutes: 0, pickups: 0, apps: new Map() }]))
 
   scoped.forEach(entry => {
@@ -1740,10 +1773,9 @@ function appStatsFromEntries(entries = [], range = 'today', dailyRecords = []) {
     bucket.apps.set(app, (bucket.apps.get(app) || 0) + Number(entry.minutes || 0))
   })
 
-  const scopedDaily = filterDailyRange(dailyRecords, range)
-  const dailyTotal = scopedDaily.reduce((sum, record) => sum + recordScreenMinutes(record), 0)
+  const systemTotal = screenTotalMinutesForRange(screenRecords, range)
   const detailTotal = Object.values(base).reduce((sum, item) => sum + item.minutes, 0)
-  base.other.minutes += Math.max(0, dailyTotal - detailTotal)
+  base.other.minutes += Math.max(0, systemTotal - detailTotal)
 
   return Object.values(base).map(item => {
     const minutes = (range === 'today' || range === 'yesterday') ? item.minutes : item.minutes / divisor
@@ -1760,10 +1792,9 @@ function appStatsFromEntries(entries = [], range = 'today', dailyRecords = []) {
   })
 }
 
-function appTop10FromEntries(entries = [], range = 'today', dailyRecords = []) {
+function appTop10FromEntries(entries = [], range = 'today', screenRecords = []) {
   const scoped = filterDailyRange(entries, range)
-  const dateCount = new Set(scoped.map(item => dateKey(item.date))).size
-  const divisor = (range === 'today' || range === 'yesterday') ? 1 : Math.max(1, dateCount || (range === 'week' ? 7 : range === 'month' ? 30 : 365))
+  const divisor = screenAverageDivisor(screenRecords, range)
   const appMap = new Map()
 
   scoped.forEach(entry => {
@@ -1779,10 +1810,9 @@ function appTop10FromEntries(entries = [], range = 'today', dailyRecords = []) {
     .sort((a, b) => (b.minutes - a.minutes) || (b.pickups - a.pickups))
     .slice(0, 10)
 
-  const scopedDaily = filterDailyRange(dailyRecords, range)
-  const dailyTotal = scopedDaily.reduce((sum, record) => sum + recordScreenMinutes(record), 0)
+  const systemTotal = screenTotalMinutesForRange(screenRecords, range)
   const listedTotal = rawTop.reduce((sum, item) => sum + Number(item.minutes || 0), 0)
-  const otherMinutes = Math.max(0, dailyTotal - listedTotal)
+  const otherMinutes = Math.max(0, systemTotal - listedTotal)
   const rows = otherMinutes > 0 ? [...rawTop, { app: '其它', minutes: otherMinutes, pickups: 0 }] : rawTop
 
   return rows.map(item => {
@@ -3035,13 +3065,13 @@ function App() {
   const dailyNutritionStats = useMemo(() => nutritionStatsFromRecords(latestRecords, dailyStatRange), [latestRecords, dailyStatRange])
   const dailyTasteStats = useMemo(() => tasteStatsFromRecords(latestRecords, dailyStatRange), [latestRecords, dailyStatRange])
   const nutritionTasteLine = useMemo(() => nutritionTasteSentence(dailyTasteStats), [dailyTasteStats])
-  const dailyAppStats = useMemo(() => appStatsFromEntries(dailyScreenEntries, dailyStatRange, latestRecords), [dailyScreenEntries, dailyStatRange, latestRecords])
+  const dailyAppStats = useMemo(() => appStatsFromEntries(dailyScreenEntries, dailyStatRange, data.screenRecords || []), [dailyScreenEntries, dailyStatRange, data.screenRecords])
   const dailyTrainRows = useMemo(() => (dailyAppStats || [])
     .filter(item => TRAIN_VISUAL_ROWS.includes(item.key))
     .filter(item => Number(item?.minutes || 0) > 0 || Number(item?.pickups || 0) > 0), [dailyAppStats])
   const dailyTrainMaxPickups = useMemo(() => Math.max(1, ...dailyTrainRows.map(item => Number(item?.pickups || 0))), [dailyTrainRows])
   const dailyTrainMaxDuration = useMemo(() => Math.max(3, ...dailyTrainRows.map(item => trainSpeedForStats(item, dailyTrainMaxPickups))), [dailyTrainRows, dailyTrainMaxPickups])
-  const dailyTopApps = useMemo(() => appTop10FromEntries(dailyScreenEntries, dailyStatRange, latestRecords), [dailyScreenEntries, dailyStatRange, latestRecords])
+  const dailyTopApps = useMemo(() => appTop10FromEntries(dailyScreenEntries, dailyStatRange, data.screenRecords || []), [dailyScreenEntries, dailyStatRange, data.screenRecords])
   const dailyTopAppSummary = useMemo(() => ({
     minutes: (dailyTopApps || []).reduce((sum, item) => sum + Number(item?.minutes || 0), 0),
     pickups: (dailyTopApps || []).filter(item => item.app !== '其它').reduce((sum, item) => sum + Number(item?.pickups || 0), 0),
@@ -3110,6 +3140,19 @@ function App() {
     : (YEARS_SCENES[data.yearsScene] || YEARS_SCENES.beach)
   const footprints = data.footprints || []
 
+  const homeAndroidLastActivity = useMemo(() => {
+    const targetKey = dateKey(snowballYesterdayText())
+    const yesterdayAndroidRow = (data.offscreenRecords || []).find(
+      row => dateKey(row?.date) === targetKey
+    )
+
+    // 主页“末次”只显示离机源表中昨天的安卓原始值。
+    // 不读取 calculatedOffscreenTime，也不读取用户修改后的日常表。
+    return String(
+      yesterdayAndroidRow?.androidOffscreenTime || ''
+    ).trim() || '—'
+  }, [data.offscreenRecords])
+
   const homeTraceStats = useMemo(() => {
     const records = [...(data.records || [])]
       .sort((a, b) => dateKey(b.date).localeCompare(dateKey(a.date)))
@@ -3125,9 +3168,13 @@ function App() {
     const worldCount = new Set((data.footprints || []).filter(item => item.type === 'world').map(item => item.place)).size
     const chinaCount = new Set((data.footprints || []).filter(item => item.type === 'china').map(item => item.place)).size
 
-    const screenValues = records
-      .map(item => recordScreenMinutes(item))
-      .filter(n => n > 0)
+    const weeklyScreenTotals = screenTotalRecordsForRange(
+      data.screenRecords || [],
+      'week',
+    )
+    const screenValues = weeklyScreenTotals.map(item =>
+      Math.max(0, Number(item.minutes || 0))
+    )
     const iosAverageMinutes =
       Number(data.iosSevenDayAverageMinutes)
 
@@ -3153,6 +3200,7 @@ function App() {
     }
   }, [
     data.records,
+    data.screenRecords,
     data.footprints,
     data.things,
     data.people,
@@ -3566,6 +3614,12 @@ function App() {
         ? dailyMode
         : dailyMode || 'home')
     setOffscreenReturnMode(targetReturnMode)
+    setDailyMode('offscreen-table')
+    setShowDataPanel(true)
+  }
+
+  function openHomeOffscreenTable() {
+    setOffscreenReturnMode('home')
     setDailyMode('offscreen-table')
     setShowDataPanel(true)
   }
@@ -4592,12 +4646,22 @@ const homeFloatingFootprintMemory = ''
   }[dailyViewTab] || ['日期', '步数', '离机', '食物', '口味', '心情', '互动']
 
   const dailyTableGrid = {
-    all: '1.15fr 0.8fr 0.8fr 1.2fr 0.9fr 1fr 0.7fr 42px 42px 48px',
+    all: '1.15fr 0.8fr 0.8fr 1.2fr 0.9fr 1fr 0.7fr 42px 48px',
     steps: '1.2fr 1fr 42px 42px 48px',
     offscreen: '1.15fr 0.9fr 42px 42px 48px',
-    food: '0.85fr 1.7fr 0.85fr 42px 42px 48px',
-    mood: '0.85fr 1.7fr 42px 42px 48px',
-  }[dailyViewTab] || '1.15fr 0.8fr 0.8fr 1.2fr 0.9fr 1fr 0.7fr 42px 42px 48px'
+    food: '0.85fr 1.7fr 0.85fr 42px 48px',
+    mood: '0.85fr 1.7fr 42px 48px',
+  }[dailyViewTab] || '1.15fr 0.8fr 0.8fr 1.2fr 0.9fr 1fr 0.7fr 42px 48px'
+
+  const dailyHasRefreshAction =
+    dailyViewTab === 'steps' || dailyViewTab === 'offscreen'
+
+  function dailyActionHeaderCells() {
+    return dailyHasRefreshAction
+      ? [<span key="refresh"></span>, <span key="edit"></span>, <span key="delete"></span>]
+      : [<span key="edit"></span>, <span key="delete"></span>]
+  }
+
 
   function dailyGroupCellsForView(group) {
     const openMark = !!expandedDailyMonths[group.key] ? '−' : '+'
@@ -4740,8 +4804,10 @@ const homeFloatingFootprintMemory = ''
         body={body}
         openDailyDetail={openDailyDetail}
         openScreenTimeSummary={openScreenTimeSummary}
+        openOffscreenTable={openHomeOffscreenTable}
         useNativeIOSScreenTime={Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios'}
         homeYesterdaySleep={homeYesterdaySleep}
+        homeAndroidLastActivity={homeAndroidLastActivity}
         furDisplay={furDisplay}
         food={food}
         mood={mood}
@@ -5026,9 +5092,7 @@ max-width:78px !important;
                           ? <span className="dailyLinkedHeader" key={item}>步数<button type="button" className="dailyHeaderNavLink" onClick={openStepAutoTable} aria-label="查看步数自动获取表"><span className="dailyHeaderNavText">详情</span></button></span>
                           : <span key={item}>{item}</span>
                   ))}
-                  <span></span>
-                  <span></span>
-                  <span></span>
+                  {dailyActionHeaderCells()}
                 </div>
                 {latestRecords.length === 0 && (
                   <div className="dailyEmpty">
@@ -5045,14 +5109,14 @@ max-width:78px !important;
                         <button className={`dailyMonthRow dailyUnifiedMonthRow dailyTab-${dailyViewTab}`} type="button" onClick={() => toggleDailyMonth(group.key)} style={{ gridTemplateColumns: dailyTableGrid }}>
                           {dailyGroupCellsForView(group)}
                           <span className="dailyMonthCount">{group.records.length}天</span>
-                          <span></span>
+                          {dailyHasRefreshAction ? <span></span> : null}
                           <span></span>
                         </button>
 
                         {expanded && group.records.map((r, i) => (
                           <div className={`dailyTableRow dailyChildRow dailyTableRowV2 dailyUnifiedRow dailyTab-${dailyViewTab}`} key={`${r.date}-${i}`} style={{ gridTemplateColumns: dailyTableGrid }}>
                             {dailyRecordCellsForView(r)}
-                            {dailyViewTab === 'steps' || dailyViewTab === 'offscreen' ? (
+                            {dailyHasRefreshAction && (
                               <button
                                 type="button"
                                 className="dailyRowEditBtn dailyIconBtn"
@@ -5063,10 +5127,33 @@ max-width:78px !important;
                               >
                                 ↻
                               </button>
-                            ) : (
-                              <span aria-hidden="true"></span>
                             )}
-                            <button type="button" className="dailyRowEditBtn dailyIconBtn" onClick={() => beginDailyEdit(r)} title="修改">✎</button>
+                            <button
+                              type="button"
+                              className="dailyRowModifyBtn dailyIconBtn"
+                              onClick={() => beginDailyEdit(r)}
+                              title="修改"
+                              aria-label="修改这一天的日常数据"
+                              style={{
+                                display: 'grid',
+                                placeItems: 'center',
+                                visibility: 'visible',
+                                opacity: 1,
+                                minWidth: '38px',
+                                minHeight: '38px',
+                                padding: 0,
+                                border: 'none',
+                                background: 'transparent',
+                                color: '#f1dfb1',
+                                fontSize: '18px',
+                                lineHeight: 1,
+                                cursor: 'pointer',
+                                touchAction: 'manipulation',
+                                WebkitTapHighlightColor: 'transparent',
+                              }}
+                            >
+                              ✎
+                            </button>
                             <button type="button" className="dailyRowDeleteBtn dailyIconBtn" onClick={() => requestDailyDelete(r)} title="删除">×</button>
                           </div>
                         ))}

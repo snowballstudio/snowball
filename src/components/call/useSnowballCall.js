@@ -195,6 +195,8 @@ function logicalRestHour(rawHour, text) {
     || source.includes('上床')
     || source.includes('就睡')
     || source.includes('歇')
+    || source.includes('躺下')
+    || source.includes('熬夜')
   ) {
     if (hour === 12) return 24
     if (hour >= 5 && hour <= 11) return hour + 12

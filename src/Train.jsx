@@ -169,13 +169,19 @@ export default function Train({
     }
 
     iosOpenedRef.current = true
-    openIOSScreenTimeDashboard().then(() => {
+
+    // 先把网页层切回主页，再由 iOS 在主页上方呈现原生报表。
+    // 这样关闭原生报表时，底下已经是主页，不会闪现黑色占位页。
+    const opening = openIOSScreenTimeDashboard()
+    onBackHome()
+
+    opening.then(() => {
       iosOpenedRef.current = false
-      onBackHome()
     }).catch(error => {
       iosOpenedRef.current = false
-      setIOSReportError(
-        String(error?.message || error || '苹果屏幕时间报表没有打开。'),
+      console.warn(
+        '苹果屏幕时间报表没有打开。',
+        error,
       )
     })
   }, [useNativeIOSScreenTime, onBackHome])
@@ -222,38 +228,7 @@ export default function Train({
     )
   }
 
-  if (useNativeIOSScreenTime) {
-    return (
-      <div className="dailyPage dailySubPage dailyTrainPage trainPage trainIOSReportPage">
-        <button type="button" className="trainBackBtn" onClick={onBackHome}>
-          返回主页
-        </button>
-        <div className="trainIOSReportFallback">
-          <p>{iosReportError || '正在打开苹果屏幕时间报表…'}</p>
-          {iosReportError && (
-            <button
-              type="button"
-              onClick={() => {
-                setIOSReportError('')
-                iosOpenedRef.current = true
-                openIOSScreenTimeDashboard().then(() => {
-                  iosOpenedRef.current = false
-                  onBackHome()
-                }).catch(error => {
-                  iosOpenedRef.current = false
-                  setIOSReportError(
-                    String(error?.message || error || '苹果屏幕时间报表没有打开。'),
-                  )
-                })
-              }}
-            >
-              重新打开
-            </button>
-          )}
-        </div>
-      </div>
-    )
-  }
+  if (useNativeIOSScreenTime) return null
 
   return (
     <div className="dailyPage dailySubPage dailyTrainPage trainPage">

@@ -143,7 +143,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         let filter = DeviceActivityFilter(
-            segment: .daily(
+            segment: .hourly(
                 during: DateInterval(
                     start: start,
                     end: end
@@ -249,6 +249,26 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                             "endDate":
                                 self.formatSnowballDate(yesterday)
                         ])
+                    }
+                },
+                onOpenDashboard: {
+                    presenter.dismiss(animated: false) {
+                        let dashboard = IOSScreenTimeDashboardContainer(
+                            onClose: {
+                                presenter.dismiss(animated: true) {
+                                    call.resolve([
+                                        "closed": true,
+                                        "returnedHome": true,
+                                        "openedDashboard": true
+                                    ])
+                                }
+                            }
+                        )
+                        let dashboardHost = UIHostingController(
+                            rootView: dashboard
+                        )
+                        dashboardHost.modalPresentationStyle = .fullScreen
+                        presenter.present(dashboardHost, animated: false)
                     }
                 }
             )
@@ -1038,6 +1058,7 @@ private struct IOSSevenDayDailyTableContainer: View {
     let context: DeviceActivityReport.Context
     let filter: DeviceActivityFilter
     let onClose: () -> Void
+    let onOpenDashboard: () -> Void
 
     private enum Page {
         case table
@@ -1128,6 +1149,17 @@ private struct IOSSevenDayDailyTableContainer: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel("返回主页")
+                        }
+
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button(action: onOpenDashboard) {
+                                Text("查看报表")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(
+                                        Color(red: 0.72, green: 0.55, blue: 0.18)
+                                    )
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
 
@@ -1328,7 +1360,7 @@ private struct IOSScreenTimeDashboardContainer: View {
         ) ?? today
 
         return DeviceActivityFilter(
-            segment: .daily(
+            segment: .hourly(
                 during: DateInterval(start: start, end: end)
             ),
             users: .all,
@@ -1385,7 +1417,18 @@ private struct IOSScreenTimeDashboardContainer: View {
             Group {
                 switch page {
                 case .dashboard:
-                    VStack(spacing: 0) {
+                    ZStack {
+                        Image("information_platform")
+                            .resizable()
+                            .scaledToFill()
+                            .ignoresSafeArea()
+                            .opacity(0.32)
+
+                        Color(uiColor: .systemBackground)
+                            .opacity(0.72)
+                            .ignoresSafeArea()
+
+                        VStack(spacing: 0) {
                         Picker("统计范围", selection: $range) {
                             ForEach(
                                 IOSDashboardRange.allCases
@@ -1434,6 +1477,7 @@ private struct IOSScreenTimeDashboardContainer: View {
                             .padding(.top, 18)
                             .padding(.trailing, 18)
                             .zIndex(10)
+                        }
                         }
                     }
                     .navigationTitle("苹果屏幕时间")
@@ -1574,9 +1618,7 @@ private struct IOSScreenTimeDashboardContainer: View {
                         ToolbarItem(
                             placement: .topBarLeading
                         ) {
-                            Button {
-                                page = .dashboard
-                            } label: {
+                            Button(action: onClose) {
                                 Text("‹")
                                     .font(
                                         .system(
@@ -1590,7 +1632,7 @@ private struct IOSScreenTimeDashboardContainer: View {
                                     .frame(width: 34, height: 34)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("返回报表")
+                            .accessibilityLabel("返回主页")
                         }
 
                         ToolbarItem(

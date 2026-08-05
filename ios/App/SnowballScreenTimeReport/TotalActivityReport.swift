@@ -73,6 +73,7 @@ struct SevenDayApplicationSummary: Sendable {
 struct SevenDayScreenSummary: Sendable {
     let date: Date
     let totalDuration: TimeInterval
+    let lastActivityDate: Date?
     let applications: [SevenDayApplicationSummary]
 }
 
@@ -395,6 +396,7 @@ struct SevenDayAverageReport: DeviceActivityReportScene {
                     date: normalized,
                     totalDuration:
                         totalsByDate[normalized] ?? 0,
+                    lastActivityDate: nil,
                     applications: apps
                 )
             )
@@ -434,6 +436,7 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
 
         var totalsByDate: [Date: TimeInterval] = [:]
         var appsByDate: [Date: [String: MutableAppBucket]] = [:]
+        var lastActivityByDate: [Date: Date] = [:]
 
         for await deviceData in data {
             for await segment in deviceData.activitySegments {
@@ -442,6 +445,25 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
                 )
                 totalsByDate[day, default: 0] +=
                     segment.totalActivityDuration
+
+                // 与昨日末次活动相同：长时活动结束点，和首次拿起时间
+                // 加本小时活动时长，取较晚者。30 日表改用 hourly filter。
+                if segment.totalActivityDuration > 0 {
+                    var candidate = segment.longestActivity?.end
+                    if let firstPickup = segment.firstPickup {
+                        let pickupPlusDuration = firstPickup.addingTimeInterval(
+                            segment.totalActivityDuration
+                        )
+                        if candidate == nil || pickupPlusDuration > candidate! {
+                            candidate = pickupPlusDuration
+                        }
+                    }
+                    if let candidate,
+                       lastActivityByDate[day] == nil ||
+                       candidate > lastActivityByDate[day]! {
+                        lastActivityByDate[day] = candidate
+                    }
+                }
 
                 for await categoryActivity in segment.categories {
                     let rawCategory =
@@ -556,6 +578,8 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
                     date: normalized,
                     totalDuration:
                         totalsByDate[normalized] ?? 0,
+                    lastActivityDate:
+                        lastActivityByDate[normalized],
                     applications: apps
                 )
             )
