@@ -18,10 +18,10 @@ extension DeviceActivityReport.Context {
         Self("Snowball Dashboard Yesterday")
     static let dashboardWeek =
         Self("Snowball Dashboard Week")
+    static let dashboardPreviousWeek =
+        Self("Snowball Dashboard Previous Week")
     static let dashboardMonth =
         Self("Snowball Dashboard Month")
-    static let dashboardYear =
-        Self("Snowball Dashboard Year")
 }
 
 struct ScreenTimeApplicationRow: Identifiable, Hashable, Sendable {
@@ -895,6 +895,22 @@ struct SnowballDashboardWeekReport: DeviceActivityReportScene {
     }
 }
 
+struct SnowballDashboardPreviousWeekReport: DeviceActivityReportScene {
+    let context: DeviceActivityReport.Context = .dashboardPreviousWeek
+    let content:
+        (SnowballDashboardConfiguration) -> SnowballDashboardView
+
+    func makeConfiguration(
+        representing data: DeviceActivityResults<DeviceActivityData>
+    ) async -> SnowballDashboardConfiguration {
+        await SnowballReportBuilder.dashboard(
+            representing: data,
+            rangeLabel: "前周",
+            divisor: 7
+        )
+    }
+}
+
 struct SnowballDashboardMonthReport: DeviceActivityReportScene {
     let context: DeviceActivityReport.Context = .dashboardMonth
     let content:
@@ -911,20 +927,5 @@ struct SnowballDashboardMonthReport: DeviceActivityReportScene {
     }
 }
 
-struct SnowballDashboardYearReport: DeviceActivityReportScene {
-    let context: DeviceActivityReport.Context = .dashboardYear
-    let content:
-        (SnowballDashboardConfiguration) -> SnowballDashboardView
 
-    func makeConfiguration(
-        representing data: DeviceActivityResults<DeviceActivityData>
-    ) async -> SnowballDashboardConfiguration {
-        await SnowballReportBuilder.dashboard(
-            representing: data,
-            rangeLabel: "年均",
-            divisor: 365,
-            useReturnedDayCount: true
-        )
-    }
-}
 

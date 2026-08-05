@@ -40,12 +40,13 @@ struct SnowballScreenTimeReport: DeviceActivityReportExtension {
             SnowballDashboardView(configuration: configuration)
         }
 
+        SnowballDashboardPreviousWeekReport { configuration in
+            SnowballDashboardView(configuration: configuration)
+        }
+
         SnowballDashboardMonthReport { configuration in
             SnowballDashboardView(configuration: configuration)
         }
 
-        SnowballDashboardYearReport { configuration in
-            SnowballDashboardView(configuration: configuration)
-        }
     }
 }

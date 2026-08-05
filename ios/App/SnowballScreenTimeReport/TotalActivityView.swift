@@ -590,9 +590,15 @@ struct SnowballDashboardView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                HStack(alignment: .firstTextBaseline) {
+                HStack(alignment: .center, spacing: 8) {
+                    Image(systemName: "iphone")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+
                     Text(configuration.rangeLabel)
                         .font(.title2.weight(.semibold))
+
                     Spacer()
                 }
 

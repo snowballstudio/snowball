@@ -840,8 +840,8 @@ const DAILY_RANGE_TABS = [
   { key: 'today', label: '今天' },
   { key: 'yesterday', label: '昨天' },
   { key: 'week', label: '周均' },
+  { key: 'previousWeek', label: '前周' },
   { key: 'month', label: '月均' },
-  { key: 'year', label: '年均' },
 ]
 
 const NUTRITION_TYPES = {
@@ -1538,7 +1538,8 @@ function filterDailyRange(items = [], range = 'today') {
     const diff = daysBetweenDate(item.date)
     if (range === 'today') return diff === 0
     if (range === 'yesterday') return diff === 1
-    if (range === 'week') return diff >= 0 && diff < 7
+    if (range === 'week') return diff >= 1 && diff <= 7
+    if (range === 'previousWeek') return diff >= 8 && diff <= 14
     if (range === 'month') return diff >= 0 && diff < 30
     if (range === 'year') return diff >= 0 && diff < 365
     return true
@@ -1547,7 +1548,7 @@ function filterDailyRange(items = [], range = 'today') {
 
 function rangeAverageDivisor(records = [], range = 'today') {
   if (range === 'today' || range === 'yesterday') return 1
-  return Math.max(1, records.length || (range === 'week' ? 7 : range === 'month' ? 30 : 365))
+  return Math.max(1, records.length || ((range === 'week' || range === 'previousWeek') ? 7 : 30))
 }
 
 function tasteStatsFromRecords(records = [], range = 'today') {
@@ -1726,7 +1727,7 @@ function buildScreenEntries(screenRecords = [], dailyRecords = []) {
 function appStatsFromEntries(entries = [], range = 'today', dailyRecords = []) {
   const scoped = filterDailyRange(entries, range)
   const dateCount = new Set(scoped.map(item => dateKey(item.date))).size
-  const divisor = (range === 'today' || range === 'yesterday') ? 1 : Math.max(1, dateCount || (range === 'week' ? 7 : range === 'month' ? 30 : 365))
+  const divisor = (range === 'today' || range === 'yesterday') ? 1 : Math.max(1, dateCount || ((range === 'week' || range === 'previousWeek') ? 7 : 30))
   const base = Object.fromEntries(Object.keys(APP_CATEGORY_MAP).map(key => [key, { key, label: APP_CATEGORY_MAP[key].label, minutes: 0, pickups: 0, apps: new Map() }]))
 
   scoped.forEach(entry => {
@@ -1763,7 +1764,7 @@ function appStatsFromEntries(entries = [], range = 'today', dailyRecords = []) {
 function appTop10FromEntries(entries = [], range = 'today', dailyRecords = []) {
   const scoped = filterDailyRange(entries, range)
   const dateCount = new Set(scoped.map(item => dateKey(item.date))).size
-  const divisor = (range === 'today' || range === 'yesterday') ? 1 : Math.max(1, dateCount || (range === 'week' ? 7 : range === 'month' ? 30 : 365))
+  const divisor = (range === 'today' || range === 'yesterday') ? 1 : Math.max(1, dateCount || ((range === 'week' || range === 'previousWeek') ? 7 : 30))
   const appMap = new Map()
 
   scoped.forEach(entry => {

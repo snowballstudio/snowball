@@ -1118,8 +1118,8 @@ private enum IOSDashboardRange: String, CaseIterable, Identifiable {
     case today
     case yesterday
     case week
+    case previousWeek
     case month
-    case year
 
     var id: String { rawValue }
 
@@ -1128,8 +1128,8 @@ private enum IOSDashboardRange: String, CaseIterable, Identifiable {
         case .today: return "今天"
         case .yesterday: return "昨天"
         case .week: return "周均"
+        case .previousWeek: return "前周"
         case .month: return "月均"
-        case .year: return "年均"
         }
     }
 
@@ -1147,13 +1147,13 @@ private enum IOSDashboardRange: String, CaseIterable, Identifiable {
             return DeviceActivityReport.Context(
                 "Snowball Dashboard Week"
             )
+        case .previousWeek:
+            return DeviceActivityReport.Context(
+                "Snowball Dashboard Previous Week"
+            )
         case .month:
             return DeviceActivityReport.Context(
                 "Snowball Dashboard Month"
-            )
-        case .year:
-            return DeviceActivityReport.Context(
-                "Snowball Dashboard Year"
             )
         }
     }
@@ -1228,6 +1228,25 @@ private struct IOSScreenTimeDashboardContainer: View {
                 devices: .all
             )
 
+        case .previousWeek:
+            let start = calendar.date(
+                byAdding: .day,
+                value: -14,
+                to: today
+            ) ?? today
+            let end = calendar.date(
+                byAdding: .day,
+                value: -7,
+                to: today
+            ) ?? today
+            return DeviceActivityFilter(
+                segment: .daily(
+                    during: DateInterval(start: start, end: end)
+                ),
+                users: .all,
+                devices: .all
+            )
+
         case .month:
             let start = calendar.date(
                 byAdding: .day,
@@ -1242,19 +1261,6 @@ private struct IOSScreenTimeDashboardContainer: View {
                 devices: .all
             )
 
-        case .year:
-            let start = calendar.date(
-                byAdding: .day,
-                value: -365,
-                to: today
-            ) ?? today
-            return DeviceActivityFilter(
-                segment: .daily(
-                    during: DateInterval(start: start, end: today)
-                ),
-                users: .all,
-                devices: .all
-            )
         }
     }
 
@@ -1621,7 +1627,7 @@ private struct IOSScreenTimeHelpView: View {
                 )
 
                 Text(
-                    "“今天”和“昨天”显示对应自然日的使用情况；周均、月均和年均显示所选时间范围内的日平均值。系统报告存在延迟时，最近一天的数据可能稍后补充。"
+                    "“今天”和“昨天”显示对应自然日的使用情况；“周均”统计昨天及之前七个完整自然日，“前周”统计再往前的七个完整自然日，“月均”统计最近三十个完整自然日。周均、前周和月均均显示所选范围内的日平均值。系统报告存在延迟时，最近一天的数据可能稍后补充。"
                 )
 
                 Text(
