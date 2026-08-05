@@ -20,8 +20,7 @@ import {
   screenSystemTotalMinutesForDate,
 } from './components/ios-screen-time/screenTimeDataService.js'
 import {
-  calculateIOSOffscreenDay,
-  recalculateIOSOffscreenRecord,
+  recalculateOffscreenRecord,
   getIOSScreenTimeStatus,
   openIOSScreenTimeReport,
   openIOSSevenDayDailyTable,
@@ -1043,48 +1042,6 @@ function formatClockForDaily(value) {
   const hour = String(Number(match[1])).padStart(2, '0')
   const minute = match[2].padStart(2, '0')
   return `${hour}：${minute}`
-}
-
-function latestOffscreenResult(record = {}) {
-  const candidates = [
-    {
-      time: record.androidOffscreenTime,
-      source: '安卓手机',
-    },
-    {
-      time: record.iosCalculatedOffscreenTime,
-      source: '苹果推算',
-    },
-    {
-      time: record.iosGoodNightTime,
-      source: '道晚安',
-    },
-    {
-      time: record.spokenRestTime,
-      source: '通话',
-    },
-  ]
-    .map(item => ({
-      ...item,
-      minutes: timeToMinutes(item.time),
-    }))
-    .filter(item => item.minutes !== null)
-
-  if (!candidates.length) {
-    return {
-      time: '',
-      source: '',
-    }
-  }
-
-  const latest = candidates.reduce((best, item) =>
-    !best || item.minutes >= best.minutes ? item : best
-  , null)
-
-  return {
-    time: formatClockForDaily(latest.time),
-    source: latest.source,
-  }
 }
 
 function parseStrictDailyDate(value) {
@@ -2355,35 +2312,17 @@ function mergeNativeOffscreenDays(prev, payload = {}, { force = false, liveToday
     const old = existingIndex >= 0 ? offscreenRecords[existingIndex] : {}
     const androidTime = formatClockForDaily(day?.offscreenTime || '')
 
-    const iosResult = calculateIOSOffscreenDay(
-      { ...day, date: dayDate },
-      {
-        goodNightTime: old.iosGoodNightTime || '',
-        cutoffHour: 5,
-        minimumActivitySeconds: 10,
-      },
-    )
-
-    const mergedSourceRow = {
-      ...old,
-      ...(iosResult || {}),
+    const next = recalculateOffscreenRecord({
       id: old.id || `offscreen-${dayKey}`,
       date: dayDate,
       androidOffscreenTime:
         androidTime || old.androidOffscreenTime || '',
-      iosGoodNightTime:
-        old.iosGoodNightTime || iosResult?.iosGoodNightTime || '',
+      goodNightTime:
+        old.goodNightTime || '',
       spokenRestTime:
         old.spokenRestTime || '',
       deviceSyncedAt: Date.now(),
-    }
-
-    const latest = latestOffscreenResult(mergedSourceRow)
-    const next = {
-      ...mergedSourceRow,
-      calculatedOffscreenTime: latest.time,
-      dataSource: latest.source,
-    }
+    })
 
     if (existingIndex >= 0) offscreenRecords[existingIndex] = next
     else offscreenRecords.push(next)
@@ -3740,20 +3679,16 @@ function App() {
       )
       const current = rowIndex >= 0 ? rows[rowIndex] : {}
 
-      const recalculated = recalculateIOSOffscreenRecord({
-        ...current,
+      const nextRow = recalculateOffscreenRecord({
         id: current.id || `offscreen-${dateKey(recordDate)}`,
         date: recordDate,
-        iosGoodNightTime: savedTime,
+        androidOffscreenTime:
+          current.androidOffscreenTime || '',
+        goodNightTime: savedTime,
+        spokenRestTime:
+          current.spokenRestTime || '',
         goodNightSavedAt: Date.now(),
       })
-
-      const latest = latestOffscreenResult(recalculated)
-      const nextRow = {
-        ...recalculated,
-        calculatedOffscreenTime: latest.time,
-        dataSource: latest.source,
-      }
 
       if (rowIndex >= 0) rows[rowIndex] = nextRow
       else rows.push(nextRow)
@@ -3762,8 +3697,8 @@ function App() {
         prev.records || [],
         recordDate,
         {
-          offscreenTime: latest.time,
-          yesterdaySleep: latest.time,
+          offscreenTime: nextRow.calculatedOffscreenTime,
+          yesterdaySleep: nextRow.calculatedOffscreenTime,
           offscreenAutoFetchedAt: Date.now(),
         },
       )
@@ -3778,7 +3713,10 @@ function App() {
         ),
         records: nextDailyRecords,
         ...(isYesterday
-          ? { yesterdaySleepTime: latest.time }
+          ? {
+              yesterdaySleepTime:
+                nextRow.calculatedOffscreenTime
+            }
           : {}),
         lastSavedAt: Date.now(),
       }

@@ -326,8 +326,9 @@ struct SevenDayAverageReport: DeviceActivityReportScene {
 
                     for await webDomainActivity
                         in categoryActivity.webDomains {
-                        let domain =
-                            webDomainActivity.webDomain.domain
+                        let domain = String(
+                            webDomainActivity.webDomain.domain ?? ""
+                        )
                         let name =
                             domain.isEmpty
                             ? "未命名网站"
@@ -486,8 +487,9 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
 
                     for await webDomainActivity
                         in categoryActivity.webDomains {
-                        let domain =
-                            webDomainActivity.webDomain.domain
+                        let domain = String(
+                            webDomainActivity.webDomain.domain ?? ""
+                        )
                         let name =
                             domain.isEmpty
                             ? "未命名网站"
@@ -749,8 +751,9 @@ private enum SnowballReportBuilder {
 
                     for await webDomainActivity
                         in categoryActivity.webDomains {
-                        let domain =
-                            webDomainActivity.webDomain.domain
+                        let domain = String(
+                            webDomainActivity.webDomain.domain ?? ""
+                        )
                         let name =
                             domain.isEmpty
                             ? "未命名网站"

@@ -8,7 +8,7 @@ import {
   readConversationRecord,
 } from './conversationDataService.js'
 import {
-  recalculateIOSOffscreenRecord,
+  recalculateOffscreenRecord,
 } from '../ios-screen-time/iosScreenTimeService.js'
 
 const VOICE_DURATION_MS = {
@@ -154,59 +154,6 @@ function calendarYesterdayKey(now = new Date()) {
     date.getMonth() + 1,
     date.getDate(),
   ].join('/')
-}
-
-function restTimeMinutes(value) {
-  const text = String(value || '')
-    .trim()
-    .replace(/：/g, ':')
-
-  const match = text.match(/^(\d{1,2}):([0-5]\d)$/)
-  if (!match) return null
-
-  return Number(match[1]) * 60 + Number(match[2])
-}
-
-function latestSpokenOffscreenResult(record = {}) {
-  const candidates = [
-    {
-      time: record.androidOffscreenTime,
-      source: '安卓手机',
-    },
-    {
-      time: record.iosCalculatedOffscreenTime,
-      source: '苹果推算',
-    },
-    {
-      time: record.iosGoodNightTime,
-      source: '道晚安',
-    },
-    {
-      time: record.spokenRestTime,
-      source: '通话',
-    },
-  ]
-    .map(item => ({
-      ...item,
-      minutes: restTimeMinutes(item.time),
-    }))
-    .filter(item => item.minutes !== null)
-
-  if (!candidates.length) {
-    return {
-      time: '',
-      source: '',
-    }
-  }
-
-  const latest = candidates.reduce((best, item) =>
-    !best || item.minutes >= best.minutes ? item : best
-  , null)
-
-  return {
-    time: String(latest.time || '').replace(':', '：'),
-    source: latest.source,
-  }
 }
 
 function logicalRestHour(rawHour, text) {
@@ -367,30 +314,24 @@ function updateSpokenRestRecord(data, spokenRest) {
         }
 
   /*
-    通话时间单独保存在 spokenRestTime。
-    系统时间、道晚安和通话时间全部参与比较，取最晚值。
-    不区分苹果、安卓或网页用户。
+    通话只写入独立 spokenRestTime。
+    安卓系统、道晚安、通话三个来源统一取最晚。
   */
-  const recalculated = recalculateIOSOffscreenRecord({
-    ...existing,
-    date: rowIndex >= 0
-      ? existing.date
-      : spokenDateKey,
-    // 通话最新时间仍按原设计写入“最后长时活动结束时间”字段，
-    // 这样离机时间表可以直接看到本次通话更新。
-    iosLastLongActivityEnd: spokenRest.time,
-    // 同时保留独立通话来源，继续参与系统/晚安/通话三者比较。
+  const nextOffscreenRecord = recalculateOffscreenRecord({
+    id:
+      existing.id ||
+      `offscreen-${spokenDateKey.replaceAll('/', '-')}`,
+    date:
+      rowIndex >= 0
+        ? existing.date
+        : spokenDateKey,
+    androidOffscreenTime:
+      existing.androidOffscreenTime || '',
+    goodNightTime:
+      existing.goodNightTime || '',
     spokenRestTime: spokenRest.time,
-  })
-
-  const latest = latestSpokenOffscreenResult(recalculated)
-  const nextOffscreenRecord = {
-    ...recalculated,
-    spokenRestTime: spokenRest.time,
-    calculatedOffscreenTime: latest.time,
-    dataSource: latest.source,
     spokenRestUpdatedAt: Date.now(),
-  }
+  })
 
   const nextRecords = [...existingRecords]
   if (rowIndex >= 0) {
@@ -432,8 +373,10 @@ function updateSpokenRestRecord(data, spokenRest) {
   const nextDailyRecord = {
     ...dailyCurrent,
     date: dailyCurrent.date || spokenDateKey,
-    offscreenTime: latest.time,
-    yesterdaySleep: latest.time,
+    offscreenTime:
+      nextOffscreenRecord.calculatedOffscreenTime,
+    yesterdaySleep:
+      nextOffscreenRecord.calculatedOffscreenTime,
     spokenRestUpdatedAt: Date.now(),
   }
 
@@ -453,7 +396,8 @@ function updateSpokenRestRecord(data, spokenRest) {
     ...data,
     offscreenRecords: nextRecords,
     records: dailyRecords,
-    yesterdaySleepTime: latest.time,
+    yesterdaySleepTime:
+      nextOffscreenRecord.calculatedOffscreenTime,
     lastSavedAt: Date.now(),
   }
 }
