@@ -352,28 +352,37 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
             /*
              Home.jsx 传入的是 homeIOSMiniReportSlot 的最终
-             getBoundingClientRect() 坐标。槽位本身已经位于雪地图
-             左 6%、上 6%，因此这里不再重复叠加 Safe Area、
-             adjustedContentInset 或其它偏移。
+             getBoundingClientRect() 坐标，属于 WKWebView 的 viewport。
+
+             这里不再猜测 Safe Area 或 contentInset，而是让 UIKit
+             把这个具体坐标点从 WKWebView 坐标系转换到 presenter.view。
+             转换会自动包含 WebView frame、bounds、原生安全区和容器偏移。
             */
+            let resolvedOrigin = webView.convert(
+                CGPoint(x: x, y: y),
+                to: presenter.view
+            )
+
             host.view.frame = CGRect(
-                x: x,
-                y: y,
+                x: resolvedOrigin.x,
+                y: resolvedOrigin.y,
                 width: width,
                 height: height
             )
             host.view.autoresizingMask = []
 
             presenter.addChild(host)
-            webView.addSubview(host.view)
+            presenter.view.addSubview(host.view)
             host.didMove(toParent: presenter)
             self.homeMiniHost = host
 
             call.resolve([
                 "shown": true,
-                "coordinateSpace": "finalSlotViewportRect",
-                "frameX": x,
-                "frameY": y,
+                "coordinateSpace": "webViewPointConvertedToPresenter",
+                "inputX": x,
+                "inputY": y,
+                "frameX": resolvedOrigin.x,
+                "frameY": resolvedOrigin.y,
                 "frameWidth": width,
                 "frameHeight": height
             ])

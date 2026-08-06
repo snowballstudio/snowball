@@ -205,13 +205,50 @@ struct TotalActivityView: View {
 
 private var snowballReportGradient: LinearGradient {
     LinearGradient(
-        colors: [
-            Color(red: 0.91, green: 0.96, blue: 0.98),
-            Color(red: 0.84, green: 0.91, blue: 0.95),
-            Color(red: 0.90, green: 0.93, blue: 0.95)
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
+        gradient: Gradient(stops: [
+            .init(
+                color: Color(
+                    red: 0.78,
+                    green: 0.87,
+                    blue: 0.92
+                ),
+                location: 0.00
+            ),
+            .init(
+                color: Color(
+                    red: 0.88,
+                    green: 0.94,
+                    blue: 0.97
+                ),
+                location: 0.20
+            ),
+            .init(
+                color: Color(
+                    red: 0.965,
+                    green: 0.98,
+                    blue: 0.985
+                ),
+                location: 0.43
+            ),
+            .init(
+                color: Color(
+                    red: 0.965,
+                    green: 0.98,
+                    blue: 0.985
+                ),
+                location: 0.68
+            ),
+            .init(
+                color: Color(
+                    red: 0.82,
+                    green: 0.89,
+                    blue: 0.93
+                ),
+                location: 1.00
+            )
+        ]),
+        startPoint: .top,
+        endPoint: .bottom
     )
 }
 
@@ -549,14 +586,21 @@ struct SnowballHomeMiniView: View {
         } ?? "—"
 
         HStack(alignment: .center, spacing: 0) {
+            /*
+             素材本身四周带透明留白。单纯增大 frame 只会放大透明画布，
+             所以先在较小基准画布中明显放大，再用固定外框裁切透明边。
+            */
             Image("main_icon_screen")
                 .resizable()
                 .scaledToFit()
-                // 素材画布内有留白：以 13pt 为基准放大可见内容，
-                // 横纵缩放比保持 1.5，使手机轮廓明显但不挤压文字。
-                .frame(width: 13, height: 13)
-                .scaleEffect(x: 1.8, y: 1.2, anchor: .center)
-                .frame(width: 24, height: 18)
+                .frame(width: 14, height: 14)
+                .scaleEffect(
+                    x: 2.65,
+                    y: 1.85,
+                    anchor: .center
+                )
+                .frame(width: 25, height: 21)
+                .clipped()
                 .padding(.trailing, 10)
                 .accessibilityHidden(true)
 
