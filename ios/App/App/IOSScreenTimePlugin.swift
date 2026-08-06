@@ -352,37 +352,43 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
             /*
              Home.jsx 传入的是 homeIOSMiniReportSlot 的最终
-             getBoundingClientRect() 坐标，属于 WKWebView 的 viewport。
+             getBoundingClientRect() 坐标，属于 WKWebView viewport。
 
-             这里不再猜测 Safe Area 或 contentInset，而是让 UIKit
-             把这个具体坐标点从 WKWebView 坐标系转换到 presenter.view。
-             转换会自动包含 WebView frame、bounds、原生安全区和容器偏移。
+             迷你报表现在挂到 WKWebView.scrollView 的网页内容层，
+             不再挂到整个 presenter.view 最外层。UIKit 负责把 viewport
+             坐标转换成 scrollView 内容坐标，其中会自动处理 bounds、
+             contentOffset 与 adjustedContentInset。
             */
-            let resolvedOrigin = webView.convert(
+            let contentOrigin = webView.convert(
                 CGPoint(x: x, y: y),
-                to: presenter.view
+                to: webView.scrollView
             )
 
             host.view.frame = CGRect(
-                x: resolvedOrigin.x,
-                y: resolvedOrigin.y,
+                x: contentOrigin.x,
+                y: contentOrigin.y,
                 width: width,
                 height: height
             )
             host.view.autoresizingMask = []
+            host.view.layer.zPosition = 1
 
             presenter.addChild(host)
-            presenter.view.addSubview(host.view)
+            webView.scrollView.addSubview(host.view)
             host.didMove(toParent: presenter)
             self.homeMiniHost = host
 
             call.resolve([
                 "shown": true,
-                "coordinateSpace": "webViewPointConvertedToPresenter",
+                "coordinateSpace": "webViewViewportToScrollContent",
                 "inputX": x,
                 "inputY": y,
-                "frameX": resolvedOrigin.x,
-                "frameY": resolvedOrigin.y,
+                "contentX": contentOrigin.x,
+                "contentY": contentOrigin.y,
+                "scrollOffsetX": webView.scrollView.contentOffset.x,
+                "scrollOffsetY": webView.scrollView.contentOffset.y,
+                "insetTop":
+                    webView.scrollView.adjustedContentInset.top,
                 "frameWidth": width,
                 "frameHeight": height
             ])

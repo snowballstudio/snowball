@@ -155,6 +155,7 @@ export default function Home({
   const avgScreenMatch = avgScreenText.match(/^([0-9.]+)\s*(.*)$/)
   const avgScreenNumber = avgScreenMatch ? avgScreenMatch[1] : avgScreenText
   const isHomeVisible = !showDataPanel && !showYearsPanel && !showThingsPanel && !showPeoplePanel
+  const suppressIOSMiniReport = Boolean(call.callActive || goodNightModal)
   const GOOD_NIGHT_INTRO_KEY = 'snowball-good-night-intro-dismissed-v1'
   const GOOD_NIGHT_SOUND_KEY = 'snowball-good-night-sound-v1'
   const [goodNightModal, setGoodNightModal] = useState(null)
@@ -171,7 +172,16 @@ export default function Home({
   const homeSnowTraceRef = useRef(null)
 
   useEffect(() => {
-    if (!useNativeIOSScreenTime || !isHomeVisible) {
+    if (
+      !useNativeIOSScreenTime ||
+      !isHomeVisible ||
+      suppressIOSMiniReport
+    ) {
+      /*
+       通话界面或任一道晚安弹窗出现时，立即移除原生迷你报表。
+       这样它不会悬浮在网页弹窗之上。状态恢复后本 effect 会重新运行，
+       并按照雪地图槽位重新生成报表。
+      */
       hideIOSHomeMiniReport().catch(() => {})
       return undefined
     }
@@ -226,7 +236,11 @@ export default function Home({
       window.visualViewport?.removeEventListener('resize', placeReport)
       hideIOSHomeMiniReport().catch(() => {})
     }
-  }, [useNativeIOSScreenTime, isHomeVisible])
+  }, [
+    useNativeIOSScreenTime,
+    isHomeVisible,
+    suppressIOSMiniReport,
+  ])
 
 
   const homeStatusGoals = {
