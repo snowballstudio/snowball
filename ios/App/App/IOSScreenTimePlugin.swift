@@ -374,9 +374,9 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
             /*
              当前坐标链已经生效，只做最终视觉微调：
-             在现有位置基础上向下移动 20pt。
+             在现有位置基础上向下移动 Npt。
             */
-            let miniVerticalOffset: CGFloat = 30
+            let miniVerticalOffset: CGFloat = 45
 
             host.view.frame = CGRect(
                 x: contentOrigin.x,
