@@ -351,12 +351,10 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             host.view.isUserInteractionEnabled = false
 
             /*
-             JavaScript 的 x / y 来自 getBoundingClientRect()，
-             坐标原点就是当前 WKWebView viewport 左上角。
-
-             因此不要再换算到 presenter.view，也不要叠加 Safe Area
-             或 adjustedContentInset；直接把原生报告放进 WKWebView，
-             使用同一套坐标系，位置才会与雪地图的 6% 完全一致。
+             Home.jsx 传入的是 homeIOSMiniReportSlot 的最终
+             getBoundingClientRect() 坐标。槽位本身已经位于雪地图
+             左 6%、上 6%，因此这里不再重复叠加 Safe Area、
+             adjustedContentInset 或其它偏移。
             */
             host.view.frame = CGRect(
                 x: x,
@@ -373,7 +371,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
             call.resolve([
                 "shown": true,
-                "coordinateSpace": "webViewViewport",
+                "coordinateSpace": "finalSlotViewportRect",
                 "frameX": x,
                 "frameY": y,
                 "frameWidth": width,
@@ -1190,7 +1188,15 @@ private struct IOSSevenDayDailyTableContainer: View {
                         .background(Color(uiColor: .secondarySystemBackground))
 
                         DeviceActivityReport(context, filter: filter)
+                            .frame(
+                                maxWidth: .infinity,
+                                maxHeight: .infinity
+                            )
                     }
+                    .background(
+                        snowballScreenTimeGradient
+                            .ignoresSafeArea()
+                    )
                     .navigationTitle("30日屏幕时间")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
@@ -1311,6 +1317,18 @@ private func snowballFiveAM(
         second: 0,
         of: calendar.startOfDay(for: day)
     ) ?? calendar.startOfDay(for: day)
+}
+
+private var snowballScreenTimeGradient: LinearGradient {
+    LinearGradient(
+        colors: [
+            Color(red: 0.91, green: 0.96, blue: 0.98),
+            Color(red: 0.84, green: 0.91, blue: 0.95),
+            Color(red: 0.90, green: 0.93, blue: 0.95)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
 }
 
 struct IOSScreenTimeDashboardContainer: View {
@@ -1551,7 +1569,10 @@ struct IOSScreenTimeDashboardContainer: View {
                         maxWidth: .infinity,
                         maxHeight: .infinity
                     )
-                    .background(Color(uiColor: .systemBackground))
+                    .background(
+                        snowballScreenTimeGradient
+                            .ignoresSafeArea()
+                    )
                     .navigationTitle("苹果屏幕时间")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
@@ -1683,7 +1704,15 @@ struct IOSScreenTimeDashboardContainer: View {
                             ),
                             filter: dailyTableFilter
                         )
+                        .frame(
+                            maxWidth: .infinity,
+                            maxHeight: .infinity
+                        )
                     }
+                    .background(
+                        snowballScreenTimeGradient
+                            .ignoresSafeArea()
+                    )
                     .navigationTitle("30日屏幕时间")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {

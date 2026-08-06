@@ -203,6 +203,18 @@ struct TotalActivityView: View {
     }
 }
 
+private var snowballReportGradient: LinearGradient {
+    LinearGradient(
+        colors: [
+            Color(red: 0.91, green: 0.96, blue: 0.98),
+            Color(red: 0.84, green: 0.91, blue: 0.95),
+            Color(red: 0.90, green: 0.93, blue: 0.95)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+}
+
 // MARK: - 主页七日平均屏时的原生计算视图
 
 struct SevenDayAverageView: View {
@@ -377,7 +389,7 @@ struct SevenDayDailyTableView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 10)
         .background(
-            Color(uiColor: .secondarySystemBackground)
+            Color.white.opacity(0.24)
         )
     }
 
@@ -448,7 +460,7 @@ struct SevenDayDailyTableView: View {
                 }
                 .padding(.horizontal, 10)
                 .background(
-                    Color(uiColor: .systemBackground)
+                    Color.white.opacity(0.12)
                 )
 
                 Divider()
@@ -457,38 +469,50 @@ struct SevenDayDailyTableView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Spacer()
+        ZStack {
+            snowballReportGradient
+                .ignoresSafeArea()
 
-                Text(
-                    "七日平均 " +
-                    compactDuration(
-                        configuration.averageDuration
+            VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+
+                    Text(
+                        "七日平均 " +
+                        compactDuration(
+                            configuration.averageDuration
+                        )
                     )
-                )
-                .font(.caption.weight(.semibold))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+                    .font(.caption.weight(.semibold))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
 
-            Divider()
+                Divider()
 
-            /*
-             横向滚动包住表头和表身，保证列始终同步；
-             纵向滚动只作用于数据行，因此表头固定。
-            */
-            ScrollView(.horizontal, showsIndicators: true) {
-                VStack(spacing: 0) {
-                    tableHeader
+                /*
+                 横向滚动包住表头和表身，保证列始终同步；
+                 纵向滚动只作用于数据行，因此表头固定。
+                */
+                ScrollView(.horizontal, showsIndicators: true) {
+                    VStack(spacing: 0) {
+                        tableHeader
 
-                    ScrollView(.vertical, showsIndicators: true) {
-                        tableRows
+                        ScrollView(.vertical, showsIndicators: true) {
+                            tableRows
+                        }
                     }
                 }
             }
+            .frame(
+                maxWidth: .infinity,
+                maxHeight: .infinity
+            )
         }
-        .background(Color(uiColor: .systemBackground))
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: .infinity
+        )
     }
 }
 
@@ -605,8 +629,12 @@ struct SnowballDashboardView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+        ZStack {
+            snowballReportGradient
+                .ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(configuration.rangeLabel)
                         .font(.title2.weight(.semibold))
@@ -717,9 +745,17 @@ struct SnowballDashboardView: View {
                     }
                 }
             }
-            .padding(18)
+                .padding(18)
+            }
+            .frame(
+                maxWidth: .infinity,
+                maxHeight: .infinity
+            )
         }
-        .background(Color(.systemBackground))
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: .infinity
+        )
     }
 }
 

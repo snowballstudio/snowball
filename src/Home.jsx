@@ -184,14 +184,16 @@ export default function Home({
       const slot = iosMiniReportRef.current
       if (!snow || !slot || cancelled) return
 
-      const snowRect = snow.getBoundingClientRect()
       const slotRect = slot.getBoundingClientRect()
 
-      // iOS 原生覆盖层直接以雪地图为参照，固定在左 6%、上 6%。
-      // 不再使用页面初次排版时可能尚未稳定的旧槽位 y 坐标。
+      /*
+       透明槽位已经由 Home.css 放在雪地图左 6%、上 6%。
+       直接读取槽位最终真实坐标，避免再次用雪地图尺寸推算时，
+       受到父级布局、百分比高度或 iOS viewport 差异影响。
+      */
       showIOSHomeMiniReport({
-        x: snowRect.left + snowRect.width * 0.06,
-        y: snowRect.top + snowRect.height * 0.06,
+        x: slotRect.left,
+        y: slotRect.top,
         width: Math.max(220, slotRect.width),
         height: Math.max(30, slotRect.height),
       }).catch(error => {
