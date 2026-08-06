@@ -372,9 +372,15 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 to: webView.scrollView
             )
 
+            /*
+             当前坐标链已经生效，只做最终视觉微调：
+             在现有位置基础上向下移动 20pt。
+            */
+            let miniVerticalOffset: CGFloat = 30
+
             host.view.frame = CGRect(
                 x: contentOrigin.x,
-                y: contentOrigin.y,
+                y: contentOrigin.y + miniVerticalOffset,
                 width: width,
                 height: height
             )
@@ -393,6 +399,8 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 "inputY": y,
                 "contentX": contentOrigin.x,
                 "contentY": contentOrigin.y,
+                "verticalOffset": miniVerticalOffset,
+                "frameY": contentOrigin.y + miniVerticalOffset,
                 "scrollOffsetX": webView.scrollView.contentOffset.x,
                 "scrollOffsetY": webView.scrollView.contentOffset.y,
                 "insetTop":
