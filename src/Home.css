@@ -2307,3 +2307,193 @@ top: 2px;
     overflow: hidden !important;
   }
 }
+
+
+/* ======================================================
+   V1.2｜“道晚安”通用说明、结果说明与轻风音效开关
+   ====================================================== */
+.goodNightOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 16000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+
+.goodNightBox {
+  position: relative;
+  width: min(390px, 92vw);
+  border: 1px solid rgba(226, 231, 235, 0.18);
+  border-radius: 22px;
+  padding: 22px 20px 18px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(31, 40, 50, 0.98),
+      rgba(12, 16, 22, 0.99)
+    );
+  color: #f4f0e6;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.48);
+}
+
+.goodNightBox h2 {
+  margin: 0 0 12px;
+  padding-right: 92px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.goodNightBox p {
+  margin: 0;
+  color: rgba(238, 239, 236, 0.84);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.goodNightBox p + p {
+  margin-top: 12px;
+}
+
+.goodNightPrimaryButton,
+.goodNightQuietButton {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 10px;
+  border-radius: 999px;
+  color: #f4f0e6;
+  font-size: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.goodNightPrimaryButton {
+  border: 1px solid rgba(224, 230, 234, 0.18);
+  background: rgba(145, 166, 158, 0.28);
+}
+
+.goodNightQuietButton {
+  border: none;
+  background: transparent;
+  color: rgba(238, 239, 236, 0.58);
+}
+
+.goodNightRememberLine {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 15px;
+  color: rgba(238, 239, 236, 0.72);
+  font-size: 13px;
+}
+
+.goodNightRememberLine input {
+  width: 16px;
+  height: 16px;
+  accent-color: #8fa99e;
+}
+
+.goodNightSavedTools {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.goodNightHelpButton {
+  min-width: 38px;
+  height: 23px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #171b1f;
+  font-size: 11px;
+  line-height: 23px;
+  cursor: pointer;
+}
+
+.goodNightSoundSwitch {
+  height: 23px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.62);
+  cursor: pointer;
+}
+
+.goodNightSoundSwitch.isOn {
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.goodNightSoundIcon {
+  width: 13px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.goodNightSwitchTrack {
+  position: relative;
+  width: 28px;
+  height: 15px;
+  display: block;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.20);
+  transition: background 160ms ease;
+}
+
+.goodNightSoundSwitch.isOn .goodNightSwitchTrack {
+  background: rgba(155, 184, 172, 0.78);
+}
+
+.goodNightSwitchTrack i {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 160ms ease;
+}
+
+.goodNightSoundSwitch.isOn .goodNightSwitchTrack i {
+  transform: translateX(13px);
+}
+
+.goodNightHelpClose {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (max-width: 430px) {
+  .goodNightOverlay {
+    padding: 18px;
+  }
+
+  .goodNightBox {
+    width: min(390px, 94vw);
+    padding: 21px 18px 17px;
+  }
+}

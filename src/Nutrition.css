@@ -1090,12 +1090,12 @@
   right: 0 !important;
   top: 0 !important;
   z-index: 3 !important;
-  height: calc(72px + env(safe-area-inset-top)) !important;
+  height: 72px !important;
   display: grid !important;
   grid-template-columns: 54px minmax(0, 1fr) 54px !important;
   align-items: end !important;
   padding:
-    env(safe-area-inset-top)
+    0
     18px
     13px !important;
   box-sizing: border-box !important;
@@ -1138,7 +1138,7 @@
   position: absolute !important;
   left: 0 !important;
   right: 0 !important;
-  top: calc(72px + env(safe-area-inset-top)) !important;
+  top: 72px !important;
   bottom: 0 !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;

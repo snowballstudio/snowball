@@ -332,6 +332,11 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
 
+            guard let webView = self.bridge?.webView else {
+                call.reject("找不到雪球网页视图。")
+                return
+            }
+
             self.removeHomeMiniHost()
 
             let report = DeviceActivityReport(
@@ -344,9 +349,19 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             host.view.backgroundColor = .clear
             host.view.isOpaque = false
             host.view.isUserInteractionEnabled = false
+
+            // JavaScript 传入的 x / y 来自 getBoundingClientRect()，
+            // 是相对于 WKWebView viewport 的坐标。
+            // 这里先把 WKWebView 左上角转换到 presenter.view，
+            // 再叠加网页坐标，避免 Safe Area / Capacitor 容器偏移。
+            let webViewOrigin = webView.convert(
+                CGPoint.zero,
+                to: presenter.view
+            )
+
             host.view.frame = CGRect(
-                x: x,
-                y: y,
+                x: webViewOrigin.x + x,
+                y: webViewOrigin.y + y,
                 width: width,
                 height: height
             )
@@ -356,7 +371,13 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             host.didMove(toParent: presenter)
             self.homeMiniHost = host
 
-            call.resolve(["shown": true])
+            call.resolve([
+                "shown": true,
+                "webViewOriginX": webViewOrigin.x,
+                "webViewOriginY": webViewOrigin.y,
+                "frameX": webViewOrigin.x + x,
+                "frameY": webViewOrigin.y + y
+            ])
         }
     }
 
@@ -1469,6 +1490,11 @@ struct IOSScreenTimeDashboardContainer: View {
                         Image("information_platform")
                             .resizable()
                             .scaledToFill()
+                            .frame(
+                                maxWidth: .infinity,
+                                maxHeight: .infinity
+                            )
+                            .clipped()
                             .ignoresSafeArea()
                             .opacity(0.32)
 
@@ -1477,57 +1503,76 @@ struct IOSScreenTimeDashboardContainer: View {
                             .ignoresSafeArea()
 
                         VStack(spacing: 0) {
-                        Picker("统计范围", selection: $range) {
-                            ForEach(
-                                IOSDashboardRange.allCases
-                            ) { item in
-                                Text(item.title).tag(item)
+                            Picker("统计范围", selection: $range) {
+                                ForEach(
+                                    IOSDashboardRange.allCases
+                                ) { item in
+                                    Text(item.title).tag(item)
+                                }
                             }
-                        }
-                        .pickerStyle(.segmented)
-                        .padding(.horizontal, 14)
-                        .padding(.top, 10)
-                        .padding(.bottom, 4)
+                            .pickerStyle(.segmented)
+                            .padding(.horizontal, 14)
+                            .padding(.top, 10)
+                            .padding(.bottom, 4)
+                            .layoutPriority(1)
 
-                        /*
-                         按钮属于主 App 容器，点击可靠。
-                         它相对报表自身右上角定位，不依赖跨进程通知。
-                        */
-                        ZStack(alignment: .topTrailing) {
-                            DeviceActivityReport(
-                                range.context,
-                                filter: filter
+                            /*
+                             DeviceActivityReport 没有可靠的 intrinsic
+                             content size。必须明确占满选择器下面的剩余空间，
+                             否则真机可能只显示标题和几个按钮，主体接近零高度。
+                            */
+                            ZStack(alignment: .topTrailing) {
+                                DeviceActivityReport(
+                                    range.context,
+                                    filter: filter
+                                )
+                                .id(range)
+                                .frame(
+                                    maxWidth: .infinity,
+                                    maxHeight: .infinity
+                                )
+
+                                Button {
+                                    page = .dailyTable
+                                } label: {
+                                    Text("查看详情")
+                                        .font(
+                                            .system(
+                                                size: 12,
+                                                weight: .semibold
+                                            )
+                                        )
+                                        .foregroundStyle(
+                                            Color(
+                                                red: 0.72,
+                                                green: 0.55,
+                                                blue: 0.18
+                                            )
+                                        )
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 8)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.top, 18)
+                                .padding(.trailing, 18)
+                                .zIndex(10)
+                            }
+                            .frame(
+                                maxWidth: .infinity,
+                                maxHeight: .infinity
                             )
-                            .id(range)
-
-                            Button {
-                                page = .dailyTable
-                            } label: {
-                                Text("查看详情")
-                                    .font(
-                                        .system(
-                                            size: 12,
-                                            weight: .semibold
-                                        )
-                                    )
-                                    .foregroundStyle(
-                                        Color(
-                                            red: 0.72,
-                                            green: 0.55,
-                                            blue: 0.18
-                                        )
-                                    )
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 8)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.top, 18)
-                            .padding(.trailing, 18)
-                            .zIndex(10)
+                            .clipped()
                         }
-                        }
+                        .frame(
+                            maxWidth: .infinity,
+                            maxHeight: .infinity
+                        )
                     }
+                    .frame(
+                        maxWidth: .infinity,
+                        maxHeight: .infinity
+                    )
                     .navigationTitle("苹果屏幕时间")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {

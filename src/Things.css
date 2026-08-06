@@ -3638,7 +3638,7 @@
   width: 100% !important;
   min-height: 72px !important;
   box-sizing: border-box !important;
-  padding: calc(8px + env(safe-area-inset-top)) 20px 10px !important;
+  padding: 8px 20px 10px !important;
   margin: 0 !important;
   background: #ffffff !important;
   border: 0 !important;
@@ -3648,7 +3648,7 @@
 .thingsPanel-info .thingsUnifiedHeader h2 {
   position: absolute !important;
   left: 50% !important;
-  top: calc(50% + (env(safe-area-inset-top) / 2)) !important;
+  top: 50% !important;
   width: max-content !important;
   max-width: calc(100% - 110px) !important;
   margin: 0 !important;
@@ -3670,7 +3670,7 @@
   position: absolute !important;
   left: 0 !important;
   right: 0 !important;
-  top: calc(72px + env(safe-area-inset-top)) !important;
+  top: 72px !important;
   bottom: 0 !important;
   width: 100% !important;
   height: auto !important;
@@ -3762,7 +3762,7 @@
 .thingsOverlay.thingsOverlay-info .thingsUnifiedHeader h2 {
   position: absolute !important;
   left: 50% !important;
-  top: calc(50% + (env(safe-area-inset-top) / 2)) !important;
+  top: 50% !important;
   transform: translate(-50%, -50%) !important;
   width: max-content !important;
   max-width: calc(100% - 112px) !important;

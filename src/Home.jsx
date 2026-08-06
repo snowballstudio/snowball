@@ -155,9 +155,17 @@ export default function Home({
   const avgScreenMatch = avgScreenText.match(/^([0-9.]+)\s*(.*)$/)
   const avgScreenNumber = avgScreenMatch ? avgScreenMatch[1] : avgScreenText
   const isHomeVisible = !showDataPanel && !showYearsPanel && !showThingsPanel && !showPeoplePanel
-  const GOOD_NIGHT_DEVICE_KEY = 'snowball-good-night-device-v1'
+  const GOOD_NIGHT_INTRO_KEY = 'snowball-good-night-intro-dismissed-v1'
+  const GOOD_NIGHT_SOUND_KEY = 'snowball-good-night-sound-v1'
   const [goodNightModal, setGoodNightModal] = useState(null)
-  const [rememberGoodNightDevice, setRememberGoodNightDevice] = useState(false)
+  const [rememberGoodNightIntro, setRememberGoodNightIntro] = useState(false)
+  const [goodNightSoundEnabled, setGoodNightSoundEnabled] = useState(() => {
+    try {
+      return localStorage.getItem(GOOD_NIGHT_SOUND_KEY) !== 'off'
+    } catch (error) {
+      return true
+    }
+  })
   const moodFlower = homeMoodFlowerState(mood)
   const iosMiniReportRef = useRef(null)
   const homeSnowTraceRef = useRef(null)
@@ -292,76 +300,165 @@ export default function Home({
     finishGoodNight(info)
   }
 
-  function chooseGoodNightDevice(device) {
-    if (rememberGoodNightDevice) {
-      try {
-        localStorage.setItem(GOOD_NIGHT_DEVICE_KEY, device)
-      } catch (error) {
-        // 本机偏好保存失败不影响本次使用。
-      }
+  function saveGoodNightIntroPreference() {
+    if (!rememberGoodNightIntro) return
+
+    try {
+      localStorage.setItem(GOOD_NIGHT_INTRO_KEY, 'yes')
+    } catch (error) {
+      // 偏好保存失败不影响本次继续。
     }
+  }
 
-    setRememberGoodNightDevice(false)
-
-    if (device === 'android') {
-      setGoodNightModal(null)
-      return
-    }
-
+  function continueFromGoodNightIntro() {
+    saveGoodNightIntroPreference()
+    setRememberGoodNightIntro(false)
     continueGoodNight()
   }
 
   function openGoodNight() {
-    let savedDevice = ''
+    let introDismissed = false
 
     try {
-      savedDevice = localStorage.getItem(GOOD_NIGHT_DEVICE_KEY) || ''
+      introDismissed = localStorage.getItem(GOOD_NIGHT_INTRO_KEY) === 'yes'
     } catch (error) {
-      savedDevice = ''
+      introDismissed = false
     }
 
-    if (savedDevice === 'android') return
-    if (savedDevice === 'iphone') {
+    if (introDismissed) {
       continueGoodNight()
       return
     }
 
-    setRememberGoodNightDevice(false)
-    setGoodNightModal({ type: 'device' })
+    setRememberGoodNightIntro(false)
+    setGoodNightModal({ type: 'intro' })
   }
 
-  const goodNightOverlayStyle = {
-    position: 'fixed',
-    inset: 0,
-    zIndex: 16000,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '22px',
-    background: 'rgba(0, 0, 0, 0.68)',
-    backdropFilter: 'blur(7px)',
+  function toggleGoodNightSound() {
+    setGoodNightSoundEnabled(current => {
+      const next = !current
+
+      try {
+        localStorage.setItem(GOOD_NIGHT_SOUND_KEY, next ? 'on' : 'off')
+      } catch (error) {
+        // 音效偏好保存失败不影响当前开关。
+      }
+
+      return next
+    })
   }
 
-  const goodNightBoxStyle = {
-    width: 'min(390px, 92vw)',
-    border: '1px solid rgba(226, 231, 235, 0.18)',
-    borderRadius: '22px',
-    padding: '22px 20px 18px',
-    background: 'linear-gradient(180deg, rgba(31, 40, 50, 0.98), rgba(12, 16, 22, 0.99))',
-    color: '#f4f0e6',
-    boxShadow: '0 24px 64px rgba(0, 0, 0, 0.48)',
+  function playGoodNightWindSound() {
+  if (!goodNightSoundEnabled) return
+
+  try {
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext
+
+    if (!AudioContextClass) return
+
+    const context = new AudioContextClass()
+    const now = context.currentTime
+
+    const master = context.createGain()
+    master.gain.setValueAtTime(0.0001, now)
+    master.gain.exponentialRampToValueAtTime(0.16, now + 0.025)
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 1.25)
+    master.connect(context.destination)
+
+    function addPianoTone({
+      frequency,
+      start,
+      duration,
+      volume,
+    }) {
+      const oscillator = context.createOscillator()
+      const overtone = context.createOscillator()
+      const toneGain = context.createGain()
+      const filter = context.createBiquadFilter()
+
+      oscillator.type = 'triangle'
+      oscillator.frequency.setValueAtTime(frequency, now + start)
+
+      overtone.type = 'sine'
+      overtone.frequency.setValueAtTime(
+        frequency * 2.01,
+        now + start,
+      )
+
+      filter.type = 'lowpass'
+      filter.frequency.setValueAtTime(6200, now + start)
+      filter.Q.setValueAtTime(0.7, now + start)
+
+      toneGain.gain.setValueAtTime(
+        0.0001,
+        now + start,
+      )
+
+      toneGain.gain.exponentialRampToValueAtTime(
+        volume,
+        now + start + 0.012,
+      )
+
+      toneGain.gain.exponentialRampToValueAtTime(
+        volume * 0.24,
+        now + start + 0.16,
+      )
+
+      toneGain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        now + start + duration + 0.55,
+      )
+
+      oscillator.connect(filter)
+      overtone.connect(filter)
+      filter.connect(toneGain)
+      toneGain.connect(master)
+
+      oscillator.start(now + start)
+      overtone.start(now + start)
+
+      oscillator.stop(now + start + duration)
+      overtone.stop(now + start + duration)
+    }
+
+    // 三个音依次上行，形成清脆、渐变的“晚安”提示。
+    addPianoTone({
+      frequency: 659.25, // E5
+      start: 0,
+      duration: 0.9,
+      volume: 0.42,
+    })
+
+    addPianoTone({
+      frequency: 783.99, // G5
+      start: 0.12,
+      duration: 0.9,
+      volume: 0.34,
+    })
+
+    addPianoTone({
+      frequency: 1046.5, // B5
+      start: 0.24,
+      duration: 1.0,
+      volume: 0.28,
+    })
+
+    window.setTimeout(() => {
+      context.close().catch(() => {})
+    }, 1500)
+  } catch (error) {
+    // 音效失败不影响弹窗关闭。
+  }
+}
+
+  function closeSavedGoodNight() {
+    playGoodNightWindSound()
+    setGoodNightModal(null)
   }
 
-  const goodNightButtonStyle = {
-    width: '100%',
-    minHeight: '42px',
-    marginTop: '10px',
-    border: '1px solid rgba(224, 230, 234, 0.18)',
-    borderRadius: '999px',
-    background: 'rgba(151, 169, 181, 0.16)',
-    color: '#f4f0e6',
-    fontSize: '14px',
-  }
+
+
 
   return (
     <section className={`phoneShell homePage ${call.callActive ? 'callMode' : ''}`}>
@@ -626,30 +723,44 @@ export default function Home({
       </section>
 
       {goodNightModal && (
-        <div style={goodNightOverlayStyle} role="dialog" aria-modal="true" aria-label="今日晚安">
-          <div style={goodNightBoxStyle}>
-            {goodNightModal.type === 'device' && (
+        <div className="goodNightOverlay" role="dialog" aria-modal="true" aria-label="道晚安">
+          <div className="goodNightBox">
+            {goodNightModal.type === 'intro' && (
               <>
-                <h2 style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: 600 }}>今日晚安</h2>
-                <p style={{ margin: 0, lineHeight: 1.75, color: 'rgba(238, 239, 236, 0.84)', fontSize: '14px' }}>
-                  此按钮是为 iPhone 用户设计，为减少自动数据误差，点击产生当日精确离机时间。安卓用户可以忽略此功能。
+                <h2>道晚安</h2>
+                <p>
+                  “道晚安”会把你此刻准备停止使用手机的时间记入离机时间表，
+                  作为当天休息时间的一个可靠来源。它对所有手机用户开放；
+                  系统自动数据不准确时，也可以用这条记录帮助雪粒判断作息。
                 </p>
-                <button type="button" style={goodNightButtonStyle} onClick={() => chooseGoodNightDevice('android')}>
-                  我是安卓用户，忽略
-                </button>
-                <button type="button" style={{ ...goodNightButtonStyle, background: 'rgba(145, 166, 158, 0.28)' }} onClick={() => chooseGoodNightDevice('iphone')}>
-                  我是 iPhone 用户，确认
-                </button>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '9px', marginTop: '15px', color: 'rgba(238, 239, 236, 0.72)', fontSize: '13px' }}>
+
+                <label className="goodNightRememberLine">
                   <input
                     type="checkbox"
-                    checked={rememberGoodNightDevice}
-                    onChange={event => setRememberGoodNightDevice(event.target.checked)}
-                    style={{ width: '16px', height: '16px', accentColor: '#8fa99e' }}
+                    checked={rememberGoodNightIntro}
+                    onChange={event =>
+                      setRememberGoodNightIntro(event.target.checked)
+                    }
                   />
-                  下次不再问我
+                  下次不再提示
                 </label>
-                <button type="button" style={{ ...goodNightButtonStyle, border: 'none', background: 'transparent', color: 'rgba(238, 239, 236, 0.58)' }} onClick={() => setGoodNightModal(null)}>
+
+                <button
+                  type="button"
+                  className="goodNightPrimaryButton"
+                  onClick={continueFromGoodNightIntro}
+                >
+                  确定继续
+                </button>
+
+                <button
+                  type="button"
+                  className="goodNightQuietButton"
+                  onClick={() => {
+                    setRememberGoodNightIntro(false)
+                    setGoodNightModal(null)
+                  }}
+                >
                   取消
                 </button>
               </>
@@ -657,14 +768,22 @@ export default function Home({
 
             {goodNightModal.type === 'confirm' && (
               <>
-                <h2 style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: 600 }}>{goodNightModal.title}</h2>
-                <p style={{ margin: 0, lineHeight: 1.75, color: 'rgba(238, 239, 236, 0.84)', fontSize: '14px' }}>
-                  {goodNightModal.text}
-                </p>
-                <button type="button" style={{ ...goodNightButtonStyle, background: 'rgba(145, 166, 158, 0.28)' }} onClick={() => finishGoodNight(goodNightModal.info)}>
+                <h2>{goodNightModal.title}</h2>
+                <p>{goodNightModal.text}</p>
+
+                <button
+                  type="button"
+                  className="goodNightPrimaryButton"
+                  onClick={() => finishGoodNight(goodNightModal.info)}
+                >
                   确认
                 </button>
-                <button type="button" style={{ ...goodNightButtonStyle, border: 'none', background: 'transparent', color: 'rgba(238, 239, 236, 0.58)' }} onClick={() => setGoodNightModal(null)}>
+
+                <button
+                  type="button"
+                  className="goodNightQuietButton"
+                  onClick={() => setGoodNightModal(null)}
+                >
                   取消
                 </button>
               </>
@@ -672,13 +791,84 @@ export default function Home({
 
             {goodNightModal.type === 'saved' && (
               <>
-                <h2 style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: 600 }}>{goodNightModal.title}</h2>
-                <p style={{ margin: 0, lineHeight: 1.75, color: 'rgba(238, 239, 236, 0.84)', fontSize: '14px' }}>
-                  {goodNightModal.text}
-                </p>
-                <button type="button" style={{ ...goodNightButtonStyle, background: 'rgba(145, 166, 158, 0.28)' }} onClick={() => setGoodNightModal(null)}>
+                <div className="goodNightSavedTools">
+                  <button
+                    type="button"
+                    className="goodNightHelpButton"
+                    onClick={() =>
+                      setGoodNightModal(previous => ({
+                        type: 'help',
+                        returnTo: previous,
+                      }))
+                    }
+                  >
+                    说明
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`goodNightSoundSwitch${
+                      goodNightSoundEnabled ? ' isOn' : ''
+                    }`}
+                    onClick={toggleGoodNightSound}
+                    role="switch"
+                    aria-checked={goodNightSoundEnabled}
+                    aria-label={
+                      goodNightSoundEnabled
+                        ? '关闭晚安音效'
+                        : '开启晚安音效'
+                    }
+                  >
+                    <span className="goodNightSoundIcon" aria-hidden="true">
+                      {goodNightSoundEnabled ? '♪' : '♪'}
+                    </span>
+                    <span className="goodNightSwitchTrack" aria-hidden="true">
+                      <i />
+                    </span>
+                  </button>
+                </div>
+
+                <h2>{goodNightModal.title}</h2>
+                <p>{goodNightModal.text}</p>
+
+                <button
+                  type="button"
+                  className="goodNightPrimaryButton"
+                  onClick={closeSavedGoodNight}
+                >
                   知道了
                 </button>
+              </>
+            )}
+
+            {goodNightModal.type === 'help' && (
+              <>
+                <button
+                  type="button"
+                  className="goodNightHelpClose"
+                  onClick={() =>
+                    setGoodNightModal(
+                      goodNightModal.returnTo || null
+                    )
+                  }
+                  aria-label="关闭说明"
+                >
+                  ×
+                </button>
+
+                <h2>道晚安说明</h2>
+                <p>
+                  点击“道晚安”后，雪粒会记录当前时间。晚上记录计入当天；
+                  凌晨 5 点以前记录为 24 点以后的时间，并计入前一日。
+                </p>
+                <p>
+                  离机时间表会同时保留系统数据、通话识别和用户道晚安记录，
+                  再按照现有优先逻辑计算最终休息时间。
+                </p>
+                <p>
+                  音效开关只控制点击“知道了”时的一秒轻风声，
+                  不影响任何数据记录。
+                </p>
               </>
             )}
           </div>

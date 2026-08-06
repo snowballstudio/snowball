@@ -2552,7 +2552,7 @@ body.futureFootprintPlanOpen .compactFootprintList {
   background: #ffffff !important;
   color: #202428 !important;
   padding:
-    calc(10px + env(safe-area-inset-top))
+    10px
     26px
     calc(28px + env(safe-area-inset-bottom)) !important;
 }
