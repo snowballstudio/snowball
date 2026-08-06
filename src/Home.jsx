@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './Home.css'
 import SnowballCall from './components/call/SnowballCall.jsx'
 import {
@@ -170,6 +170,63 @@ export default function Home({
   const moodFlower = homeMoodFlowerState(mood)
   const iosMiniReportRef = useRef(null)
   const homeSnowTraceRef = useRef(null)
+  const homePageRef = useRef(null)
+  const miniPlacementSequenceRef = useRef(0)
+
+  /*
+   iPhone 重装或冷启动时，WKWebView 偶尔会恢复旧的 scroll offset，
+   造成固定五区主页整体上移。这里只归零滚动位置，不修改任何区域高度、
+   grid 比例、字体、边框或内部布局。
+  */
+  useLayoutEffect(() => {
+    if (!isHomeVisible || call.callActive) return undefined
+
+    let cancelled = false
+    const frameIds = []
+    const timerIds = []
+
+    const resetHomeViewport = () => {
+      if (cancelled) return
+
+      const page = homePageRef.current
+      const shell = page?.closest('.phoneShell')
+
+      if (shell) shell.scrollTop = 0
+      if (page) page.scrollTop = 0
+
+      const scrollingElement = document.scrollingElement
+      if (scrollingElement) scrollingElement.scrollTop = 0
+
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+      window.scrollTo(0, 0)
+    }
+
+    // 首帧前、连续两帧后及图片/字体稳定后各归零一次。
+    resetHomeViewport()
+
+    frameIds.push(
+      window.requestAnimationFrame(() => {
+        resetHomeViewport()
+        frameIds.push(
+          window.requestAnimationFrame(resetHomeViewport),
+        )
+      }),
+    )
+
+    timerIds.push(window.setTimeout(resetHomeViewport, 120))
+    timerIds.push(window.setTimeout(resetHomeViewport, 360))
+
+    const handlePageShow = () => resetHomeViewport()
+    window.addEventListener('pageshow', handlePageShow)
+
+    return () => {
+      cancelled = true
+      frameIds.forEach(id => window.cancelAnimationFrame(id))
+      timerIds.forEach(id => window.clearTimeout(id))
+      window.removeEventListener('pageshow', handlePageShow)
+    }
+  }, [isHomeVisible, call.callActive])
 
   useEffect(() => {
     if (
@@ -189,18 +246,49 @@ export default function Home({
     let cancelled = false
     const timers = []
 
-    const placeReport = () => {
+    const resetHomeViewport = () => {
+      const page = homePageRef.current
+      const shell = page?.closest('.phoneShell')
+
+      if (shell) shell.scrollTop = 0
+      if (page) page.scrollTop = 0
+
+      const scrollingElement = document.scrollingElement
+      if (scrollingElement) scrollingElement.scrollTop = 0
+
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+      window.scrollTo(0, 0)
+    }
+
+    const placeReport = async () => {
       const snow = homeSnowTraceRef.current
       const slot = iosMiniReportRef.current
       if (!snow || !slot || cancelled) return
 
+      const sequence = ++miniPlacementSequenceRef.current
+
+      // 先稳定主页当前位置，再读取槽位；旧原生 Host 必须先移除。
+      resetHomeViewport()
+      await hideIOSHomeMiniReport().catch(() => {})
+
+      await new Promise(resolve => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(resolve)
+        })
+      })
+
+      if (
+        cancelled ||
+        sequence !== miniPlacementSequenceRef.current
+      ) {
+        return
+      }
+
+      resetHomeViewport()
+
       const slotRect = slot.getBoundingClientRect()
 
-      /*
-       透明槽位已经由 Home.css 放在雪地图左 6%、上 6%。
-       直接读取槽位最终真实坐标，避免再次用雪地图尺寸推算时，
-       受到父级布局、百分比高度或 iOS viewport 差异影响。
-      */
       showIOSHomeMiniReport({
         x: slotRect.left,
         y: slotRect.top,
@@ -215,25 +303,72 @@ export default function Home({
       timers.push(window.setTimeout(placeReport, delay))
     }
 
-    // 首次渲染、原生安全区完成、字体及五区布局稳定后分别校准。
-    schedulePlacement(80)
-    schedulePlacement(260)
-    schedulePlacement(700)
+    /*
+     冷启动时先让固定五区主页稳定，再创建原生报表。
+     这些延迟只重新读取位置，不改变主页任何高度参数。
+    */
+    schedulePlacement(120)
+    schedulePlacement(420)
+    schedulePlacement(900)
 
-    const resizeObserver = new ResizeObserver(placeReport)
+    const resizeObserver = new ResizeObserver(() => {
+      schedulePlacement(40)
+    })
     if (homeSnowTraceRef.current) {
       resizeObserver.observe(homeSnowTraceRef.current)
     }
 
-    window.addEventListener('resize', placeReport)
-    window.visualViewport?.addEventListener('resize', placeReport)
+    const handleViewportChange = () => schedulePlacement(50)
+    const handlePageShow = () => schedulePlacement(80)
+    const handleImageLoad = () => schedulePlacement(60)
+
+    window.addEventListener('resize', handleViewportChange)
+    window.addEventListener('orientationchange', handleViewportChange)
+    window.addEventListener('pageshow', handlePageShow)
+    window.visualViewport?.addEventListener(
+      'resize',
+      handleViewportChange,
+    )
+    window.visualViewport?.addEventListener(
+      'scroll',
+      handleViewportChange,
+    )
+
+    const pageImages = homePageRef.current?.querySelectorAll('img') || []
+    pageImages.forEach(image => {
+      if (!image.complete) {
+        image.addEventListener('load', handleImageLoad, { once: true })
+      }
+    })
+
+    document.fonts?.ready
+      ?.then(() => {
+        if (!cancelled) schedulePlacement(40)
+      })
+      .catch(() => {})
 
     return () => {
       cancelled = true
+      miniPlacementSequenceRef.current += 1
       timers.forEach(timer => window.clearTimeout(timer))
       resizeObserver.disconnect()
-      window.removeEventListener('resize', placeReport)
-      window.visualViewport?.removeEventListener('resize', placeReport)
+      window.removeEventListener('resize', handleViewportChange)
+      window.removeEventListener(
+        'orientationchange',
+        handleViewportChange,
+      )
+      window.removeEventListener('pageshow', handlePageShow)
+      window.visualViewport?.removeEventListener(
+        'resize',
+        handleViewportChange,
+      )
+      window.visualViewport?.removeEventListener(
+        'scroll',
+        handleViewportChange,
+      )
+      pageImages.forEach(image => {
+        image.removeEventListener('load', handleImageLoad)
+      })
       hideIOSHomeMiniReport().catch(() => {})
     }
   }, [
@@ -477,7 +612,10 @@ export default function Home({
 
 
   return (
-    <section className={`phoneShell homePage ${call.callActive ? 'callMode' : ''}`}>
+    <section
+      ref={homePageRef}
+      className={`phoneShell homePage ${call.callActive ? 'callMode' : ''}`}
+    >
       {isHomeVisible && (
         <div className="homeFixedTopBar">
           <div className="homeFixedBrand">
