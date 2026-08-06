@@ -645,10 +645,17 @@ struct SnowballHomeMiniView: View {
         }
         .lineLimit(1)
         .minimumScaleFactor(0.82)
+        /*
+         DeviceActivityReport 可能给 Extension 一个远高于迷你条的画布。
+         alignment: .leading 只控制水平靠左，垂直仍默认居中，
+         所以内容会固定落在整页中部，看起来像外层 y 坐标无效。
+
+         必须明确使用 topLeading，让内容贴住原生 host 的左上角。
+        */
         .frame(
             maxWidth: .infinity,
             maxHeight: .infinity,
-            alignment: .leading
+            alignment: .topLeading
         )
         .background(Color.clear)
     }

@@ -351,6 +351,14 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             host.view.isUserInteractionEnabled = false
 
             /*
+             DeviceActivityReport 的 Extension 画布可能大于主页迷你条。
+             必须裁切到传入的 width / height，否则内部整页画布会溢出，
+             外层 frame 的位置看起来就像没有生效。
+            */
+            host.view.clipsToBounds = true
+            host.view.layer.masksToBounds = true
+
+            /*
              Home.jsx 传入的是 homeIOSMiniReportSlot 的最终
              getBoundingClientRect() 坐标，属于 WKWebView viewport。
 
