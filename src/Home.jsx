@@ -155,11 +155,11 @@ export default function Home({
   const avgScreenMatch = avgScreenText.match(/^([0-9.]+)\s*(.*)$/)
   const avgScreenNumber = avgScreenMatch ? avgScreenMatch[1] : avgScreenText
   const isHomeVisible = !showDataPanel && !showYearsPanel && !showThingsPanel && !showPeoplePanel
-  const suppressIOSMiniReport = Boolean(call.callActive || goodNightModal)
   const GOOD_NIGHT_INTRO_KEY = 'snowball-good-night-intro-dismissed-v1'
   const GOOD_NIGHT_SOUND_KEY = 'snowball-good-night-sound-v1'
   const [goodNightModal, setGoodNightModal] = useState(null)
   const [rememberGoodNightIntro, setRememberGoodNightIntro] = useState(false)
+  const suppressIOSMiniReport = Boolean(call.callActive || goodNightModal)
   const [goodNightSoundEnabled, setGoodNightSoundEnabled] = useState(() => {
     try {
       return localStorage.getItem(GOOD_NIGHT_SOUND_KEY) !== 'off'
