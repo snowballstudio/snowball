@@ -890,16 +890,16 @@
 
 @media (max-width: 900px) {
   .nutritionDetailTop {
-    padding-top: env(safe-area-inset-top);
-    height: calc(82px + env(safe-area-inset-top));
+    padding-top: 0;
+    height: 82px;
   }
 
   .nutritionDetailTop .nutritionBackBtn {
-    top: calc(24px + env(safe-area-inset-top)) !important;
+    top: 24px !important;
   }
 
   .nutritionDetailTableWrap {
-    height: calc(100dvh - 124px - env(safe-area-inset-top));
+    height: calc(100dvh - 124px);
   }
 
   .nutritionDetailTable th,
