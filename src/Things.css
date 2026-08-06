@@ -4009,3 +4009,9 @@ button.thingPhotoIndexUpload {
   font: inherit !important;
 }
 
+.thingBlueNumber{
+  display:inline-block;
+  margin:0 3px;
+  color:#18A8FF;
+  font-weight:700;
+}

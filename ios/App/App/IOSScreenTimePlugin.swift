@@ -350,33 +350,34 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             host.view.isOpaque = false
             host.view.isUserInteractionEnabled = false
 
-            // JavaScript 传入的 x / y 来自 getBoundingClientRect()，
-            // 是相对于 WKWebView viewport 的坐标。
-            // 这里先把 WKWebView 左上角转换到 presenter.view，
-            // 再叠加网页坐标，避免 Safe Area / Capacitor 容器偏移。
-            let webViewOrigin = webView.convert(
-                CGPoint.zero,
-                to: presenter.view
-            )
+            /*
+             JavaScript 的 x / y 来自 getBoundingClientRect()，
+             坐标原点就是当前 WKWebView viewport 左上角。
 
+             因此不要再换算到 presenter.view，也不要叠加 Safe Area
+             或 adjustedContentInset；直接把原生报告放进 WKWebView，
+             使用同一套坐标系，位置才会与雪地图的 6% 完全一致。
+            */
             host.view.frame = CGRect(
-                x: webViewOrigin.x + x,
-                y: webViewOrigin.y + y,
+                x: x,
+                y: y,
                 width: width,
                 height: height
             )
+            host.view.autoresizingMask = []
 
             presenter.addChild(host)
-            presenter.view.addSubview(host.view)
+            webView.addSubview(host.view)
             host.didMove(toParent: presenter)
             self.homeMiniHost = host
 
             call.resolve([
                 "shown": true,
-                "webViewOriginX": webViewOrigin.x,
-                "webViewOriginY": webViewOrigin.y,
-                "frameX": webViewOrigin.x + x,
-                "frameY": webViewOrigin.y + y
+                "coordinateSpace": "webViewViewport",
+                "frameX": x,
+                "frameY": y,
+                "frameWidth": width,
+                "frameHeight": height
             ])
         }
     }
@@ -1486,83 +1487,60 @@ struct IOSScreenTimeDashboardContainer: View {
             Group {
                 switch page {
                 case .dashboard:
-                    ZStack {
-                        Image("information_platform")
-                            .resizable()
-                            .scaledToFill()
+                    VStack(spacing: 0) {
+                        Picker("统计范围", selection: $range) {
+                            ForEach(
+                                IOSDashboardRange.allCases
+                            ) { item in
+                                Text(item.title).tag(item)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal, 14)
+                        .padding(.top, 10)
+                        .padding(.bottom, 4)
+
+                        /*
+                         恢复到加入背景图以前的简单结构。
+                         DeviceActivityReport 直接占据 Picker 下方空间，
+                         不再经过背景 ZStack、半透明覆盖层或 clipped。
+                        */
+                        ZStack(alignment: .topTrailing) {
+                            DeviceActivityReport(
+                                range.context,
+                                filter: filter
+                            )
+                            .id(range)
                             .frame(
                                 maxWidth: .infinity,
                                 maxHeight: .infinity
                             )
-                            .clipped()
-                            .ignoresSafeArea()
-                            .opacity(0.32)
 
-                        Color(uiColor: .systemBackground)
-                            .opacity(0.72)
-                            .ignoresSafeArea()
-
-                        VStack(spacing: 0) {
-                            Picker("统计范围", selection: $range) {
-                                ForEach(
-                                    IOSDashboardRange.allCases
-                                ) { item in
-                                    Text(item.title).tag(item)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .padding(.horizontal, 14)
-                            .padding(.top, 10)
-                            .padding(.bottom, 4)
-                            .layoutPriority(1)
-
-                            /*
-                             DeviceActivityReport 没有可靠的 intrinsic
-                             content size。必须明确占满选择器下面的剩余空间，
-                             否则真机可能只显示标题和几个按钮，主体接近零高度。
-                            */
-                            ZStack(alignment: .topTrailing) {
-                                DeviceActivityReport(
-                                    range.context,
-                                    filter: filter
-                                )
-                                .id(range)
-                                .frame(
-                                    maxWidth: .infinity,
-                                    maxHeight: .infinity
-                                )
-
-                                Button {
-                                    page = .dailyTable
-                                } label: {
-                                    Text("查看详情")
-                                        .font(
-                                            .system(
-                                                size: 12,
-                                                weight: .semibold
-                                            )
+                            Button {
+                                page = .dailyTable
+                            } label: {
+                                Text("查看详情")
+                                    .font(
+                                        .system(
+                                            size: 12,
+                                            weight: .semibold
                                         )
-                                        .foregroundStyle(
-                                            Color(
-                                                red: 0.72,
-                                                green: 0.55,
-                                                blue: 0.18
-                                            )
+                                    )
+                                    .foregroundStyle(
+                                        Color(
+                                            red: 0.72,
+                                            green: 0.55,
+                                            blue: 0.18
                                         )
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 8)
-                                        .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                                .padding(.top, 18)
-                                .padding(.trailing, 18)
-                                .zIndex(10)
+                                    )
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
+                                    .contentShape(Rectangle())
                             }
-                            .frame(
-                                maxWidth: .infinity,
-                                maxHeight: .infinity
-                            )
-                            .clipped()
+                            .buttonStyle(.plain)
+                            .padding(.top, 18)
+                            .padding(.trailing, 18)
+                            .zIndex(10)
                         }
                         .frame(
                             maxWidth: .infinity,
@@ -1573,6 +1551,7 @@ struct IOSScreenTimeDashboardContainer: View {
                         maxWidth: .infinity,
                         maxHeight: .infinity
                     )
+                    .background(Color(uiColor: .systemBackground))
                     .navigationTitle("苹果屏幕时间")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
