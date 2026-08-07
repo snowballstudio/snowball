@@ -2233,21 +2233,32 @@
 }
 
 /* ======================================================
-   2026-08-07｜Android 原生｜人间主页 Edge-to-Edge + Safe Area
-   只处理“人间主页”：
-   - peopleOverlay 是全屏背景层，覆盖顶部/底部系统区域；
-   - peoplePanel 是内容层，只在安全区域内排版；
-   - 不影响人间说明页、编辑页、照片页、iOS 与普通网页。
+   2026-08-07｜人间主页最终边界
+   Edge-to-Edge 背景 + 页面自己的 Safe Area
+   ------------------------------------------------------
+   只处理“人间主页”最外层边界：
+   - peopleOverlay：背景从物理屏幕顶部到底部连续铺满；
+   - peoplePanel：内容只在系统 Safe Area 内排版；
+   - iOS：使用 env(safe-area-inset-top/bottom)，即原系统尺寸；
+   - Android 原生：顶部继续使用 MainActivity 注入的真实 --snowball-safe-top；
+   - 不处理人间说明页、编辑页、照片页；
+   - 不改变地图、表格、标题、按钮等内部布局参数。
    ====================================================== */
 @media (max-width: 900px) {
-  /* 全屏背景：使用人间主页原来的米白渐变，且改为不透明，
-     避免顶部安全区透出 Android/WebView 的系统灰色。 */
-  html.snowball-native-edge .peopleOverlay {
+  /* 背景层必须始终覆盖整个物理屏幕。 */
+  .peopleOverlay {
     position: fixed !important;
     inset: 0 !important;
     width: 100% !important;
     height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
     padding: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+
+    /* 使用与人间正文一致的不透明背景，
+       避免 Safe Area 区域透出原生黑/灰底。 */
     background:
       radial-gradient(circle at 16% 8%, rgba(255,255,255,0.86), transparent 30%),
       linear-gradient(135deg, rgb(246, 241, 231), rgb(231, 239, 238)) !important;
@@ -2255,12 +2266,11 @@
     -webkit-backdrop-filter: none !important;
   }
 
-  /* 内容层：顶部使用 Android 原生传入的真实 Safe Area；
-     底部只使用系统可提供的 safe-area-inset-bottom，不写死像素。
-     背景改透明，让整个页面只由外层同一张渐变连续绘制。 */
-  html.snowball-native-edge .peopleOverlay > .peoplePanel {
+  /* iOS / 支持 CSS Safe Area 的环境：
+     背景仍全屏，只有内容层恢复系统原本的上下安全距离。 */
+  .peopleOverlay > .peoplePanel {
     position: absolute !important;
-    top: var(--snowball-safe-top, 0px) !important;
+    top: env(safe-area-inset-top, 0px) !important;
     right: 0 !important;
     bottom: env(safe-area-inset-bottom, 0px) !important;
     left: 0 !important;
@@ -2269,7 +2279,16 @@
     min-height: 0 !important;
     max-height: none !important;
     box-sizing: border-box !important;
+
+    /* 整页只绘制一层连续背景，避免正文和刘海区出现接缝。 */
     background: transparent !important;
+  }
+
+  /* Android 原生 Edge-to-Edge：
+     顶部使用 MainActivity 已读取并换算好的真实状态栏高度。 */
+  html.snowball-native-edge .peopleOverlay > .peoplePanel {
+    top: var(--snowball-safe-top, 0px) !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
   }
 }
 

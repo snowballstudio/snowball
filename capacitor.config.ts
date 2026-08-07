@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: '雪粒',
   webDir: 'dist',
   ios: {
-    contentInset: 'always',
+    contentInset: 'never',
   },
 }
 
