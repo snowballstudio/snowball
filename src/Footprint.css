@@ -28,11 +28,11 @@
   --fp-home-bg-drift-x: 0px;
   --fp-home-bg-drift-duration: 24s;
   --fp-home-title-top: 24px;
-  --fp-home-title-size: 24px;
+  --fp-home-title-size: 22px;
   --fp-home-title-color: #ffffff;
   --fp-home-back-left: 18px;
   --fp-home-back-top: 18px;
-  --fp-home-back-size: 34px;
+  --fp-home-back-size: 30px;
   --fp-home-summary-top: 75px;
   --fp-home-summary-left: 38px;
   --fp-home-summary-width: calc(80% - 44px);
@@ -2673,7 +2673,7 @@ body.futureFootprintPlanOpen .compactFootprintList {
   padding: 4px 6px !important;
   border-radius: 25px !important;
   background: rgba(224, 224, 223, 0.3) !important;
-  border: 1px solid rgba(181, 183, 185, 0.5) !important;
+  border: 1px solid rgba(207, 208, 209, 0.5) !important;
 }
 
 .footprintTabsShell .footprintFullTabs,
@@ -2957,6 +2957,34 @@ body.futureFootprintPlanOpen .compactFootprintList {
 
   html.snowball-native-edge .footprintInfoPage {
     padding-top: calc(10px + var(--snowball-safe-top, 0px)) !important;
+  }
+}
+
+/* ======================================================
+   2026-08-07｜iOS 底部 Double Safe Area 修复
+   本段只处理：世界 / 中国 / 身边三个足迹子页面
+   ------------------------------------------------------
+   iOS：
+   - 子页内容壳不再第二次抬高 safe-area-inset-bottom；
+   - 底部“添加足迹 / 设置住址”栏取消内部第二次 safe area；
+   - 页面自己的浅灰背景仍铺到物理屏幕最底。
+
+   Android：
+   - html.snowball-native-edge 保持原有规则不变。
+   ====================================================== */
+@media (max-width: 900px) {
+  /* iOS / 普通 WebKit：外层内容直接延伸到物理底部。 */
+  html:not(.snowball-native-edge)
+    .yearsOverlay > .footprintFullPage {
+    bottom: 0 !important;
+  }
+
+  /* 原底栏本来已经用负 margin 把背景铺到最底，
+     因此 iOS 不再额外加入 env(safe-area-inset-bottom)。 */
+  html:not(.snowball-native-edge)
+    .footprintFullPage .footprintBrowseActions {
+    margin-bottom: -18px !important;
+    padding-bottom: 14px !important;
   }
 }
 

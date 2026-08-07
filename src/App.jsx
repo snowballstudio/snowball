@@ -444,14 +444,14 @@ function generationInfo(days) {
   const dayInGen = ((d - 1) % 100) + 1
 
   let stage = 'adult'
-  let stageLabel = '高手猫'
+  let stageLabel = '高手'
 
   if (dayInGen <= 7) {
     stage = 'baby'
-    stageLabel = '新手猫'
+    stageLabel = '新手'
   } else if (dayInGen <= 30) {
     stage = 'kitten'
-    stageLabel = '能手猫'
+    stageLabel = '能手'
   }
 
   const genLabel = generation === 1 ? '' : `第${generation}代`
@@ -996,6 +996,7 @@ const APP_ICON_MAP = {
   哔哩哔哩: '/refine/icon_bilibili.png',
   腾讯视频: '/refine/icon_tengxunshipin.png',
   今日头条: '/refine/icon_jinritoutiao.png',
+  爱奇艺: '/refine/icon_aiqiyi.png',
   快手: '/refine/icon_kuaishou.png',
 }
 
@@ -4671,7 +4672,7 @@ const homeFloatingFootprintMemory = ''
 
   const dailyTableGrid = {
     all: '1.15fr 0.8fr 0.8fr 1.2fr 0.9fr 1fr 0.7fr 42px 48px',
-    steps: '1.2fr 1fr 42px 42px 48px',
+    steps: '0.9fr 0.9fr 42px 42px 48px',
     offscreen: '1.15fr 0.9fr 42px 42px 48px',
     food: '0.85fr 1.7fr 0.85fr 42px 48px',
     mood: '0.85fr 1.7fr 42px 48px',
@@ -5180,7 +5181,7 @@ max-width:78px !important;
                                   aria-label="修改这一天的日常数据"
                                   style={{
                                     position: 'absolute',
-                                    right: '48px',
+                                    right: '64px',
                                     top: '50%',
                                     transform: 'translateY(-50%)',
                                     zIndex: 30,

@@ -381,7 +381,7 @@
   font-size: 22px;
 }
 
-.peopleEditor label {
+.peopleEditor label:not(.peoplePhotoUploadButton) {
   display: grid;
   gap: 7px;
   margin-bottom: 12px;
@@ -457,7 +457,7 @@
   }
 
   .peopleTopBar h2 {
-    font-size: 26px;
+    font-size: 22px;
   }
 
   .peopleTopBar p {
@@ -2019,7 +2019,7 @@
 }
 
 .peoplePhotoEditButton {
-  transform: translateY(-7px);
+  transform: translateY(0);
    margin-left: 8px;
 }
 
@@ -2397,6 +2397,21 @@
 
   html.snowball-native-edge .peopleInfoOverlay > .peopleInfoPage {
     top: var(--snowball-safe-top, 0px) !important;
+  }
+}
+
+/* ======================================================
+   2026-08-07｜iOS 底部 Double Safe Area 修复
+   本段只处理：人间主页
+   ------------------------------------------------------
+   iOS：取消 peoplePanel 内容层第二次 bottom Safe Area；
+   页面自己的米灰渐变背景继续铺满物理屏幕。
+   Android：保持 snowball-native-edge 原规则。
+   ====================================================== */
+@media (max-width: 900px) {
+  html:not(.snowball-native-edge)
+    .peopleOverlay > .peoplePanel {
+    bottom: 0 !important;
   }
 }
 

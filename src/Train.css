@@ -12,11 +12,11 @@
   :root {
     /* 顶部返回与标题 */
     --train-title-top: 25px;
-    --train-title-size: 24px;
+    --train-title-size: 22px;
     --train-title-color: #ffffff;
     --train-back-left: 21px;
     --train-back-top: 22px;
-    --train-back-size: 31px;
+    --train-back-size: 28px;
 
     /* 背景 */
     --train-bg-brightness: 0.90;
@@ -40,7 +40,7 @@
 
     /* APP使用榜：整体位置与大小 */
     --train-panel-left: 3vw;
-    --train-panel-top: 43.5vh;
+    --train-panel-top: 42.5vh;
     --train-panel-width: min(400px, 72vw);
     --train-panel-padding: 12px;
     --train-panel-radius: 18px;
@@ -55,7 +55,7 @@
 
     /* TAB */
     --train-tab-gap: 5px;
-    --train-tab-size: 11px;
+    --train-tab-size: 12px;
     --train-tab-height: 26px;
     --train-tab-color: rgba(219,231,239,0.72);
     --train-tab-active-color: rgba(154,230,255,0.95);
@@ -66,10 +66,10 @@
     --train-table-radius: 14px;
     --train-table-padding-y: 4px;
     --train-table-padding-x: 8px;
-    --train-grid-cols: minmax(0, 1.2fr) 0.72fr 0.86fr;
+    --train-grid-cols: minmax(0, 1.2fr) 0.81fr 0.77fr;
     --train-grid-gap: 4px;
     --train-header-size: 12px;
-    --train-row-size: 11px;
+    --train-row-size: 12px;
     --train-row-height: 12px;
     --train-row-line: rgba(190,210,224,0.08);
     --train-header-color: rgba(153,229,255,0.94);
@@ -455,6 +455,15 @@
   text-align: center !important;
 }
 
+/* 第一列：HEADER 与所有数据行统一靠左；其它两列继续居中。 */
+.trainLedHeader > :first-child,
+.trainLedRow > :first-child {
+  justify-self: stretch !important;
+  text-align: left !important;
+  justify-content: flex-start !important;
+  padding-left: 8px !important;
+}
+
 .trainLedHeader {
   padding: 7px 0 8px !important;
   border-bottom: 1px solid rgba(153,220,255,0.22) !important;
@@ -485,6 +494,11 @@
   font-weight: 650 !important;
   text-shadow: none !important;
   text-align: center !important;
+}
+
+.trainLedRow > :first-child {
+  text-align: left !important;
+  justify-content: flex-start !important;
 }
 
 .trainLedRow span {
@@ -802,7 +816,7 @@ html,body{
   border: none !important;
   border-radius: 0 !important;
   background: transparent !important;
-  color: rgba(241,223,177,0.96) !important;
+  color: rgba(255,255,255,0.96) !important;
   font-size: 13px !important;
   font-weight: 700 !important;
   line-height: 40px !important;

@@ -448,7 +448,7 @@ body {
 .dailyPanelCat {
   position: fixed;
   right: min(9vw, 90px);
-  bottom: 0;
+  bottom: 20px;
   width: min(34vw, 320px);
   max-height: 58vh;
   object-fit: contain;
@@ -515,7 +515,7 @@ body {
 
 .dailyPage {
   width: min(940px, 94vw);
-  margin: 28px auto;
+  margin: 40px auto;
   position: relative;
   z-index: 2;
 }
@@ -3722,11 +3722,13 @@ button,
 .screenDetailEditRow .dailyRowDeleteBtn {
   background: rgba(176, 66, 66, 0.78) !important;
   color: #fff !important;
+  width: 22px !important;
+  min-width: 22px !important;
 }
 
 .dailyUnifiedHeader > span:last-child,
 .dailyUnifiedRow > .dailyRowDeleteBtn:last-child {
-  min-width: 44px !important;
+  min-width: 32px !important;
 }
 
 /* 表头、数据行和小计共享同一个滚动容器。 */
@@ -3883,13 +3885,13 @@ button.dailyScreenValuePlain { cursor: pointer; }
 .dailyUnifiedHeader.dailyTab-all,
 .dailyUnifiedMonthRow.dailyTab-all,
 .dailyUnifiedRow.dailyTab-all {
-  grid-template-columns: 104px 66px 74px 78px 152px 100px 108px 52px 38px 38px 46px !important;
+  grid-template-columns: 104px 66px 74px 78px 152px 100px 108px 52px 32px 44px 46px !important;
   min-width: 900px !important;
 }
 .dailyUnifiedHeader.dailyTab-steps,
 .dailyUnifiedMonthRow.dailyTab-steps,
 .dailyUnifiedRow.dailyTab-steps {
-  grid-template-columns: 128px 96px 38px 38px 46px !important;
+  grid-template-columns: 110px 75px 32px 32px 32px !important;
   min-width: 376px !important;
 }
 .dailyUnifiedHeader.dailyTab-offscreen,
@@ -3898,19 +3900,19 @@ button.dailyScreenValuePlain { cursor: pointer; }
 .dailyUnifiedHeader.dailyTab-screen,
 .dailyUnifiedMonthRow.dailyTab-screen,
 .dailyUnifiedRow.dailyTab-screen {
-  grid-template-columns: 128px 92px 38px 38px 46px !important;
+  grid-template-columns: 110px 81px 32px 32px 32px !important;
   min-width: 376px !important;
 }
 .dailyUnifiedHeader.dailyTab-food,
 .dailyUnifiedMonthRow.dailyTab-food,
 .dailyUnifiedRow.dailyTab-food {
-  grid-template-columns: 124px 170px 118px 38px 38px 46px !important;
+  grid-template-columns: 110px 170px 112px 38px 56px 46px !important;
   min-width: 572px !important;
 }
 .dailyUnifiedHeader.dailyTab-mood,
 .dailyUnifiedMonthRow.dailyTab-mood,
 .dailyUnifiedRow.dailyTab-mood {
-  grid-template-columns: 124px 170px 38px 38px 46px !important;
+  grid-template-columns: 110px 164px 38px 56px 46px !important;
   min-width: 438px !important;
 }
 .dailyUnifiedRow > .dailyRowDeleteBtn:last-child {
@@ -4085,7 +4087,7 @@ button.dailyScreenValuePlain { cursor: pointer; }
   .dailyUnifiedHeader.dailyTab-food,
   .dailyUnifiedMonthRow.dailyTab-food,
   .dailyUnifiedRow.dailyTab-food {
-    grid-template-columns: 124px 221px 118px 38px 46px !important;
+    grid-template-columns: 124px 221px 112px 56px 46px !important;
     min-width: 547px !important;
   }
 
@@ -4093,7 +4095,7 @@ button.dailyScreenValuePlain { cursor: pointer; }
   .dailyUnifiedHeader.dailyTab-mood,
   .dailyUnifiedMonthRow.dailyTab-mood,
   .dailyUnifiedRow.dailyTab-mood {
-    grid-template-columns: 124px 170px 38px 46px !important;
+    grid-template-columns: 124px 164px 56px 46px !important;
     min-width: 378px !important;
   }
 
@@ -4692,7 +4694,7 @@ button.dailyScreenValuePlain { cursor: pointer; }
     width: min(940px, calc(100vw - 36px)) !important;
     max-width: calc(100vw - 36px) !important;
     margin:
-      calc(12px + env(safe-area-inset-top, 0px))
+      calc(24px + env(safe-area-inset-top, 0px))
       auto
       env(safe-area-inset-bottom, 0px) !important;
 
@@ -4725,7 +4727,7 @@ button.dailyScreenValuePlain { cursor: pointer; }
 
   /* Android 原生顶部改用 MainActivity 的真实高度。 */
   html.snowball-native-edge .dailyDataOverlay > .dailyPage.dailyHomePage {
-    margin-top: calc(12px + var(--snowball-safe-top, 0px)) !important;
+    margin-top: calc(24px + var(--snowball-safe-top, 0px)) !important;
     max-height: calc(
       100dvh
       - var(--snowball-safe-top, 0px)

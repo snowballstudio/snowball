@@ -21,7 +21,7 @@
     --m-home-hero-scale: 1.04;
 
     /* 顶部文字与猫 */
-    --m-home-brand-title-size: 27px;
+    --m-home-brand-title-size: 25px;
     --m-home-brand-subtitle-size: 12px;
     --m-home-guide-font: 13px;
     --m-home-cat-width: 34%;
@@ -1590,7 +1590,7 @@ top: 2px;
 
   .homeFixedTopBar .homeFixedBrand strong {
     margin: 10px !important;
-    font-size: 27px !important;
+    font-size: 24px !important;
     line-height: 1.05 !important;
     letter-spacing: 2px !important;
     font-weight: 700 !important;
@@ -2502,16 +2502,24 @@ top: 2px;
 }
 
 /* ======================================================
-   2026-08-07｜主页顶部 Safe Area 最终边界 V2
-   只处理正常 Home（非通话模式）
+   2026-08-07｜主页顶部 Safe Area 最终边界 V3
    ------------------------------------------------------
-   - 顶部 Safe Area 仍为主页自己的纯黑背景；
-   - 摄影背景继续从 Safe Area 下方开始；
-   - “雪粒”品牌文字与“使用说明”明确进入顶部 Safe Area 下方；
-   - 五区比例、状态栏、雪地、迷你报表和底部导航不改；
-   - 底部 Safe Area 本轮完全不处理。
+   当前实际顶部文字结构来自：
+   homeFixedTopBar
+     ├─ homeFixedBrand
+     │    ├─ “雪粒”
+     │    └─ “第 N 天 · 新手猫”
+     └─ “使用说明”
+
+   原则：
+   - 主页摄影图继续使用已经正确的顶部 Safe Area；
+   - 三组文字作为一个整体下移同一份 Safe Area；
+   - 不改变三组文字之间的任何相对位置；
+   - 不再修改已隐藏的旧 brandBlock / usageGuideText；
+   - 底部与其它五区布局完全不动。
    ====================================================== */
 @media (max-width: 900px) {
+  /* 页面内容（包括摄影图）仍从顶部 Safe Area 之后开始。 */
   .phoneShell.homePage:not(.callMode) {
     background: #000 !important;
     box-sizing: border-box !important;
@@ -2526,21 +2534,20 @@ top: 2px;
     max-height: 100dvh !important;
   }
 
-  /* 这两个元素在旧移动端规则中各自写死 top:18px，
-     因此需要显式再加一次顶部 Safe Area。 */
-  .phoneShell.homePage:not(.callMode) .brandBlock,
-  .phoneShell.homePage:not(.callMode) .usageGuideText {
-    top: calc(18px + env(safe-area-inset-top, 0px)) !important;
+  /* 真正显示的三组顶部文字：
+     只移动整个固定栏，不改 strong / span / button 的内部参数。 */
+  .phoneShell.homePage:not(.callMode) > .homeFixedTopBar {
+    top: env(safe-area-inset-top, 0px) !important;
   }
 
-  /* Android 原生使用 MainActivity 传来的真实顶部状态栏高度。 */
+  /* Android 原生使用 MainActivity 注入的真实顶部高度。 */
   html.snowball-native-edge .phoneShell.homePage:not(.callMode) {
     padding-top: var(--snowball-safe-top, 0px) !important;
   }
 
-  html.snowball-native-edge .phoneShell.homePage:not(.callMode) .brandBlock,
-  html.snowball-native-edge .phoneShell.homePage:not(.callMode) .usageGuideText {
-    top: calc(18px + var(--snowball-safe-top, 0px)) !important;
+  html.snowball-native-edge
+    .phoneShell.homePage:not(.callMode) > .homeFixedTopBar {
+    top: var(--snowball-safe-top, 0px) !important;
   }
 }
 

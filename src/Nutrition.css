@@ -11,11 +11,11 @@
 @media (max-width: 900px) {
   :root {
     /* 顶部标题 */
-    --nutrition-title-top: 32px;
-    --nutrition-title-size: 25px;
+    --nutrition-title-top: 28px;
+    --nutrition-title-size: 22px;
     --nutrition-back-left: 21px;
-    --nutrition-back-top: 28px;
-    --nutrition-back-size: 35px;
+    --nutrition-back-top: 24px;
+    --nutrition-back-size: 28px;
 
     /* 页面背景 */
     --nutrition-page-inset-x: 18px;
@@ -791,7 +791,7 @@
   height: calc(100dvh - 130px);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 0 12px 24px;
+  padding: 0 0 24px;
   box-sizing: border-box;
   overscroll-behavior: contain;
 }
@@ -911,17 +911,17 @@
 
   .nutritionDetailTable th:first-child,
   .nutritionDetailTable td:first-child {
-    width: 92px;
-    min-width: 92px;
-    max-width: 92px;
+    width: 82px;
+    min-width: 82px;
+    max-width: 82px;
   }
 
   .nutritionDetailTable th:nth-child(2),
   .nutritionDetailTable td:nth-child(2) {
-    left: 92px;
-    width: 88px;
-    min-width: 88px;
-    max-width: 88px;
+    left: 82px;
+    width: 82px;
+    min-width: 82px;
+    max-width: 82px;
   }
 }
 
@@ -1055,7 +1055,7 @@
 .dailyNutritionPage .nutritionInfoButton {
   position: absolute !important;
   right: 20px !important;
-  top: 34px !important;
+  top: 30px !important;
   width: auto !important;
   min-width: 0 !important;
   min-height: 0 !important;
@@ -1229,7 +1229,7 @@
 @media (max-width: 900px) {
   .dailyNutritionPage .nutritionInfoButton {
     right: 22px !important;
-    top: 36px !important;
+    top: 32px !important;
   }
 
   .nutritionInfoBody {

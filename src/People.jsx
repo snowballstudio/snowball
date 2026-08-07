@@ -1462,7 +1462,7 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
       {editing && (
         <div className="peopleEditorOverlay">
           <div className="peopleEditor">
-            <h3>{editing === 'new' ? '新增' : '编辑人物'}</h3>
+            <h3>{editing === 'new' ? '' : ''}</h3>
             <label>姓名<input value={draft.name} onChange={event => updateDraft('name', event.target.value)} placeholder="必填，建议填全名" /></label>
             <label>昵称<span className="peopleFieldHint">限两个汉字或一个英文单词，必填。</span><input value={draft.nickname} onChange={event => { setNicknameError(''); updateDraft('nickname', event.target.value) }} placeholder="例如：妈妈，王总，JACK" />{nicknameError && <small className="peopleFieldError">{nicknameError}</small>}</label>
             <div className="peopleEditorGrid">

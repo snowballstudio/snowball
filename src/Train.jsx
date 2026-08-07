@@ -313,7 +313,7 @@ export default function Train({
               <div className="trainLedHeader">
                 <span>APP</span>
                 <strong>时间</strong>
-                <em>打开次数</em>
+                <em>打开</em>
               </div>
               {dailyTopApps.length ? (
                 <>

@@ -1027,10 +1027,10 @@ export default function Footprint({
               <p>
                 {footprintRangeParts ? (
                   <>
-                    从<strong>{footprintRangeParts.first.y}</strong>年<strong>{footprintRangeParts.first.m}</strong>月到<strong>{footprintRangeParts.last.y}</strong>年<strong>{footprintRangeParts.last.m}</strong>月，你一共去过
+                    <strong>{footprintRangeParts.first.y}</strong>年<strong>{footprintRangeParts.first.m}</strong>月 ~ <strong>{footprintRangeParts.last.y}</strong>年<strong>{footprintRangeParts.last.m}</strong>月，去过
                   </>
                 ) : (
-                  <>尚未开始记录，你一共去过</>
+                  <>尚未开始记录，你去过</>
                 )}
                 <strong>{uniquePlaces}</strong>个地方，留下
                 <strong>{totalFootprints}</strong>条足迹。

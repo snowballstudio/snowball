@@ -8,9 +8,9 @@ import {
 
 const THING_TYPES = { wish: '愿单', treasure: '在手', memory: '舍离' }
 const THING_COPY = {
-  wish: { title: '我的愿单', reasonLabel: '为什么期待', placeholder: '例如：改善生活，梦想物品。', catLine: '我理解了，此物值得期待。' },
-  treasure: { title: '此刻拥有', reasonLabel: '为什么珍贵', placeholder: '例如：强大功能，审美价值。', catLine: '我理解了，此物值得拥有。' },
-  memory: { title: '舍离区', reasonLabel: '为什么难忘', placeholder: '例如：独特样式，珍贵回忆。', catLine: '我理解了，此物值得记住。它离开了，但没有消失。' },
+  wish: { title: '我的愿单', reasonLabel: '', placeholder: '例如：改善生活，梦想物品。', catLine: '我理解了，此物值得期待。' },
+  treasure: { title: '此刻拥有', reasonLabel: '', placeholder: '例如：强大功能，审美价值。', catLine: '我理解了，此物值得拥有。' },
+  memory: { title: '舍离区', reasonLabel: '', placeholder: '例如：独特样式，珍贵回忆。', catLine: '我理解了，此物值得记住。它离开了，但没有消失。' },
 }
 const THING_LIMIT = 300
 const PAW_STEP = 20
@@ -491,11 +491,11 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
             <div className="thingsLayout">
               {showAddForm ? <section className="thingsAddCard">
                 <div className="thingsAddCardHead">
-                  <h3>{editingThingId ? `${THING_TYPES[thingsMode]} · 编辑记录` : `${THING_TYPES[thingsMode]} · 添加记录`}</h3>
+                  <h3>{editingThingId ? `编辑` : `添加`}</h3>
                   <button type="button" className="thingsAddClose" onClick={closeThingForm} aria-label="收起添加记录">×</button>
                 </div>
 
-                <p className="thingHint">{THING_COPY[thingsMode]?.reasonLabel}是门槛。</p>
+                <p className="thingHint">{THING_COPY[thingsMode]?.reasonLabel}</p>
 
 
 

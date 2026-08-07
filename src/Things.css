@@ -116,7 +116,7 @@
 .thingDetailCard h3 {
   margin: 0 0 8px;
   color: #2b3d54;
-  font-size: 20px;
+  font-size: 17px;
 }
 
 .thingHint,
@@ -358,7 +358,7 @@
     align-items: center;
   }
 .thingsTopBar h2 {
-    font-size: 24px;
+    font-size: 22px;
   }
 .thingsTopBar p {
     display: none;
@@ -448,7 +448,7 @@
 
 .thingsOverviewStats h3 {
   margin: 0 0 8px;
-  font-size: 24px;
+  font-size: 22px;
   color: #1c79d5;
 }
 
@@ -1960,7 +1960,7 @@
   }
   .thingsUnifiedHeader { grid-template-columns: 32px minmax(0, 1fr) 32px !important; min-height: 40px !important; }
   .thingsBackBtn { font-size: 28px !important; }
-  .thingsUnifiedHeader h2 { font-size: 24px !important; }
+  .thingsUnifiedHeader h2 { font-size: 22px !important; }
   .thingsOverview { grid-template-rows: 50px auto minmax(0, 1fr) 58px !important; }
   .thingsProgressLine { grid-template-columns: 112px 1fr !important; }
   .thingsOverviewGrid { grid-template-columns: 1fr !important; gap: 7px !important; }
@@ -3836,7 +3836,7 @@
 
   .thingPhotoActionRow .thingPhotoUpload,
   .thingPhotoActionRow .saveThingBtnInline {
-    min-height: 62px !important;
+    min-height: 52px !important;
   }
 
   .thingInlineField {
@@ -4173,5 +4173,33 @@ button.thingPhotoIndexUpload {
     top: var(--snowball-safe-top, 0px) !important;
     bottom: env(safe-area-inset-bottom, 0px) !important;
   }
+}
+
+/* ======================================================
+   2026-08-07｜iOS 底部 Double Safe Area 修复
+   本段只处理：物馆主页 overview
+   ------------------------------------------------------
+   iOS：取消主页内容层第二次 bottom Safe Area；
+   things_background 页面背景继续铺满物理屏幕。
+   Android：保持 snowball-native-edge 原规则。
+   ====================================================== */
+@media (max-width: 900px) {
+  html:not(.snowball-native-edge)
+    .thingsOverlay > .thingsPanel.thingsPanel-overview {
+    bottom: 0 !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .thingsPanel-overview .thingsUnifiedHeader h2 {
+    text-align: center !important;
+    font-size: 22px !important;
+  }
+}
+
+.thingsPanel-wish .thingsUnifiedHeader h2,
+.thingsPanel-treasure .thingsUnifiedHeader h2,
+.thingsPanel-memory .thingsUnifiedHeader h2 {
+    font-size: 19px !important;
 }
 
