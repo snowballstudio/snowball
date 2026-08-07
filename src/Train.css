@@ -922,3 +922,80 @@ html,body{
   }
 }
 
+/* ======================================================
+   2026-08-07｜安卓信息页 Safe Area 最终版
+   仅 Android 原生（html.snowball-native-edge）
+   ------------------------------------------------------
+   信息主页：
+   - information_platform 背景图继续铺满物理屏幕；
+   - 标题/返回/说明和列车/APP榜内容进入顶部 Safe Area；
+   - 原内部坐标、动画、表格参数不改。
+
+   信息说明页：
+   - 白色背景铺满物理屏幕；
+   - Header / 正文进入真实 Safe Area；
+   - 不影响苹果原生 Screen Time 报表路径。
+   ====================================================== */
+@media (max-width: 900px) {
+  /* ---------- Android 信息主页 ---------- */
+
+  /* 外壳、卡片、摄影背景始终真正 Edge-to-Edge。 */
+  html.snowball-native-edge .dailySubPage.dailyTrainPage,
+  html.snowball-native-edge .dailyTrainPage .dailyInsightCard,
+  html.snowball-native-edge .dailyTrainPage .dailyInsightBg {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+  }
+
+  /* 顶部功能区整体从真实状态栏之后开始。
+     标题、返回、说明按钮在 header 内的原坐标保持不变。 */
+  html.snowball-native-edge .dailyTrainPage .dailySubTop {
+    top: var(--snowball-safe-top, 0px) !important;
+  }
+
+  /* 列车、APP 使用榜等内容层整体进入安全区域。
+     背景图不移动，因此顶部仍然显示页面自己的摄影背景。 */
+  html.snowball-native-edge .dailyTrainPage .dailyInsightContent {
+    position: fixed !important;
+    top: var(--snowball-safe-top, 0px) !important;
+    right: 0 !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    left: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* ---------- Android 信息说明页 ---------- */
+
+  html.snowball-native-edge .trainInfoPage {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    background-image: none !important;
+  }
+
+  /* 保留 Header 原来的 72px 高度，只把整块移到状态栏下面。 */
+  html.snowball-native-edge .trainInfoHeader {
+    top: var(--snowball-safe-top, 0px) !important;
+    height: 72px !important;
+    padding: 0 20px 13px !important;
+    background: #ffffff !important;
+  }
+
+  html.snowball-native-edge .trainInfoBody {
+    top: calc(var(--snowball-safe-top, 0px) + 72px) !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    padding-bottom: 42px !important;
+    background: #ffffff !important;
+  }
+}
+

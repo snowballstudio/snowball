@@ -4008,13 +4008,116 @@ button.thingPhotoIndexUpload {
 }
 
 /* ======================================================
-   2026-08-07｜物馆说明页最终边界
-   白色全背景 + 页面独立 Safe Area
+   2026-08-07｜物馆三个子页面最终边界 V3
+   Edge-to-Edge 全背景 + 页面独立 Safe Area
    ------------------------------------------------------
-   - thingsOverlay-info：白色背景铺满物理屏幕；
-   - thingsPanel-info：内容只在 Safe Area 内；
-   - 原说明页标题、正文、滚动布局保持不变；
-   - 不影响物馆总览及愿单/在手/舍离页面。
+   覆盖：
+   - 愿单 wish：查看 / 新增 / 编辑
+   - 在手 treasure：查看 / 新增 / 编辑
+   - 舍离 memory：查看 / 新增 / 编辑
+
+   原则：
+   - thingsOverlay：每种页面自己的全屏背景层；
+   - 对应 thingsPanel-*：安全区内的内容层；
+   - thingsSubPage / thingsAddCard 等内部布局完全不改；
+   - 物馆总览 overview 保持上一轮已经验证成功的规则。
+   ====================================================== */
+@media (max-width: 900px) {
+  /* ---------- 愿单：保留原淡蓝渐变 ---------- */
+  .thingsOverlay:has(> .thingsPanel-wish) {
+    background:
+      radial-gradient(
+        circle at 18% 8%,
+        rgba(203, 229, 255, 0.98),
+        transparent 35%
+      ),
+      linear-gradient(
+        135deg,
+        rgba(246, 252, 255, 0.98),
+        rgba(214, 235, 255, 0.96)
+      ) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* ---------- 在手：保留当前灰绿色渐变 ---------- */
+  .thingsOverlay:has(> .thingsPanel-treasure) {
+    background:
+      radial-gradient(
+        circle at 18% 8%,
+        rgba(216, 229, 222, 0.96),
+        transparent 35%
+      ),
+      linear-gradient(
+        135deg,
+        rgba(249, 252, 250, 0.98),
+        rgba(211, 224, 218, 0.96)
+      ) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* ---------- 舍离：保留原淡金米色渐变 ---------- */
+  .thingsOverlay:has(> .thingsPanel-memory) {
+    background:
+      radial-gradient(
+        circle at 18% 8%,
+        rgba(255, 235, 184, 0.78),
+        transparent 36%
+      ),
+      linear-gradient(
+        135deg,
+        rgba(255, 252, 241, 0.98),
+        rgba(239, 224, 190, 0.96)
+      ) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* 三个子页面共用同一 Safe Area 内容规则。
+     新增与编辑都发生在同一个 Panel 内，因此无需另改内部表单。 */
+  .thingsOverlay > .thingsPanel.thingsPanel-wish,
+  .thingsOverlay > .thingsPanel.thingsPanel-treasure,
+  .thingsOverlay > .thingsPanel.thingsPanel-memory {
+    position: absolute !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    right: 0 !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    left: 0 !important;
+
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+
+    /* 页面背景统一由外层 Overlay 从刘海画到底部，
+       内容层透明，避免上下出现系统底色或渐变接缝。 */
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+
+  /* Android 原生：顶部继续使用 MainActivity 注入的真实状态栏高度。 */
+  html.snowball-native-edge .thingsOverlay > .thingsPanel.thingsPanel-wish,
+  html.snowball-native-edge .thingsOverlay > .thingsPanel.thingsPanel-treasure,
+  html.snowball-native-edge .thingsOverlay > .thingsPanel.thingsPanel-memory {
+    top: var(--snowball-safe-top, 0px) !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+
+/* ======================================================
+   2026-08-07｜物馆说明页 Safe Area 最终版
+   仅处理说明页；不碰总览、愿单、在手、舍离及新增/修改。
+   ------------------------------------------------------
+   - Overlay：纯白背景铺满物理屏幕，刘海/底部不露系统灰色；
+   - Panel：只在真实 Safe Area 内排版；
+   - Header / 正文原有 72px 结构与内部布局不改。
    ====================================================== */
 @media (max-width: 900px) {
   .thingsOverlay.thingsOverlay-info {
@@ -4028,7 +4131,10 @@ button.thingPhotoIndexUpload {
     padding: 0 !important;
     overflow: hidden !important;
     background: #ffffff !important;
+    background-color: #ffffff !important;
     background-image: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
@@ -4051,12 +4157,13 @@ button.thingPhotoIndexUpload {
     padding: 0 !important;
     box-sizing: border-box !important;
 
+    overflow: hidden !important;
     background: #ffffff !important;
+    background-color: #ffffff !important;
     background-image: none !important;
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    overflow: hidden !important;
   }
 
   html.snowball-native-edge

@@ -1391,3 +1391,46 @@
   }
 }
 
+/* ======================================================
+   2026-08-07｜每日营养详情表 Safe Area 最终版
+   只处理 nutritionDetailPage；营养主页与营养说明页不动。
+   ------------------------------------------------------
+   - 详情页自己的深蓝渐变铺满物理屏幕；
+   - Header + Intro + 表格整体从顶部 Safe Area 后开始；
+   - 表格底部继续使用已有 safe-area-inset-bottom；
+   - 不改变冻结列、滚动、列宽和触摸逻辑。
+   ====================================================== */
+@media (max-width: 900px) {
+  .nutritionDetailPage {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: linear-gradient(180deg, #152432 0%, #0d1822 100%) !important;
+  }
+
+  /* iOS / 支持 CSS Safe Area：
+     只给第一块 Header 增加顶部安全距离。
+     由于详情页是纵向 flex，后面的 Intro 和表格会自然跟随下移。 */
+  .nutritionDetailPage > .nutritionDetailTop {
+    margin-top: env(safe-area-inset-top, 0px) !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* Android 原生使用 MainActivity 注入的真实状态栏高度。 */
+  html.snowball-native-edge
+    .nutritionDetailPage > .nutritionDetailTop {
+    margin-top: var(--snowball-safe-top, 0px) !important;
+  }
+
+  /* 保留原稳定滚动设计，只确保底部系统区域不压住最后内容。 */
+  .nutritionDetailPage > .nutritionDetailTableWrap {
+    min-height: 0 !important;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
