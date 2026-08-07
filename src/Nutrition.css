@@ -1261,3 +1261,133 @@
   }
 }
 
+/* ======================================================
+   2026-08-07｜营养主页与说明页最终边界
+   Edge-to-Edge 全背景 + 页面独立 Safe Area
+   ------------------------------------------------------
+   营养主页：
+   - nutritionSpectrumCard / nutritionBg 继续全屏，不移动背景；
+   - nutritionSubTop、nutritionInsightContent、猫进入 Safe Area；
+   - 彩虹、云朵、表格等内部坐标和比例不改。
+
+   营养说明页：
+   - nutritionInfoPage 白色背景铺满物理屏幕；
+   - 标题栏与正文滚动区只在 Safe Area 内；
+   - 不处理每日营养详情表。
+   ====================================================== */
+@media (max-width: 900px) {
+  /* ---------- 营养主页：背景保持真正全屏 ---------- */
+  .dailyNutritionPage.nutritionPage,
+  .dailyNutritionPage.nutritionPage .nutritionSpectrumCard {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .dailyNutritionPage.nutritionPage .nutritionBg,
+  .dailyNutritionPage.nutritionPage .dailyInsightBg {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  /* 标题栏只避开顶部 Safe Area。
+     原来标题/返回/说明按钮在 header 内的相对位置不改。 */
+  .dailyNutritionPage.nutritionPage .nutritionSubTop {
+    position: fixed !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+  }
+
+  /* 彩虹、云朵、表格等作为一个整体进入上下 Safe Area。
+     内部所有 top/left 参数继续使用原值。 */
+  .dailyNutritionPage.nutritionPage .nutritionInsightContent,
+  .dailyNutritionPage.nutritionPage .dailyInsightContent {
+    position: absolute !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    right: 0 !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    left: 0 !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  /* 猫是 content 的兄弟层，因此单独避开底部系统区域。 */
+  .dailyNutritionPage.nutritionPage .nutritionInsightCat {
+    bottom: calc(
+      var(--nutrition-cat-bottom)
+      + env(safe-area-inset-bottom, 0px)
+    ) !important;
+  }
+
+  /* Android 原生顶部使用 MainActivity 注入的真实状态栏高度。 */
+  html.snowball-native-edge
+    .dailyNutritionPage.nutritionPage .nutritionSubTop {
+    top: var(--snowball-safe-top, 0px) !important;
+  }
+
+  html.snowball-native-edge
+    .dailyNutritionPage.nutritionPage .nutritionInsightContent,
+  html.snowball-native-edge
+    .dailyNutritionPage.nutritionPage .dailyInsightContent {
+    top: var(--snowball-safe-top, 0px) !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+
+  /* ---------- 营养说明页：白色全背景 ---------- */
+  .nutritionInfoPage {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #202428 !important;
+  }
+
+  .nutritionInfoHeader {
+    position: fixed !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 72px !important;
+    background: rgba(255,255,255,.98) !important;
+  }
+
+  .nutritionInfoScroll {
+    position: absolute !important;
+    top: calc(env(safe-area-inset-top, 0px) + 72px) !important;
+    right: 0 !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    left: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  /* 底部已由 Scroll 自身避开 Safe Area，取消正文重复增加的安全区，
+     保留原来的 42px 正文收尾空间。 */
+  .nutritionInfoBody {
+    padding-bottom: 42px !important;
+  }
+
+  html.snowball-native-edge .nutritionInfoHeader {
+    top: var(--snowball-safe-top, 0px) !important;
+  }
+
+  html.snowball-native-edge .nutritionInfoScroll {
+    top: calc(var(--snowball-safe-top, 0px) + 72px) !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+
