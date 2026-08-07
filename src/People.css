@@ -2313,3 +2313,99 @@
   }
 }
 
+/* ======================================================
+   2026-08-07｜人间编辑页与说明页 Safe Area
+   ------------------------------------------------------
+   人间主页已经完成全背景 + Safe Area。
+   本段只处理：
+   1. peopleEditorOverlay / peopleEditor（编辑页）
+   2. peopleInfoOverlay / peopleInfoPage（说明页）
+   照片页保持现状，不做任何处理。
+   ====================================================== */
+@media (max-width: 900px) {
+  /* ---------- 编辑页 ---------- */
+  .peopleEditorOverlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    box-sizing: border-box !important;
+
+    /* 背景继续全屏。编辑框仍保持原有风格。 */
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+
+  .peopleEditorOverlay > .peopleEditor {
+    max-height: calc(
+      100dvh
+      - env(safe-area-inset-top, 0px)
+      - env(safe-area-inset-bottom, 0px)
+      - 36px
+    ) !important;
+  }
+
+  /* Android 原生顶部使用 MainActivity 传入的真实高度。 */
+  html.snowball-native-edge .peopleEditorOverlay {
+    padding-top: var(--snowball-safe-top, 0px) !important;
+  }
+
+  html.snowball-native-edge .peopleEditorOverlay > .peopleEditor {
+    max-height: calc(
+      100dvh
+      - var(--snowball-safe-top, 0px)
+      - env(safe-area-inset-bottom, 0px)
+      - 36px
+    ) !important;
+  }
+
+  /* ---------- 说明页 ---------- */
+  .peopleInfoOverlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    box-sizing: border-box !important;
+
+    /* 使用与人间主页一致的连续背景，避免上下色差。 */
+    padding: 0 !important;
+    background:
+      radial-gradient(
+        circle at 16% 8%,
+        rgba(255,255,255,0.86),
+        transparent 30%
+      ),
+      linear-gradient(
+        135deg,
+        rgba(246, 241, 231, 0.98),
+        rgba(231, 239, 238, 0.96)
+      ) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    overflow: hidden !important;
+    align-items: stretch !important;
+  }
+
+  .peopleInfoOverlay > .peopleInfoPage {
+    position: absolute !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    right: 0 !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    left: 0 !important;
+
+    width: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+    box-sizing: border-box !important;
+    border-radius: 0 !important;
+
+    /* 说明页内部继续保持原白色内容页，不改文字布局。 */
+    overflow-y: auto !important;
+  }
+
+  html.snowball-native-edge .peopleInfoOverlay > .peopleInfoPage {
+    top: var(--snowball-safe-top, 0px) !important;
+  }
+}
+

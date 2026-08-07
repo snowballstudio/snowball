@@ -4015,3 +4015,70 @@ button.thingPhotoIndexUpload {
   color:#18A8FF;
   font-weight:700;
 }
+
+/* ======================================================
+   2026-08-07｜物馆主页 Edge-to-Edge + Safe Area
+   ------------------------------------------------------
+   只处理 thingsPanel-overview（物馆主页）。
+   愿单 / 在手 / 舍离子页面暂不处理。
+   背景层全屏；主页内容层只在系统 Safe Area 内排版。
+   ====================================================== */
+@media (max-width: 900px) {
+  /*
+   物馆主页外层背景保持全屏。
+   这里使用主页原本 thingsPanel-overview 的摄影背景配方，
+   让刘海与 Home Indicator 后面看到同一张图。
+  */
+  .thingsOverlay:has(> .thingsPanel-overview) {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    align-items: stretch !important;
+
+    background:
+      linear-gradient(
+        135deg,
+        rgba(232, 235, 238, 0.68),
+        rgba(202, 207, 213, 0.58)
+      ),
+      url('/refine/things_background.png') center/cover no-repeat !important;
+
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /*
+   只让主页内容进入 Safe Area 之内。
+   页面内部的卡片、表格、按钮、猫等布局完全不改。
+  */
+  .thingsOverlay > .thingsPanel-overview {
+    position: absolute !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    right: 0 !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    left: 0 !important;
+
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    box-sizing: border-box !important;
+
+    /* 摄影背景由外层统一绘制，避免上下出现两次独立背景。 */
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  html.snowball-native-edge .thingsOverlay > .thingsPanel-overview {
+    top: var(--snowball-safe-top, 0px) !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+
