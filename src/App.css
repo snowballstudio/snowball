@@ -4643,3 +4643,105 @@ button.dailyScreenValuePlain { cursor: pointer; }
   }
 }
 
+/* ======================================================
+   2026-08-07｜日常数据表 Safe Area 最终边界
+   只处理 dailyMode = home / edit
+   ------------------------------------------------------
+   - daily_background.png 与日常猫仍保持全屏背景层；
+   - 日常数据表主页进入顶部/底部 Safe Area；
+   - 日常编辑页进入顶部/底部 Safe Area；
+   - 不改变表格列宽、TAB、Sticky 操作条、输入框和弹窗布局；
+   - 营养 / 信息 / 屏幕时间 / 离机等其它 dailyMode 不在此处处理。
+   ====================================================== */
+@media (max-width: 900px) {
+
+  /* 最外层只负责物理屏幕，不再用通用 dataOverlay 的 18px
+     形成系统底色边。 */
+  .dataOverlay.dailyDataOverlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 摄影图和猫继续真正 Edge-to-Edge。 */
+  .dailyDataOverlay > .dailyPanelScene {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .dailyDataOverlay > .dailyPanelScene .dailyPanelBg {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  /* ---------- 日常数据表主页 ---------- */
+  .dailyDataOverlay > .dailyPage.dailyHomePage {
+    width: min(940px, calc(100vw - 36px)) !important;
+    max-width: calc(100vw - 36px) !important;
+    margin:
+      calc(12px + env(safe-area-inset-top, 0px))
+      auto
+      env(safe-area-inset-bottom, 0px) !important;
+
+    max-height: calc(
+      100dvh
+      - env(safe-area-inset-top, 0px)
+      - env(safe-area-inset-bottom, 0px)
+      - 24px
+    ) !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* ---------- 日常编辑页 ---------- */
+  .dailyDataOverlay > .dailyEditOnlyPage {
+    margin:
+      calc(14px + env(safe-area-inset-top, 0px))
+      auto
+      env(safe-area-inset-bottom, 0px) !important;
+
+    max-height: calc(
+      100dvh
+      - env(safe-area-inset-top, 0px)
+      - env(safe-area-inset-bottom, 0px)
+      - 28px
+    ) !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* Android 原生顶部改用 MainActivity 的真实高度。 */
+  html.snowball-native-edge .dailyDataOverlay > .dailyPage.dailyHomePage {
+    margin-top: calc(12px + var(--snowball-safe-top, 0px)) !important;
+    max-height: calc(
+      100dvh
+      - var(--snowball-safe-top, 0px)
+      - env(safe-area-inset-bottom, 0px)
+      - 24px
+    ) !important;
+  }
+
+  html.snowball-native-edge .dailyDataOverlay > .dailyEditOnlyPage {
+    margin-top: calc(14px + var(--snowball-safe-top, 0px)) !important;
+    max-height: calc(
+      100dvh
+      - var(--snowball-safe-top, 0px)
+      - env(safe-area-inset-bottom, 0px)
+      - 28px
+    ) !important;
+  }
+}
+

@@ -2734,3 +2734,172 @@ body.futureFootprintPlanOpen .compactFootprintList {
   }
 }
 
+/* ======================================================
+   2026-08-07｜足迹全模块 Safe Area 最终边界
+   Edge-to-Edge 背景 + 页面独立 Safe Area
+   ------------------------------------------------------
+   覆盖：
+   1. 足迹主页
+   2. 世界 / 中国 / 身边三个子页
+      - 查看
+      - 新增
+      - 编辑
+      - 设置住址
+   3. 足迹说明页
+
+   原则：
+   - 页面自己的摄影图 / 地图 / 浅灰 / 白色背景继续铺满物理屏幕；
+   - 只把需要点击和阅读的内容放进 Safe Area；
+   - 不改变地图比例、图钉、列表、弹窗、表单、猫和照片布局。
+   ====================================================== */
+@media (max-width: 900px) {
+
+  /* ---------- 整个足迹模块的物理屏幕背景层 ---------- */
+  .yearsOverlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: var(--fp-page-bg) !important;
+  }
+
+  /* ====================================================
+     A. 足迹主页
+     ----------------------------------------------------
+     主页面上半部摄影背景必须继续从物理屏幕顶部开始，
+     因此不移动 footprintHomePanel / footprintBgMover。
+     只处理顶部交互内容和底部三个入口。
+     ==================================================== */
+
+  .footprintHomePanel {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 摄影背景保持真正 Edge-to-Edge。 */
+  .footprintHomePanel .footprintBgMover {
+    top: 0 !important;
+  }
+
+  /* 顶部返回、标题摘要、背景设置整体避开刘海/状态栏。
+     各元素之间原来的相对距离完全保持。 */
+  .footprintHomePanel .footprintHomeBack {
+    top: calc(var(--fp-home-back-top) + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  .footprintHomePanel .footprintHomeTitle {
+    transform: translateY(env(safe-area-inset-top, 0px)) !important;
+  }
+
+  .footprintHomePanel .footprintSceneSetting {
+    top: calc(var(--fp-scene-top) + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  /* 底部三个地图入口避开 Home Indicator；
+     背景底栏本身仍铺到物理屏幕最底。 */
+  .footprintHomePanel .footprintMapTextLinks {
+    bottom: calc(var(--fp-home-link-bottom) + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Android 原生使用 MainActivity 注入的真实顶部高度。 */
+  html.snowball-native-edge .footprintHomePanel .footprintHomeBack {
+    top: calc(var(--fp-home-back-top) + var(--snowball-safe-top, 0px)) !important;
+  }
+
+  html.snowball-native-edge .footprintHomePanel .footprintHomeTitle {
+    transform: translateY(var(--snowball-safe-top, 0px)) !important;
+  }
+
+  html.snowball-native-edge .footprintHomePanel .footprintSceneSetting {
+    top: calc(var(--fp-scene-top) + var(--snowball-safe-top, 0px)) !important;
+  }
+
+  /* ====================================================
+     B. 世界 / 中国 / 身边子页面
+     ----------------------------------------------------
+     footprintFullPage 是查看、新增、编辑、设置住址的共同页面壳。
+     外层 yearsOverlay 已经是原来的浅灰背景，
+     因此只把这一整块内容限定在 Safe Area 内即可。
+     ==================================================== */
+
+  .yearsOverlay > .footprintFullPage {
+    position: absolute !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    right: 0 !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    left: 0 !important;
+
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+
+    background: var(--fp-home-link-bar-bg) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+
+  html.snowball-native-edge .yearsOverlay > .footprintFullPage {
+    top: var(--snowball-safe-top, 0px) !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+
+  /* 子页顶部、地图、记录区继续使用原有灰色/地图背景，
+     不允许 Safe Area 露出系统底色。 */
+  .yearsOverlay > .footprintFullPage,
+  .yearsOverlay > .footprintFullPage .footprintFullTop,
+  .yearsOverlay > .footprintFullPage .footprintTopBar {
+    background-color: var(--fp-home-link-bar-bg) !important;
+  }
+
+  /* ====================================================
+     C. 足迹说明页
+     ----------------------------------------------------
+     说明页自己的背景就是纯白。
+     白色一直铺到刘海与底部，正文从 Safe Area 内开始。
+     ==================================================== */
+
+  .footprintInfoPage {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #202428 !important;
+
+    /* 保留原左右与底部排版，只增加真实顶部 Safe Area。 */
+    padding:
+      calc(10px + env(safe-area-inset-top, 0px))
+      24px
+      calc(28px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  html.snowball-native-edge .footprintInfoPage {
+    padding-top: calc(10px + var(--snowball-safe-top, 0px)) !important;
+  }
+}
+
