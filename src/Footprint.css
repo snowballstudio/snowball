@@ -2834,10 +2834,18 @@ body.futureFootprintPlanOpen .compactFootprintList {
     ) !important;
   }
 
-  /* 主页底部恢复原来的定位关系。
-     不再给入口额外增加 safe-area-inset-bottom。 */
+  /* 足迹主页底部：iOS/default 只保留页面原本的 16px 距离，
+     同时取消旧规则再次加入的 safe-area padding。
+     只测试主页，不影响世界/中国/身边子页与说明页。 */
   .footprintHomePanel .footprintMapTextLinks {
+    bottom: 16px !important;
+    padding-bottom: 10px !important;
+  }
+
+  /* Android 原生保持华为当前已经合适的底部表现。 */
+  html.snowball-native-edge .footprintHomePanel .footprintMapTextLinks {
     bottom: var(--fp-home-link-bottom) !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)) !important;
   }
 
   /* Android 原生：顶部用 MainActivity 注入的真实状态栏高度。 */
