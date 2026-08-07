@@ -2500,3 +2500,38 @@ top: 2px;
     padding: 21px 18px 17px;
   }
 }
+
+/* ======================================================
+   2026-08-07｜主页顶部 Safe Area 最终边界
+   只处理正常 Home（非通话模式）
+   ------------------------------------------------------
+   - 顶部 Safe Area 使用主页自己的纯黑背景；
+   - 顶部猫摄影背景从 Safe Area 下方开始；
+   - 原五区比例仍在“剩余可用高度”内按原比例分配；
+   - 状态栏、雪地、迷你报表、底部导航内部布局不改；
+   - 底部 Safe Area 本轮完全不处理。
+   ====================================================== */
+@media (max-width: 900px) {
+  .phoneShell.homePage:not(.callMode) {
+    /* 页面本身已经是黑色；padding 区就是主页自己的黑色顶部边界。 */
+    background: #000 !important;
+    box-sizing: border-box !important;
+
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+    padding-left: 0 !important;
+
+    /* 仍占满整个物理屏幕；五区网格只在扣除顶部 Safe Area 后的
+       可用区域内按原 27.5/23/5.5/36.5/7.5 比例分配。 */
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+  }
+
+  /* Android 原生使用 MainActivity 传来的真实顶部状态栏高度。 */
+  html.snowball-native-edge .phoneShell.homePage:not(.callMode) {
+    padding-top: var(--snowball-safe-top, 0px) !important;
+  }
+}
+

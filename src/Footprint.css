@@ -2673,7 +2673,7 @@ body.futureFootprintPlanOpen .compactFootprintList {
   padding: 4px 6px !important;
   border-radius: 25px !important;
   background: rgba(224, 224, 223, 0.3) !important;
-  border: 1px solid rgba(181, 183, 185, 0.6) !important;
+  border: 1px solid rgba(181, 183, 185, 0.5) !important;
 }
 
 .footprintTabsShell .footprintFullTabs,
@@ -2769,11 +2769,14 @@ body.futureFootprintPlanOpen .compactFootprintList {
   }
 
   /* ====================================================
-     A. 足迹主页
+     A. 足迹主页 V2
      ----------------------------------------------------
-     主页面上半部摄影背景必须继续从物理屏幕顶部开始，
-     因此不移动 footprintHomePanel / footprintBgMover。
-     只处理顶部交互内容和底部三个入口。
+     足迹主页是特殊版式：
+     - 顶部 Safe Area 使用页面自己的浅灰色；
+     - 摄影背景不进入顶部 Safe Area；
+     - 摄影区的“下边界”仍保持在原来的 40vh，
+       因此历史记录区、底部栏的原有纵向关系不被挤乱；
+     - 底部完全恢复原设计，本段不再抬高底部三个入口。
      ==================================================== */
 
   .footprintHomePanel {
@@ -2786,17 +2789,38 @@ body.futureFootprintPlanOpen .compactFootprintList {
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
+
+    /* 顶部 Safe Area 看到的是足迹自己的浅灰色，不是系统灰边。 */
+    background: var(--fp-home-link-bar-bg) !important;
   }
 
-  /* 摄影背景保持真正 Edge-to-Edge。 */
+  /* 摄影图从 Safe Area 下方开始，但仍在原来的 40vh 位置结束。
+     这样不会把历史记录区和底部栏整体往下推。 */
   .footprintHomePanel .footprintBgMover {
-    top: 0 !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    height: calc(
+      var(--fp-home-bg-height)
+      - env(safe-area-inset-top, 0px)
+    ) !important;
   }
 
-  /* 顶部返回、标题摘要、背景设置整体避开刘海/状态栏。
-     各元素之间原来的相对距离完全保持。 */
+  /* 原摄影区上的暗色覆盖层必须与摄影图使用同一范围，
+     否则浅灰 Safe Area 会被黑色渐变重新盖住。 */
+  .footprintHomePanel::after {
+    top: env(safe-area-inset-top, 0px) !important;
+    height: calc(
+      var(--fp-home-bg-height)
+      - env(safe-area-inset-top, 0px)
+    ) !important;
+  }
+
+  /* 标题、返回、背景设置仍位于摄影图内，
+     只整体加上真实顶部 Safe Area。 */
   .footprintHomePanel .footprintHomeBack {
-    top: calc(var(--fp-home-back-top) + env(safe-area-inset-top, 0px)) !important;
+    top: calc(
+      var(--fp-home-back-top)
+      + env(safe-area-inset-top, 0px)
+    ) !important;
   }
 
   .footprintHomePanel .footprintHomeTitle {
@@ -2804,18 +2828,40 @@ body.futureFootprintPlanOpen .compactFootprintList {
   }
 
   .footprintHomePanel .footprintSceneSetting {
-    top: calc(var(--fp-scene-top) + env(safe-area-inset-top, 0px)) !important;
+    top: calc(
+      var(--fp-scene-top)
+      + env(safe-area-inset-top, 0px)
+    ) !important;
   }
 
-  /* 底部三个地图入口避开 Home Indicator；
-     背景底栏本身仍铺到物理屏幕最底。 */
+  /* 主页底部恢复原来的定位关系。
+     不再给入口额外增加 safe-area-inset-bottom。 */
   .footprintHomePanel .footprintMapTextLinks {
-    bottom: calc(var(--fp-home-link-bottom) + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: var(--fp-home-link-bottom) !important;
   }
 
-  /* Android 原生使用 MainActivity 注入的真实顶部高度。 */
+  /* Android 原生：顶部用 MainActivity 注入的真实状态栏高度。 */
+  html.snowball-native-edge .footprintHomePanel .footprintBgMover {
+    top: var(--snowball-safe-top, 0px) !important;
+    height: calc(
+      var(--fp-home-bg-height)
+      - var(--snowball-safe-top, 0px)
+    ) !important;
+  }
+
+  html.snowball-native-edge .footprintHomePanel::after {
+    top: var(--snowball-safe-top, 0px) !important;
+    height: calc(
+      var(--fp-home-bg-height)
+      - var(--snowball-safe-top, 0px)
+    ) !important;
+  }
+
   html.snowball-native-edge .footprintHomePanel .footprintHomeBack {
-    top: calc(var(--fp-home-back-top) + var(--snowball-safe-top, 0px)) !important;
+    top: calc(
+      var(--fp-home-back-top)
+      + var(--snowball-safe-top, 0px)
+    ) !important;
   }
 
   html.snowball-native-edge .footprintHomePanel .footprintHomeTitle {
@@ -2823,7 +2869,10 @@ body.futureFootprintPlanOpen .compactFootprintList {
   }
 
   html.snowball-native-edge .footprintHomePanel .footprintSceneSetting {
-    top: calc(var(--fp-scene-top) + var(--snowball-safe-top, 0px)) !important;
+    top: calc(
+      var(--fp-scene-top)
+      + var(--snowball-safe-top, 0px)
+    ) !important;
   }
 
   /* ====================================================
