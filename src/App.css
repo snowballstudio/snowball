@@ -3962,53 +3962,6 @@ button.dailyScreenValuePlain { cursor: pointer; }
 }
 
 
-/* ======================================================
-   V1.1｜iPhone Safe Area 白边统一修复
-   安全区和 WebView 根背景统一为雪球炭黑色。
-   ====================================================== */
-:root {
-  --snowball-safe-bg: #11161b;
-}
-
-html,
-body,
-#root {
-  background: var(--snowball-safe-bg) !important;
-}
-
-@media (max-width: 900px) {
-  html,
-  body,
-  #root,
-  .app {
-    background-color: var(--snowball-safe-bg) !important;
-  }
-
-  html {
-    min-height: 100%;
-  }
-
-  body {
-    min-height: 100%;
-    color-scheme: dark;
-  }
-
-  #root,
-  .app {
-    min-height: 100dvh !important;
-  }
-
-  /* 在 iPhone 刘海与 Home Indicator 区域下方提供统一深色底板。 */
-  .app::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background: var(--snowball-safe-bg);
-    pointer-events: none;
-  }
-}
-
 /* 对话记录编辑：三段原文与实时只读识别结果 */
 .dailyConversationEditFields {
   display: grid;
@@ -4657,3 +4610,36 @@ body,
     font-size: 13px !important;
   }
 }
+
+/* ======================================================
+   Android 原生全背景 + 原系统顶部安全区
+   背景仍铺到状态栏后面；只把页面内容恢复到系统状态栏之外。
+   高度来自 MainActivity 注入的真实 status bar / cutout inset，
+   不使用手写固定像素，不处理底部。
+   ====================================================== */
+@media (max-width: 900px) {
+  html.snowball-android-native-edge {
+    --snowball-native-safe-top: 0px;
+  }
+
+  /*
+   主页属于正常根布局：
+   padding 占用原系统状态栏高度，box-sizing 保证总高度仍为 100dvh，
+   因而不会增加页面总高度或改变原有区域比例。
+  */
+  html.snowball-android-native-edge .app {
+    box-sizing: border-box !important;
+    padding-top: var(--snowball-native-safe-top) !important;
+  }
+
+  /*
+   各独立页面和弹窗多为 fixed overlay，不参与 .app 的普通布局，
+   因此只在它们自己的全屏背景内部恢复同一份顶部安全距离。
+   overlay 的背景仍从物理屏幕顶部开始绘制。
+  */
+  html.snowball-android-native-edge .app > [class*="Overlay"] {
+    box-sizing: border-box !important;
+    padding-top: var(--snowball-native-safe-top) !important;
+  }
+}
+

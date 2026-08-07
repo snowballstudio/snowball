@@ -2090,28 +2090,31 @@ top: 2px;
   pointer-events: none;
 }
 
-/* 原生报表不接收触摸；链接只覆盖金色数字和末次时间。 */
+/* 原生报表不接收触摸；视觉不变，只扩大两组金色数字周围的透明点击热区。
+   两个热区都进入苹果“每日屏幕时间表”，不再连接雪粒离机/道晚安数据。 */
 .homeIOSMiniValueLink {
   position: absolute;
-  top: 0;
-  height: 32px;
+  top: -10px;
+  height: 52px;
   margin: 0;
   padding: 0;
   border: 0;
   background: transparent;
-  z-index: 2;
+  z-index: 12;
   cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
 .homeIOSMiniAverageLink {
-  left: 57px;
-  width: 45px;
+  left: 49px;
+  width: 62px;
 }
 
 .homeIOSMiniLastLink {
-  left: 157px;
-  width: 70px;
+  left: 147px;
+  width: 88px;
 }
 
 .homeIOSMiniValueLink:active {

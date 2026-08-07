@@ -1280,7 +1280,7 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
             setTestTodayDraft(monthChineseDraft(testTodayMonth || currentMonthValue()))
             setShowBirthdayEditor(true)
           }}>设置</button>
-          <span className="peopleDragTip">小贴士：手指按住圆圈轻移可调整位置。</span>
+          <span className="peopleDragTip">注：点人物圆圈存照片，按住轻移调位置。</span>
         </div>
       </section>
 

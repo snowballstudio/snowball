@@ -18,16 +18,21 @@ public final class MainViewController: CAPBridgeViewController {
         // iPhone 录音结束后恢复媒体播放通道。
         bridge?.registerPluginInstance(IOSAudioSessionPlugin())
 
-        // 覆盖状态栏、安全区和 WebView 加载时可能出现的白色区域。
-        let snowballBackground = UIColor.black
+        /*
+         页面背景由网页中的当前页面负责。
+         原生控制器和 WKWebView 不再强制铺黑色，避免物馆、人间等
+         浅色页面在状态栏或 Home Indicator 区域露出全局黑边。
 
-        view.backgroundColor = snowballBackground
-        webView?.backgroundColor = snowballBackground
-        webView?.scrollView.backgroundColor = snowballBackground
-        webView?.isOpaque = true
+         本轮保留 capacitor 的 contentInset = always，
+         因此只测试“取消原生黑底”，不改变现有 Safe Area 内容位置。
+        */
+        view.backgroundColor = .clear
+        webView?.backgroundColor = .clear
+        webView?.scrollView.backgroundColor = .clear
+        webView?.isOpaque = false
 
         if #available(iOS 15.0, *) {
-            webView?.underPageBackgroundColor = snowballBackground
+            webView?.underPageBackgroundColor = .clear
         }
     }
 }

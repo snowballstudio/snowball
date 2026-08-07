@@ -84,11 +84,11 @@ function saveThingsBackup(things, savedAt = Date.now()) {
 
 function thingProgressStage(count) {
   const n = Number(count || 0)
-  if (n <= 50) return { title: '简约主义', desc: '有待添加记录' }
-  if (n <= 100) return { title: '积攒中', desc: '空间仍很充裕' }
-  if (n <= 150) return { title: '不多不少', desc: '刚刚好' }
-  if (n <= 200) return { title: '日趋富足', desc: '生活越来越完整' }
-  return { title: '近乎圆满', desc: '每件都有故事' }
+  if (n <= 50) return { title: '简约', desc: '' }
+  if (n <= 100) return { title: '恰好', desc: '' }
+  if (n <= 150) return { title: '充裕', desc: '' }
+  if (n <= 200) return { title: '富足', desc: '' }
+  return { title: '圆满', desc: '' }
 }
 function thingCategoryCaption(key) { return key === 'wish' ? '等待拥有' : key === 'treasure' ? '陪伴现在' : '留在记忆' }
 function thingGoldAmount(itemOrValue) {

@@ -567,8 +567,27 @@ function speak(text) {
   window.speechSynthesis.speak(utterance)
 }
 
+function backgroundDateVariant(path, now = new Date()) {
+  // 在现有“达标状态 / 星期”背景逻辑之后，再按月份与日期单双选择 4 个版本。
+  // 单月单日：原文件；单月双日：2；双月单日：3；双月双日：4。
+  const month = now.getMonth() + 1
+  const dayOfMonth = now.getDate()
+  const monthOdd = month % 2 === 1
+  const dayOdd = dayOfMonth % 2 === 1
+
+  let suffix = ''
+  if (monthOdd && !dayOdd) suffix = '2'
+  else if (!monthOdd && dayOdd) suffix = '3'
+  else if (!monthOdd && !dayOdd) suffix = '4'
+
+  if (!suffix) return path
+  return path.replace(/\.png$/i, `${suffix}.png`)
+}
+
 function backgroundImage(stepsOk, sleepOk, moodOk) {
-  // 如果所有指标都达标，一周七天轮换不同的好状态背景，避免每天看同一张图。
+  let basePath = ''
+
+  // 如果所有指标都达标，一周七天轮换不同的好状态背景。
   if (stepsOk && sleepOk && moodOk) {
     const day = new Date().getDay()
     const weeklyGoodBgs = [
@@ -580,15 +599,24 @@ function backgroundImage(stepsOk, sleepOk, moodOk) {
       '/bg_good_all_fri.png',
       '/bg_good_all_sat.png',
     ]
-    return weeklyGoodBgs[day] || '/bg_good_all.png'
+    basePath = weeklyGoodBgs[day] || '/bg_good_all.png'
+  } else if (!stepsOk && sleepOk && moodOk) {
+    basePath = '/bg_badstep_goodsleep_goodmood.png'
+  } else if (!stepsOk && !sleepOk && moodOk) {
+    basePath = '/bg_badstep_badsleep_goodmood.png'
+  } else if (!stepsOk && sleepOk && !moodOk) {
+    basePath = '/bg_badstep_goodsleep_badmood.png'
+  } else if (!stepsOk && !sleepOk && !moodOk) {
+    basePath = '/bg_bad_all.png'
+  } else if (stepsOk && !sleepOk && moodOk) {
+    basePath = '/bg_goodstep_badsleep_goodmood.png'
+  } else if (stepsOk && sleepOk && !moodOk) {
+    basePath = '/bg_goodstep_goodsleep_badmood.png'
+  } else {
+    basePath = '/bg_goodstep_badsleep_badmood.png'
   }
-  if (!stepsOk && sleepOk && moodOk) return '/bg_badstep_goodsleep_goodmood.png'
-  if (!stepsOk && !sleepOk && moodOk) return '/bg_badstep_badsleep_goodmood.png'
-  if (!stepsOk && sleepOk && !moodOk) return '/bg_badstep_goodsleep_badmood.png'
-  if (!stepsOk && !sleepOk && !moodOk) return '/bg_bad_all.png'
-  if (stepsOk && !sleepOk && moodOk) return '/bg_goodstep_badsleep_goodmood.png'
-  if (stepsOk && sleepOk && !moodOk) return '/bg_goodstep_goodsleep_badmood.png'
-  return '/bg_goodstep_badsleep_badmood.png'
+
+  return backgroundDateVariant(basePath)
 }
 
 function dailySummaryText(data, sleepOk) {
@@ -2401,16 +2429,12 @@ function App() {
 
     viewport.setAttribute('content', mergedViewport.join(', '))
 
-    let themeColor = document.querySelector('meta[name="theme-color"]')
-    if (!themeColor) {
-      themeColor = document.createElement('meta')
-      themeColor.setAttribute('name', 'theme-color')
-      document.head.appendChild(themeColor)
-    }
-    themeColor.setAttribute('content', '#11161b')
-
-    document.documentElement.style.backgroundColor = '#11161b'
-    document.body.style.backgroundColor = '#11161b'
+    /*
+     页面背景由当前页面自身负责。
+     不再在 App 启动时强制写入统一 theme-color，
+     也不再给 html / body 写入固定炭黑色内联样式。
+     viewport-fit=cover 保留，背景仍可延伸到安全区。
+    */
   }, [])
 
   const [data, setData] = useState(() => {

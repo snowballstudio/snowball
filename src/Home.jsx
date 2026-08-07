@@ -712,9 +712,9 @@ export default function Home({
 
       <section className="statusCards homeDashboard">
         <div className="homeCausalStatus">
-          <button type="button" className="homeCausalRow" onClick={() => openDailyDetail('steps')}>
+          <div className="homeCausalRow homeCausalSplitRow">
             <span className="homeCausalIcon">👟</span>
-            <span className="homeCausalLeft">你最近步数 <strong className={homeStatusValueClass(homeStatusGoals.steps)}>{homeYesterdaySteps}</strong> </span>
+            <button type="button" className="homeCausalTextButton homeCausalLeft" onClick={() => openDailyDetail('steps')}>你最近步数 <strong className={homeStatusValueClass(homeStatusGoals.steps)}>{homeYesterdaySteps}</strong></button>
             <span
               className={`homeCausalArrow${homeStatusGoals.steps && homeStatusGoals.body ? ' homeCausalArrow-good' : ''}`}
               aria-hidden="true"
@@ -724,13 +724,13 @@ export default function Home({
               </svg>
             </span>
             <span className="homeCausalRight">它体型 <strong className={homeStatusValueClass(homeStatusGoals.body)}>{body.label}</strong></span>
-          </button>
+          </div>
 
-          <button type="button" className="homeCausalRow" onClick={() => openDailyDetail('offscreen')}>
+          <div className="homeCausalRow homeCausalSplitRow">
             <span className="homeCausalIcon">🌙</span>
-            <span className="homeCausalLeft">你上次休息 <strong className={homeStatusValueClass(homeStatusGoals.rest)}>
+            <button type="button" className="homeCausalTextButton homeCausalLeft" onClick={() => openDailyDetail('offscreen')}>你上次休息 <strong className={homeStatusValueClass(homeStatusGoals.rest)}>
   {formatHomeRestTime(homeYesterdaySleep)}
-</strong> </span>
+</strong></button>
             <span
               className={`homeCausalArrow${homeStatusGoals.rest && homeStatusGoals.fur ? ' homeCausalArrow-good' : ''}`}
               aria-hidden="true"
@@ -740,7 +740,7 @@ export default function Home({
               </svg>
             </span>
             <span className="homeCausalRight">它毛形 <strong className={homeStatusValueClass(homeStatusGoals.fur)}>{furDisplay}</strong></span>
-          </button>
+          </div>
 
           <div className="homeCausalRow homeCausalSplitRow">
             <span className="homeCausalIcon">🍽️</span>
@@ -753,10 +753,10 @@ export default function Home({
                 <path d="M2 4 L15.0 7 L2.3 11.6 Z" />
               </svg>
             </span>
-            <button type="button" className="homeCausalTextButton homeCausalRight" onClick={() => openDailyDetail('food')}>它毛色 <strong className={homeStatusValueClass(homeStatusGoals.furColor)}>{food.label}</strong></button>
+            <span className="homeCausalRight">它毛色 <strong className={homeStatusValueClass(homeStatusGoals.furColor)}>{food.label}</strong></span>
           </div>
 
-          <button type="button" className="homeCausalRow" onClick={() => openDailyDetail('mood')}>
+          <div className="homeCausalRow homeCausalSplitRow">
             <span className="homeCausalIcon homeMoodFlowerShell">
               <img
                 className={`homeMoodFlower homeMoodFlower-${moodFlower.level}`}
@@ -764,7 +764,7 @@ export default function Home({
                 alt={moodFlower.alt}
               />
             </span>
-            <span className="homeCausalLeft">你今日心情 <strong className={homeStatusValueClass(homeStatusGoals.mood)}>{mood.statusLabel}</strong></span>
+            <button type="button" className="homeCausalTextButton homeCausalLeft" onClick={() => openDailyDetail('mood')}>你今日心情 <strong className={homeStatusValueClass(homeStatusGoals.mood)}>{mood.statusLabel}</strong></button>
             <span
               className={`homeCausalArrow${homeStatusGoals.mood && homeStatusGoals.eyes ? ' homeCausalArrow-good' : ''}`}
               aria-hidden="true"
@@ -774,7 +774,7 @@ export default function Home({
               </svg>
             </span>
             <span className="homeCausalRight">它眼睛 <strong className={homeStatusValueClass(homeStatusGoals.eyes)}>{mood.eyes}</strong></span>
-          </button>
+          </div>
         </div>
 
         <div className="homeTodayActionRow">
@@ -818,8 +818,8 @@ export default function Home({
                 <button
                   type="button"
                   className="homeIOSMiniValueLink homeIOSMiniLastLink"
-                  onClick={openOffscreenTable}
-                  aria-label="打开离机时间表"
+                  onClick={openScreenTimeSummary}
+                  aria-label="打开苹果每日屏幕时间表"
                 />
               </span>
             ) : (
