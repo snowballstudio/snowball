@@ -3341,91 +3341,6 @@
 }
 
 /* ======================================================
-   2026-07-26｜物馆主页全屏背景修正版
-   原因：App.css 已把手机端 WebView 锁定在可用视口内；
-   此处再次使用 env(safe-area-inset-*) 会把安全区重复加到内容内，
-   因而标题、进度箱、猫和三张分类卡整体下移。
-
-   本修正版只做两件事：
-   1. 物馆总览背景铺满当前 WebView；
-   2. 内容恢复原来的上下位置，不重复添加安全区。
-
-   注意：iPhone 最上方状态栏和最下方 Home Indicator 黑区属于原生层。
-   是否让网页背景进入这两个区域，需要 Capacitor/iOS 的原生
-   StatusBar overlay 配置，不能单靠 CSS 真正消除。
-   ====================================================== */
-@media (max-width: 900px) {
-  /* 当前物馆页打开时，根节点底色同步成物馆背景色，避免边缘闪黑。 */
-  html:has(.thingsOverlay .thingsPanel-overview),
-  body:has(.thingsOverlay .thingsPanel-overview),
-  #root:has(.thingsOverlay .thingsPanel-overview),
-  .app:has(.thingsOverlay .thingsPanel-overview) {
-    background-color: #eaf4fa !important;
-  }
-
-  /* 覆盖层铺满 App.css 已经锁定好的可用视口。 */
-  .thingsOverlay:has(.thingsPanel-overview) {
-    position: fixed !important;
-    inset: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    display: block !important;
-    overflow: hidden !important;
-    background:
-      linear-gradient(
-        135deg,
-        rgba(232, 235, 238, 0.68),
-        rgba(202, 207, 213, 0.58)
-      ),
-      url('/refine/things_background.png') center/cover no-repeat !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
-
-  /* 面板本身铺满覆盖层；不再重复添加 safe-area。 */
-  .thingsOverlay:has(.thingsPanel-overview) > .thingsPanel-overview {
-    position: absolute !important;
-    inset: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    max-width: none !important;
-    max-height: none !important;
-    margin: 0 !important;
-    padding: 12px 12px 10px !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    background:
-      linear-gradient(
-        135deg,
-        rgba(232, 235, 238, 0.68),
-        rgba(202, 207, 213, 0.58)
-      ),
-      url('/refine/things_background.png') center/cover no-repeat !important;
-  }
-
-  /* 清除旧规则制造的额外顶部距离。 */
-  .thingsOverlay:has(.thingsPanel-overview) .thingsTopBar,
-  .thingsOverlay:has(.thingsPanel-overview) .thingsOverview {
-    margin-top: 0 !important;
-  }
-
-  /* 底部导航保持透明，不再重复叠加安全区高度。 */
-  .thingsOverlay:has(.thingsPanel-overview) .thingsOverviewBottomNav,
-  .thingsOverlay:has(.thingsPanel-overview) .thingsBottomNav {
-    padding-bottom: 0 !important;
-    background: transparent !important;
-  }
-}
-
-/* ======================================================
    2026-07-26｜物馆普通动作提示弹窗
    仅缩小：
    - 新增记录成功
@@ -4017,30 +3932,38 @@ button.thingPhotoIndexUpload {
 }
 
 /* ======================================================
-   2026-08-07｜物馆主页 Edge-to-Edge + Safe Area
+   2026-08-07｜物馆主页最终边界 V2
+   Edge-to-Edge 全背景 + 页面独立 Safe Area
    ------------------------------------------------------
-   只处理 thingsPanel-overview（物馆主页）。
-   愿单 / 在手 / 舍离子页面暂不处理。
-   背景层全屏；主页内容层只在系统 Safe Area 内排版。
+   实际 JSX 结构：
+   thingsOverlay
+     > thingsPanel thingsPanel-overview
+       > thingsOverview
+
+   只处理物馆主页 overview：
+   - thingsOverlay：唯一的全屏摄影背景层；
+   - thingsPanel-overview：安全区内的内容层；
+   - thingsOverview：内部布局完全不改；
+   - 愿单 / 在手 / 舍离子页面暂不处理。
    ====================================================== */
 @media (max-width: 900px) {
-  /*
-   物馆主页外层背景保持全屏。
-   这里使用主页原本 thingsPanel-overview 的摄影背景配方，
-   让刘海与 Home Indicator 后面看到同一张图。
-  */
-  .thingsOverlay:has(> .thingsPanel-overview) {
+  /* 物馆最外层始终铺满物理屏幕。 */
+  .thingsOverlay {
     position: fixed !important;
     inset: 0 !important;
     width: 100% !important;
     height: 100dvh !important;
     min-height: 100dvh !important;
     max-height: 100dvh !important;
-    box-sizing: border-box !important;
+    margin: 0 !important;
     padding: 0 !important;
+    box-sizing: border-box !important;
     overflow: hidden !important;
-    align-items: stretch !important;
+  }
 
+  /* 只在“物馆主页”状态下，把主页摄影图交给外层统一绘制。
+     JSX 中 overview 是 thingsPanel 自身的 class，不是额外节点。 */
+  .thingsOverlay:has(.thingsPanel-overview) {
     background:
       linear-gradient(
         135deg,
@@ -4048,16 +3971,13 @@ button.thingPhotoIndexUpload {
         rgba(202, 207, 213, 0.58)
       ),
       url('/refine/things_background.png') center/cover no-repeat !important;
-
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
 
-  /*
-   只让主页内容进入 Safe Area 之内。
-   页面内部的卡片、表格、按钮、猫等布局完全不改。
-  */
-  .thingsOverlay > .thingsPanel-overview {
+  /* iOS：主页内容层从系统真实 Safe Area 开始。
+     不改 thingsOverview 内部任何比例、位置或间距。 */
+  .thingsOverlay > .thingsPanel.thingsPanel-overview {
     position: absolute !important;
     top: env(safe-area-inset-top, 0px) !important;
     right: 0 !important;
@@ -4067,16 +3987,21 @@ button.thingPhotoIndexUpload {
     width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
+    max-width: none !important;
     max-height: none !important;
+    margin: 0 !important;
     box-sizing: border-box !important;
 
-    /* 摄影背景由外层统一绘制，避免上下出现两次独立背景。 */
+    /* 背景只由外层绘制一次，避免刘海/正文/底部出现接缝。 */
     background: transparent !important;
-    border-color: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
+    overflow: hidden !important;
   }
 
-  html.snowball-native-edge .thingsOverlay > .thingsPanel-overview {
+  /* Android 原生：继续使用 MainActivity 注入的真实顶部高度。 */
+  html.snowball-native-edge .thingsOverlay > .thingsPanel.thingsPanel-overview {
     top: var(--snowball-safe-top, 0px) !important;
     bottom: env(safe-area-inset-bottom, 0px) !important;
   }
