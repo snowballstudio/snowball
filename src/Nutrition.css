@@ -11,10 +11,10 @@
 @media (max-width: 900px) {
   :root {
     /* 顶部标题 */
-    --nutrition-title-top: 28px;
+    --nutrition-title-top: 24px;
     --nutrition-title-size: 22px;
-    --nutrition-back-left: 21px;
-    --nutrition-back-top: 24px;
+    --nutrition-back-left: 18px;
+    --nutrition-back-top: 18px;
     --nutrition-back-size: 28px;
 
     /* 页面背景 */
@@ -1055,7 +1055,7 @@
 .dailyNutritionPage .nutritionInfoButton {
   position: absolute !important;
   right: 20px !important;
-  top: 30px !important;
+  top: 26px !important;
   width: auto !important;
   min-width: 0 !important;
   min-height: 0 !important;
@@ -1228,8 +1228,8 @@
 
 @media (max-width: 900px) {
   .dailyNutritionPage .nutritionInfoButton {
-    right: 22px !important;
-    top: 32px !important;
+    right: 20px !important;
+    top: 26px !important;
   }
 
   .nutritionInfoBody {

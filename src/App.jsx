@@ -82,29 +82,26 @@ const VIDEO_MAP = {
 
 const REWARD_VIDEO = '/three_days_bonus.mp4'
 
-const USAGE_TEXT = `声明：雪粒是一款生活管理APP，旨在帮助梳理与自律，其中涉及的各项数据分析仅供参考，不构成任何健康诊断与建议。
+const USAGE_TEXT = `声明：雪粒是一款生活管理APP，旨在梳理与自律，其中数据分析仅供参考，不构成诊断与建议。
 
-雪粒的数据来源取决于用户的授权提供，仅存在用户单机，不作任何他用，云端和外界无法触及。
+数据来自用户的授权提供，仅存在用户本机。
 
-雪粒的形象随着用户每天的数据变化而变化。
+雪粒的形象可随每天的数据变化而变化。
 
 步数越多 → 体型越壮
 及时休息 → 毛形浓密
 饮食均衡 → 毛色雪白
 心情正面 → 眼睛圆亮
 
-步数和屏幕时间经首次授权后，每天自动获取，可手动添加或更改。
+步数和屏幕时间经首次授权后，每天自动获取，可手动更改。
 
-饮食和心情数据来自每天与雪粒通话，录音流畅度受设备类型影响，可临时打字完成对话。
+饮食和心情数据来自每天与雪粒通话，点录音图标后开始语音录入，可空格发送切断或快进。
 
-后期植入人工智能后，通话将近似真人效果。
+苹果手机的屏幕时间数据因技术规定，仅能展示，用户可通过每天“道晚安”录入休息时间。
 
-五个主要功能：
-营养：查看饮食结构和口味偏好光谱。
-信息：查看屏幕时间分布和趋势。
-足迹：记录去过的地方。
-物馆：收录愿望、拥有和舍离。
-人间：登记生命中有交集的人。
+任何用户都可与雪粒通话，回答第3个关于想法的问题，自动记入状态数据“上次休息”。
+
+详情参见底部五个功能的说明页面。足迹、物馆、人间可无数量限制管理相册。
 `
 
 // =========================
@@ -1244,7 +1241,7 @@ function daysFromYesterdayBackTo(records = [], today = new Date()) {
 const FOOD_ALIAS = {
   米饭: ['米饭', '白米饭', '大米', '香米','八宝饭','白米饭', '米豆腐','炒饭', '红米','蛋炒饭', '八宝粥','腊八粥','血糯米','崇明糕','盖交饭', '糯米饭','糯米饼','糯米粥','糯米','米饼','寿司', '饭团', '粥',  '小米粥', '粽子', '年糕', '松糕','米糕','糍粑',  '皮蛋瘦肉粥',  '菜饭', '稀饭'],
   面食: ['面食', '面条', '拉面', '牛肉拉面', '螺蛳粉', '肠粉','河粉','炒河粉','炒面','馒头', '包子', '肉包', '菜包', '馍馍', '小笼包','生煎','米线','饺子', '馄饨', '云吞','抄手','云吞面','小馄饨','意大利面','葱油饼','煎饼','意面', '披萨', '汉堡'],
-  面包: ['面包', '吐司', '汉堡包', '切片', '菠萝包','肉松包', '白切面包', '三明治', '烤面包'],
+  面包: ['面包', '吐司', '汉堡包', '切片', '菠萝包','肉松包', '白切面包', '蒜蓉面包','肉松面包','三明治', '烤面包'],
   土豆: ['土豆', '马铃薯', '土豆泥','土豆丝','土豆片'],
   薯类: ['红薯', '烤地瓜','山药','凉薯','芋艿','芋头','烤地瓜','地瓜'],
   其它主食: ['其它主食', '鸡蛋饼', '饼干',  '馅饼', '水晶饺', '烧卖', '燕饺','韭菜盒子', '发糕','面筋','油面筋','小蛋糕','布丁','纸杯蛋糕',
@@ -1255,7 +1252,7 @@ const FOOD_ALIAS = {
     '油豆腐', '豆腐丝','兰花豆腐干','豆腐干','兰花香干','素鸡','素鸭','香干','豆皮' ],
   鸡鸭鹅: ['鸡鸭鹅', '鸡', '鸡肉', '炸鸡', '鸡汤','鸡胗','母鸡汤','鸡丝','鸡丁','宫保鸡丁','童子鸡','鸡公煲','鸡腿', '鸡翅', '鸡块', '鸡排', '鸡爪', '鸡胸脯', '油鸡', '鸡柳','熏鸡',  '烤鸡', '鸭', '烧鸭','烧鹅','鸭肉', '烤鸭'],
   牛羊肉: ['牛肉', '煎牛排', '牛排','牛里脊','牛腩','牛肉干','红烧牛肉','牛肉汤','羊肉汤','罗宋汤','牛骨汤','牛腿肉','牛柳',
-    '牛腱子','牛肉丝','牛肉丸','烤牛排','和牛','牛肚','百叶','羊排','烤羊排','羊','羊肉','涮羊肉','孜然牛肉','孜然羊肉',
+    '牛腱子','牛肉丝','牛肉丸','烤牛排','和牛','牛肚','百叶','巴西烤肉','烤肉','羊排','烤羊排','羊','羊肉','涮羊肉','孜然牛肉','孜然羊肉',
     '牛蹄筋','羊蝎子','烤全羊'],
   猪肉: ['猪肉','蛋饺', '炒肉', '肉','咕咾肉','红烧大排','肉米','炖肉','里脊','里脊肉','肋条','梅头','肉末','红烧肉',
     '狮子头','红烧狮子头','酱肘子','炒肉丝','辣椒炒肉','青椒炒肉','肉片','猪柳', '蹄膀', '猪皮冻', '排骨', 
@@ -1279,7 +1276,7 @@ const FOOD_ALIAS = {
   草莓: ['草莓', '蓝莓', '红莓', '桑葚', '覆盆子', '黑莓'],
   瓜类: ['西瓜', '黄瓜', '南瓜', '冬瓜', '苦瓜', '甜瓜','香瓜','丝瓜','葫芦瓜','菜瓜','伊丽莎白','早春红玉','哈密瓜'],
   桃李杏: ['桃子', '李子', '杏子', '布林', '桃', '李', '杏', '油奈', '毛桃', '黄桃', '白桃', '油桃', '蟠桃', '水蜜桃'],
-  其它蔬菜: ['菜叶', '韭菜','蔬菜','笋','冬笋','莴笋','茭白','苦芥菜','香菜','包菜','金针菜','手撕包菜','甜菜'],
+  其它蔬菜: ['菜叶', '韭菜','蔬菜','笋','冬笋','莴笋','蔬菜色拉','色拉','茭白','苦芥菜','香菜','包菜','金针菜','手撕包菜','甜菜'],
   其它水果: ['水果', '菠萝', '果汁','苹果汁','石榴','大枣', '枣子', '甜枣', '石榴汁','胡萝卜汁','椰子汁','椰子水','椰子','芒果','芒果汁','橙汁','鲜榨饮料','果粒橙','枇杷','神仙果','无花果','荔枝','牛油果', '车厘子', '热情果', '圣女果','山竹','樱桃','梨', '鸭梨', '杨梅', '香梨', '火龙果', '猕猴桃'],
   坚果: ['坚果', '核桃', '瓜子',  '花生',  '杏仁', '红枣',  '火山果',  '巴达木', '榛子', '开心果',  '松仁',  '芝麻',  '南瓜子',  '西瓜子',  '小核桃', '腰果'],
   海带: ['海带','海苔','海参','海蜇','海蜇皮'],
@@ -2496,6 +2493,7 @@ function App() {
   const [dailyModal, setDailyModal] = useState(null)
   const [dailyDateModal, setDailyDateModal] = useState(null)
   const [usageModal, setUsageModal] = useState(false)
+  const [usageDocument, setUsageDocument] = useState('')
   const [versionTapCount, setVersionTapCount] = useState(0)
   const versionTapTimerRef = useRef(null)
   const screenOpenTimerRef = useRef(null)
@@ -3023,46 +3021,46 @@ function App() {
         ? <>昨天运动特别足，雪粒今天<StatusWord type="gold">胖嘟嘟</StatusWord>的，很有精神。</>
         : stepGood
           ? <>昨天运动够了，雪粒的体型保持得<StatusWord type="good">正好</StatusWord>。</>
-          : <>昨天活动偏少，雪粒有点<StatusWord type="warn">偏瘦</StatusWord>，今天多走走就会好起来。</>
+          : <>昨天活动偏少，雪粒有点<StatusWord type="warn">偏瘦</StatusWord>。</>
 
     const sleepText = sleepMissing
       ? <>昨天的离机时间还没有记录，雪粒的毛发状态还在等待更新。</>
       : sleepGoodFlag
-        ? <>昨天休息比较准时，雪粒的毛发显得<StatusWord type="good">浓密</StatusWord>柔软。</>
-        : <>昨天休息有点晚，雪粒今天有些没精神，毛发也有点<StatusWord type="warn">稀疏</StatusWord>。</>
+        ? <>昨天休息比较准时，雪粒的毛形<StatusWord type="good">浓密</StatusWord>柔软。</>
+        : <>昨天休息有点晚，雪粒毛形变得<StatusWord type="warn">稀疏</StatusWord>。</>
 
     const foodText = foodMissing
-      ? <>今天还没有饮食记录，可以和雪粒聊聊吃了什么，也可以稍后手动补上。</>
+      ? <>今天还没有饮食记录，可以和雪粒通话记录。</>
       : foodGoodFlag
-        ? <>今天吃得不错，雪粒的毛色保持<StatusWord type="snow">雪白</StatusWord>，看起来很干净。</>
-        : <>今天食物品种还可以更丰富一点，雪粒的毛色显得有些<StatusWord type="warn">暗淡</StatusWord>。</>
+        ? <>今天吃得不错，雪粒的毛色保持<StatusWord type="snow">雪白</StatusWord>。</>
+        : <>今天饮食记录有待改进，雪粒的毛色有些<StatusWord type="warn">暗淡</StatusWord>。</>
 
     const moodText = moodMissing
-      ? <>今天还没有心情记录，雪粒很想听你说说今天过得怎么样。</>
+      ? <>今天还没有心情记录，可以和雪粒通话记录。</>
       : moodGoodFlag
-        ? <>今天心情不错，雪粒开心地睁着<StatusWord type="blue">圆亮眼睛</StatusWord>看着你。</>
-        : <>今天似乎有点心情不佳，雪粒的瞳孔有些<StatusWord type="muted">无神</StatusWord>。</>
+        ? <>今天心情不错，雪粒的眼睛<StatusWord type="blue">圆亮</StatusWord>。</>
+        : <>今天似乎心情不佳，雪粒的眼睛有些<StatusWord type="muted">无神</StatusWord>。</>
 
     let summaryLine
     if (allGood) {
       summaryLine = <>今天整体状态很好，雪粒<StatusWord type="good">活泼漂亮</StatusWord>。</>
     } else if (goodCount >= 2) {
-      summaryLine = <>今天可以继续改善，雪粒才会到<StatusWord type="good">最佳状态</StatusWord>。</>
+      summaryLine = <>今天还可以继续改进，才会到<StatusWord type="good">最佳状态</StatusWord>。</>
     } else {
-      summaryLine = <>今天比较普通，早点休息、多走一走，雪粒明天有机会恢复<StatusWord type="good">状态</StatusWord>。</>
+      summaryLine = <>今天比较普通，改进作息，争取恢复<StatusWord type="good">状态</StatusWord>。</>
     }
 
     let companionLine
     if (allGood && brainReady) {
-      companionLine = <>今天已经和雪粒通话过了。拍拍它，看看它会不会<StatusWord type="blue">动起来</StatusWord>。</>
+      companionLine = <>拍拍雪粒，看它会不会<StatusWord type="blue">动起来</StatusWord>。</>
     } else if (allGood && hasTalked) {
-      companionLine = <>今天再多与雪粒聊几句，拍拍它，它可能会<StatusWord type="blue">动起来</StatusWord>。</>
+      companionLine = <>再多与雪粒聊几句，它可能会<StatusWord type="blue">动起来</StatusWord>。</>
     } else if (allGood) {
-      companionLine = <>今天还没有和雪粒通话。和它说说话，再拍拍它，说不定会有一点小惊喜。</>
+      companionLine = <>今天还没有和雪粒通话。</>
     } else if (hasTalked) {
-      companionLine = <>雪粒已经了解你的饮食和心情。今晚早点睡、多走走，等状态回升，它就有机会动起来。</>
+      companionLine = <>雪粒已经记录了你的饮食和心情。</>
     } else {
-      companionLine = <>今天还没有和雪粒通话。和它通话，再把作息调整好，明天就有机会看到雪粒活泼起来。</>
+      companionLine = <>今天还没有和雪粒通话。</>
     }
 
     return {
@@ -4872,18 +4870,46 @@ const homeFloatingFootprintMemory = ''
       {usageModal && (
         <div className="noticeOverlay usageInfoOverlay" role="dialog" aria-modal="true" aria-label="使用说明">
           <div className="noticeBox usageInfoBox">
-            <h2>使用说明</h2>
+            <div className="usageInfoHeader">
+              <button
+                type="button"
+                className="usageInfoBack"
+                aria-label="返回主页"
+                onClick={() => { setUsageDocument(''); setUsageModal(false) }}
+              >‹</button>
+              <h2>使用说明</h2>
+              <span className="usageInfoHeaderSpacer" aria-hidden="true" />
+            </div>
             <div className="usageInfoText">{USAGE_TEXT}</div>
             <div className="usageVersionBlock">
               <p>雪粒 Snowlet</p>
-              <button type="button" className="usageVersionTap" onClick={handleVersionTap}>Version 1.1</button>
-              <p>Copyright © 2026</p>
-              <p>专利申请中 · 仅供测试使用</p>
+              <button type="button" className="usageVersionTap" onClick={handleVersionTap}>Version 1.2</button>
+              <p>Copyright © dflystudio.com</p>
+              <p>专利申请中</p>
               {data.developerMode && (
                 <button type="button" className="developerModeLine" onClick={closeDeveloperMode}>开发者模式已开启 · 点此关闭</button>
               )}
             </div>
-            <button type="button" className="usageCloseBtn" onClick={() => setUsageModal(false)}>知道了</button>
+            <div className="usageLegalLinks" aria-label="法律文件">
+              <button type="button" onClick={() => setUsageDocument('privacy')}>隐私政策</button>
+              <button type="button" onClick={() => setUsageDocument('terms')}>用户协议</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {usageModal && usageDocument && (
+        <div className="usageDocumentOverlay" role="dialog" aria-modal="true" aria-label={usageDocument === 'privacy' ? '隐私政策' : '用户协议'}>
+          <div className="usageDocumentPanel">
+            <div className="usageDocumentHeader">
+              <button type="button" className="usageDocumentBack" aria-label="返回使用说明" onClick={() => setUsageDocument('')}>‹</button>
+              <h2>{usageDocument === 'privacy' ? '隐私政策' : '用户协议'}</h2>
+              <span aria-hidden="true" />
+            </div>
+            <iframe
+              className="usageDocumentFrame"
+              title={usageDocument === 'privacy' ? '雪粒隐私政策' : '雪粒用户协议'}
+              src={usageDocument === 'privacy' ? '/privacy.html' : '/terms.html'}
+            />
           </div>
         </div>
       )}
@@ -5438,7 +5464,7 @@ max-width:78px !important;
               aria-label="七天健康奖励视频"
             />
             <h2>太好了！</h2>
-            <p>你连续7天保持了良好的作息、饮食，</p>
+            <p>你连续7天保持了良好的作息与饮食，</p>
             <p>雪粒的状态刚刚好，它很开心。</p>
             <button onClick={() => setShowReward(false)}>知道了</button>
           </div>

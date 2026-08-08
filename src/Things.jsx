@@ -468,10 +468,10 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
         {showThingsInfo ? (
           <section className="thingsInfoPage">
             <div className="thingsInfoText">
-              <p>物馆记录愿望、拥有和舍离。愿单放下期待，在手留下正在陪伴的物，舍离保存已经离开的东西。</p>
-              <p>物品可以填写照片、起始时间、理由和估值。无价不等于没有价值，只是不以金粒计算。</p>
-              <p>愿单到手后可以移入在手，在手舍离后可以留在舍离。记录可以随时编辑或删除。</p>
-              <p>每次查看，雪粒都会留下爪印。物馆是你与物品之间的记忆档案。</p>
+              <p>物馆记录愿望、拥有和舍离。建议总数量不超300件。</p>
+              <p>每件物品可以上传多张照片、起始时间、理由和估值。估值可以是无价，也可以每金粒1000元人民币折算。</p>
+              <p>物品到手或舍离后可直接转移记录，保留原来数据。所有记录可随时编辑或删除。</p>
+              <p>每次查看，雪粒都会留下爪印，点击次数越多爪印越长、越深。</p>
             </div>
           </section>
         ) : thingsMode === 'overview' ? (

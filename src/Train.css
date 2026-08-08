@@ -11,11 +11,11 @@
 @media (max-width: 900px) {
   :root {
     /* 顶部返回与标题 */
-    --train-title-top: 25px;
+    --train-title-top: 24px;
     --train-title-size: 22px;
     --train-title-color: #ffffff;
-    --train-back-left: 21px;
-    --train-back-top: 22px;
+    --train-back-left: 18px;
+    --train-back-top: 18px;
     --train-back-size: 28px;
 
     /* 背景 */
@@ -805,8 +805,8 @@ html,body{
 
 .dailyTrainPage .trainInfoBtn {
   position: absolute !important;
-  right: 22px !important;
-  top: var(--train-back-top, 35px) !important;
+  right: 20px !important;
+  top: var(--train-back-top, 18px) !important;
   z-index: 24 !important;
   width: auto !important;
   height: 40px !important;
@@ -817,7 +817,7 @@ html,body{
   border-radius: 0 !important;
   background: transparent !important;
   color: rgba(255,255,255,0.96) !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   font-weight: 700 !important;
   line-height: 40px !important;
   text-shadow: 0 0 8px rgba(241,223,177,.28),
@@ -924,8 +924,8 @@ html,body{
 
 @media (max-width: 900px) {
   .dailyTrainPage .trainInfoBtn {
-    right: 22px !important;
-    top: var(--train-back-top, 22px) !important;
+    right: 20px !important;
+    top: var(--train-back-top, 18px) !important;
     font-size: 12px !important;
   }
 

@@ -200,7 +200,7 @@ export default function SnowballCall({
               🧠 脑动 <strong>{brain.label}</strong>
             </span>
             <span className={brain.active ? 'active' : ''}>
-              🐾 {brain.active ? '它很活跃' : '它很安静'}
+              🐾 {brain.active ? '活泼' : '安静'}
             </span>
           </div>
         </div>
@@ -253,7 +253,7 @@ export default function SnowballCall({
           placeholder={
             call.isListening
               ? '正在听你说话...'
-              : '点录音说话或直接打字'
+              : '语音或打字，空格快进'
           }
           aria-label="通话文字输入"
         />

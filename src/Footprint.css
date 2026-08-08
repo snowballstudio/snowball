@@ -27,13 +27,13 @@
   --fp-home-bg-drift-scale: 1.00;
   --fp-home-bg-drift-x: 0px;
   --fp-home-bg-drift-duration: 24s;
-  --fp-home-title-top: 24px;
+  --fp-home-title-top: 22px;
   --fp-home-title-size: 22px;
   --fp-home-title-color: #ffffff;
   --fp-home-back-left: 18px;
   --fp-home-back-top: 18px;
-  --fp-home-back-size: 30px;
-  --fp-home-summary-top: 75px;
+  --fp-home-back-size: 28px;
+  --fp-home-summary-top: 60px;
   --fp-home-summary-left: 38px;
   --fp-home-summary-width: calc(80% - 44px);
   --fp-home-summary-size: 13px;
@@ -317,10 +317,10 @@
 }
 
 .footprintHomeTitle p strong {
-  color: #f6186d !important;
-  font-size: 1.22em !important;
-  font-weight: 900 !important;
-  text-shadow: 0 1px 5px rgba(255,255,255,0.32) !important;
+  color: #e14414 !important;
+  font-size: 1.25em !important;
+  font-weight: 600 !important;
+  text-shadow: 0 1px 5px rgba(255,255,255,0.9) !important;
 }
 
 .footprintHomeRunCat,
@@ -1154,7 +1154,7 @@
   :root {
     --fp-home-bg-height: 30vh;
     --fp-home-title-top: 23px;
-    --fp-home-summary-top: 74px;
+    --fp-home-summary-top: 70px;
     --fp-scene-top: 18px;
     --fp-scene-right: 14px;
     --fp-history-left: 14px;
@@ -1403,11 +1403,12 @@
 }
 /* 浏览/编辑地图页左上角返回小于号 */
 .footprintFullPage .footprintBackText {
-  font-size: 30px !important;
+  font-size: 28px !important;
   width: 44px !important;
   height: 46px !important;
   line-height: 1 !important;
   font-weight: 300 !important;
+  transform: translate(0px, -3px) !important;
 }
 
 /* ======================================================
@@ -1847,6 +1848,7 @@ margin-right: 4px !important;
 /* 确保两个按钮仍位于背景之上，点击和间距不受影响。 */
 .footprintFullPage .footprintBrowseActions .footprintIconTextButton {
   position: relative !important;
+  transform: translateY(-12px) !important;
   z-index: 1 !important;
 }
 

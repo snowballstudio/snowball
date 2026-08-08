@@ -1552,6 +1552,7 @@ top: 2px;
     min-width: 0 !important;
     padding: 4px 0 !important;
     gap: 3px !important;
+    transform: translateY(-2px) !important;
   }
 
   .homeBottomNav span {
@@ -1969,7 +1970,7 @@ top: 2px;
   :root {
     /* ① “彩虹图标＋营养文字”整体位置
        负数向上，正数向下 */
-    --home-nutrition-button-y: -2px;
+    --home-nutrition-button-y: -4px;
 
     /* ② 彩虹图案单独放大
        X 控制宽度，Y 控制高度 */
@@ -2215,11 +2216,11 @@ top: 2px;
 @media (max-width: 900px) {
   :root {
     /* 五个数字合计建议保持 100。 */
-    --home-area-hero: 27.5fr;
+    --home-area-hero: 26fr;
     --home-area-status: 23fr;
     --home-area-actions: 5.5fr;
-    --home-area-snow: 36.5fr;
-    --home-area-nav: 7.5fr;
+    --home-area-snow: 36fr;
+    --home-area-nav: 9.5fr;
   }
 
   html,
