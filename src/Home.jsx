@@ -805,6 +805,26 @@ export default function Home({
 
         <div ref={homeSnowTraceRef} className="homeSnowTrace">
           <img className="homeSnowBg" src="/refine/snow_background.png" alt="雪地留痕" />
+          {useNativeIOSScreenTime && (
+            <button
+              type="button"
+              aria-label="打开苹果每日屏幕时间表"
+              onClick={openScreenTimeSummary}
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: '5%',
+                width: '100%',
+                height: '10%',
+                zIndex: 8,
+                border: 0,
+                padding: 0,
+                margin: 0,
+                background: 'transparent',
+                cursor: 'pointer',
+              }}
+            />
+          )}
           <p className="homeDeviceSummaryLine">
             {useNativeIOSScreenTime ? (
               <span className="homeIOSMiniReportButton">

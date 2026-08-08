@@ -431,6 +431,7 @@ export default function useSnowballCall({
   const chatStepRef = useRef(data.chatStep || 'idle')
   const callActiveRef = useRef(false)
   const callSessionRef = useRef(0)
+  const voiceCacheGenerationRef = useRef(0)
 
   // 原生录音连续会话：
   // Android / iOS 的单次语音识别可能因停顿自动结束，
@@ -458,6 +459,7 @@ export default function useSnowballCall({
     callSessionRef.current += 1
     stopSpeechRecognition()
     stopVoiceImmediately()
+    resetVoiceAudioCache()
   }, [])
 
   useEffect(() => {
@@ -479,6 +481,8 @@ export default function useSnowballCall({
   }
 
   function unlockVoiceAudio() {
+    const cacheGeneration = voiceCacheGenerationRef.current
+
     Object.keys(VOICE_DURATION_MS).forEach(name => {
       try {
         const audio = getVoiceAudio(name)
@@ -490,9 +494,13 @@ export default function useSnowballCall({
           promise.then(() => {
             audio.pause()
             audio.currentTime = 0
-            audio.muted = false
+            audio.muted = cacheGeneration === voiceCacheGenerationRef.current
+              ? false
+              : true
           }).catch(() => {
-            audio.muted = false
+            audio.muted = cacheGeneration === voiceCacheGenerationRef.current
+              ? false
+              : true
           })
         } else {
           audio.pause()
@@ -533,6 +541,24 @@ export default function useSnowballCall({
     const finish = voiceFinishRef.current
     voiceFinishRef.current = null
     if (typeof finish === 'function') finish()
+  }
+
+  function resetVoiceAudioCache() {
+    voiceCacheGenerationRef.current += 1
+
+    Object.values(voiceAudioCacheRef.current).forEach(audio => {
+      try {
+        audio.onended = null
+        audio.onerror = null
+        audio.muted = true
+        audio.pause()
+        audio.currentTime = 0
+      } catch (error) {
+        // 旧会话音频已经失效时无需额外处理。
+      }
+    })
+
+    voiceAudioCacheRef.current = {}
   }
 
   async function playVoice(name, sessionId = callSessionRef.current) {
@@ -610,6 +636,15 @@ export default function useSnowballCall({
           }
 
           const attemptPlay = async (retry = false) => {
+            if (
+              finished ||
+              !callActiveRef.current ||
+              sessionId !== callSessionRef.current
+            ) {
+              finish()
+              return
+            }
+
             try {
               audio.muted = false
               audio.volume = 1
@@ -627,6 +662,16 @@ export default function useSnowballCall({
                 sessionId === callSessionRef.current
               ) {
                 await wait(360)
+
+                if (
+                  finished ||
+                  !callActiveRef.current ||
+                  sessionId !== callSessionRef.current
+                ) {
+                  finish()
+                  return
+                }
+
                 audio.pause()
                 audio.currentTime = 0
                 await attemptPlay(true)
@@ -1299,6 +1344,7 @@ export default function useSnowballCall({
     clearNativeRestartTimer()
     stopSpeechRecognition()
     stopVoiceImmediately()
+    resetVoiceAudioCache()
     unlockVoiceAudio()
 
     callActiveRef.current = true
@@ -1331,6 +1377,7 @@ export default function useSnowballCall({
     clearNativeRestartTimer()
     stopSpeechRecognition()
     stopVoiceImmediately()
+    resetVoiceAudioCache()
     setCallActive(false)
 
     setData(prev => ({
