@@ -1160,7 +1160,7 @@ private struct IOSSevenDayDailyTableContainer: View {
         let today = calendar.startOfDay(for: Date())
         let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
         let start = calendar.date(byAdding: .day, value: -29, to: yesterday) ?? yesterday
-        return start...yesterday
+        return start...today
     }
 
     private var detailFilter: DeviceActivityFilter {

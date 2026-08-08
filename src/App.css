@@ -3363,6 +3363,7 @@ button,
    ====================================================== */
 .todayStatusPaper {
   padding: 18px 22px 22px !important;
+  transform: translateY(-40px);
 }
 
 .todayStatusBack {

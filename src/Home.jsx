@@ -114,6 +114,8 @@ export default function Home({
   showThingsPanel,
   showPeoplePanel,
   setUsageModal,
+  usageModal = false,
+  todayStatusModal = false,
   canPlayMotionVideo,
   interactionFrameSrc,
   interactionPlaying,
@@ -159,7 +161,9 @@ export default function Home({
   const GOOD_NIGHT_SOUND_KEY = 'snowball-good-night-sound-v1'
   const [goodNightModal, setGoodNightModal] = useState(null)
   const [rememberGoodNightIntro, setRememberGoodNightIntro] = useState(false)
-  const suppressIOSMiniReport = Boolean(call.callActive || goodNightModal)
+  const suppressIOSMiniReport = Boolean(
+    call.callActive || goodNightModal || usageModal || todayStatusModal
+  )
   const [goodNightSoundEnabled, setGoodNightSoundEnabled] = useState(() => {
     try {
       return localStorage.getItem(GOOD_NIGHT_SOUND_KEY) !== 'off'
