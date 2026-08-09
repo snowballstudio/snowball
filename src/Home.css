@@ -2216,8 +2216,8 @@ top: 2px;
 @media (max-width: 900px) {
   :root {
     /* 五个数字合计建议保持 100。 */
-    --home-area-hero: 26fr;
-    --home-area-status: 23fr;
+    --home-area-hero: 26.5fr;
+    --home-area-status: 22.5fr;
     --home-area-actions: 5.5fr;
     --home-area-snow: 36fr;
     --home-area-nav: 9.5fr;
@@ -2551,4 +2551,3 @@ top: 2px;
     top: var(--snowball-safe-top, 0px) !important;
   }
 }
-

@@ -21,6 +21,10 @@ public final class IOSPhotoIndexPlugin: CAPPlugin,
         CAPPluginMethod(
             name: "presentPhoto",
             returnType: CAPPluginReturnPromise
+        ),
+        CAPPluginMethod(
+            name: "exportRecordFile",
+            returnType: CAPPluginReturnPromise
         )
     ]
 
@@ -102,6 +106,75 @@ public final class IOSPhotoIndexPlugin: CAPPlugin,
                     "cancelled": false
                 ])
             }
+        }
+    }
+
+    @objc public func exportRecordFile(_ call: CAPPluginCall) {
+        let content = call.getString("content") ?? ""
+        var fileName = call.getString("fileName") ?? "雪粒记录.json"
+
+        fileName = fileName
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "\\", with: "_")
+
+        guard let data = content.data(using: .utf8) else {
+            call.reject("记录文件内容无法转换。")
+            return
+        }
+
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(fileName)
+
+        do {
+            try data.write(to: fileURL, options: .atomic)
+        } catch {
+            call.reject("记录文件没有生成成功。", nil, error)
+            return
+        }
+
+        DispatchQueue.main.async {
+            guard let presenter = self.bridge?.viewController else {
+                try? FileManager.default.removeItem(at: fileURL)
+                call.reject("找不到雪粒主页面。")
+                return
+            }
+
+            let activity = UIActivityViewController(
+                activityItems: [fileURL],
+                applicationActivities: nil
+            )
+
+            activity.completionWithItemsHandler = {
+                _,
+                completed,
+                _,
+                error in
+
+                try? FileManager.default.removeItem(at: fileURL)
+
+                if let error {
+                    call.reject("记录文件没有导出成功。", nil, error)
+                    return
+                }
+
+                call.resolve([
+                    "cancelled": !completed,
+                    "saved": completed
+                ])
+            }
+
+            if let popover = activity.popoverPresentationController {
+                popover.sourceView = presenter.view
+                popover.sourceRect = CGRect(
+                    x: presenter.view.bounds.midX,
+                    y: presenter.view.bounds.midY,
+                    width: 1,
+                    height: 1
+                )
+                popover.permittedArrowDirections = []
+            }
+
+            presenter.present(activity, animated: true)
         }
     }
 

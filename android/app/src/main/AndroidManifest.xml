@@ -32,7 +32,8 @@
         <service
             android:name=".StepCounterForegroundService"
             android:exported="false"
-            android:foregroundServiceType="health" />
+            android:foregroundServiceType="health"
+        />
 
         <activity
             android:name=".HealthPermissionActivity"

@@ -41,6 +41,8 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -191,6 +193,85 @@ public class AndroidPhotoIndexPlugin extends Plugin {
             response.put("photos", photos);
             call.resolve(response);
         });
+    }
+
+    @PluginMethod
+    public void exportRecordFile(PluginCall call) {
+        String content = call.getString("content");
+        String fileName = call.getString("fileName");
+
+        if (content == null) content = "";
+        if (fileName == null || fileName.trim().isEmpty()) {
+            fileName = "snowlet-records.json";
+        }
+
+        // 只保留文件名，避免路径字符进入系统保存位置。
+        fileName = fileName
+            .replace("/", "_")
+            .replace("\\", "_");
+
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE, fileName);
+
+        startActivityForResult(
+            call,
+            intent,
+            "handleRecordFileCreateResult"
+        );
+    }
+
+    @ActivityCallback
+    private void handleRecordFileCreateResult(
+        PluginCall call,
+        @Nullable androidx.activity.result.ActivityResult result
+    ) {
+        if (call == null) return;
+
+        if (
+            result == null
+                || result.getResultCode() != android.app.Activity.RESULT_OK
+        ) {
+            JSObject cancelled = new JSObject();
+            cancelled.put("cancelled", true);
+            call.resolve(cancelled);
+            return;
+        }
+
+        Intent data = result.getData();
+        Uri uri = data == null ? null : data.getData();
+
+        if (uri == null) {
+            call.reject("系统没有返回记录文件的保存位置。");
+            return;
+        }
+
+        String content = call.getString("content");
+        if (content == null) content = "";
+
+        try (
+            OutputStream output =
+                getContext()
+                    .getContentResolver()
+                    .openOutputStream(uri, "wt")
+        ) {
+            if (output == null) {
+                call.reject("无法打开记录文件的保存位置。");
+                return;
+            }
+
+            output.write(content.getBytes(StandardCharsets.UTF_8));
+            output.flush();
+
+            JSObject response = new JSObject();
+            response.put("cancelled", false);
+            response.put("saved", true);
+            response.put("uri", uri.toString());
+            call.resolve(response);
+        } catch (Exception error) {
+            call.reject("记录文件没有保存成功。", error);
+        }
     }
 
     @PluginMethod

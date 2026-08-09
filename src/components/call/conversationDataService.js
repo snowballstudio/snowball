@@ -71,6 +71,39 @@ export async function readConversationRecord(date) {
   })
 }
 
+
+export async function readAllConversationRecords() {
+  const db = await openConversationDb()
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CONVERSATION_STORE, 'readonly')
+    const request = tx.objectStore(CONVERSATION_STORE).getAll()
+
+    request.onsuccess = () => {
+      const records = Array.isArray(request.result) ? request.result : []
+      resolve(
+        records
+          .map(record => ({
+            ...emptyConversationRecord(record?.dateKey || record?.date),
+            ...(record || {}),
+            date: normalizeDateKey(record?.dateKey || record?.date),
+            dateKey: normalizeDateKey(record?.dateKey || record?.date),
+            foodDescription: String(record?.foodDescription || ''),
+            moodDescription: String(record?.moodDescription || ''),
+          }))
+          .filter(record => record.dateKey)
+          .sort((left, right) => String(left.dateKey).localeCompare(String(right.dateKey)))
+      )
+    }
+    request.onerror = () => reject(request.error || new Error('Unable to read conversation records'))
+    tx.oncomplete = () => db.close()
+    tx.onerror = () => {
+      db.close()
+      reject(tx.error || new Error('Unable to read conversation records'))
+    }
+  })
+}
+
 export async function saveConversationRecord(record) {
   const dateKey = normalizeDateKey(record?.dateKey || record?.date)
   if (!dateKey) throw new Error('Conversation date is required')

@@ -3363,7 +3363,22 @@ button,
    ====================================================== */
 .todayStatusPaper {
   padding: 18px 22px 22px !important;
-  transform: translateY(-40px);
+}
+
+/* 今日状态只在手机端按实际运行环境修正垂直位置。
+   不再用一个全局 translateY 同时套用 APP 与浏览器。 */
+@media (max-width: 900px) {
+  .todayStatusOverlay--ios .todayStatusPaper {
+    transform: translateY(-40px);
+  }
+
+  .todayStatusOverlay--android .todayStatusPaper {
+    transform: none;
+  }
+
+  .todayStatusOverlay--web .todayStatusPaper {
+    transform: translateY(-55px);
+  }
 }
 
 .todayStatusBack {
@@ -4892,3 +4907,51 @@ button.dailyScreenValuePlain { cursor: pointer; }
   border: 0 !important;
   background: #fff !important;
 }
+
+/* 2026-08-09 使用说明底部四个文字链接：同一行均匀对称 */
+.usageFooterLinks {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  align-items: center !important;
+  gap: 0 !important;
+  margin: 18px 0 2px !important;
+  padding-top: 14px !important;
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+.usageFooterLinks .usageLegalLinks,
+.usageFooterLinks .usageRecordLinks {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  align-items: center !important;
+  gap: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-top: 0 !important;
+}
+
+.usageFooterLinks .usageLegalLinks button,
+.usageFooterLinks .usageRecordLinks button {
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 2px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px !important;
+  box-shadow: none !important;
+  text-align: center !important;
+}
+
+.usageFooterLinks .usageLegalLinks button {
+  color: rgba(241,223,177,0.9) !important;
+}
+
+.usageFooterLinks .usageRecordLinks button {
+  color: #dad6d6 !important;
+}
+

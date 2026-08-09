@@ -177,6 +177,7 @@ export default function Home({
   const homePageRef = useRef(null)
   const miniPlacementSequenceRef = useRef(0)
 
+
   /*
    iPhone 重装或冷启动时，WKWebView 偶尔会恢复旧的 scroll offset，
    造成固定五区主页整体上移。这里只归零滚动位置，不修改任何区域高度、
@@ -626,7 +627,7 @@ export default function Home({
             <strong>雪粒</strong>
             <span>第 {adoptDays} 天 · {gen.label}</span>
           </div>
-          <button type="button" onClick={() => setUsageModal(true)}>使用说明</button>
+          <button type="button" onClick={() => setUsageModal(true)}>说明</button>
         </div>
       )}
       <section className="heroCard">

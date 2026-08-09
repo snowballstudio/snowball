@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import {
   isIOSPhotoIndexAvailable,
   pickIOSPhotoIndexes,
@@ -9,6 +9,34 @@ import {
   pickAndroidPhotoIndexes,
   presentAndroidIndexedPhoto,
 } from './androidPhotoIndexService.js'
+
+
+const IOSPhotoIndexNative = registerPlugin('IOSPhotoIndex')
+const AndroidPhotoIndexNative = registerPlugin('AndroidPhotoIndex')
+
+export async function exportNativeRecordFile(content, fileName) {
+  if (!Capacitor.isNativePlatform()) {
+    throw new Error('记录文件原生导出只在安装版 APP 中启用。')
+  }
+
+  const payload = {
+    content: String(content || ''),
+    fileName: String(fileName || '雪粒记录.json'),
+  }
+
+  const platform = Capacitor.getPlatform()
+
+  if (platform === 'ios') {
+    return IOSPhotoIndexNative.exportRecordFile(payload)
+  }
+
+  if (platform === 'android') {
+    return AndroidPhotoIndexNative.exportRecordFile(payload)
+  }
+
+  throw new Error('当前平台无法导出记录文件。')
+}
+
 
 export function isPhotoIndexAvailable() {
   return isIOSPhotoIndexAvailable() || isAndroidPhotoIndexAvailable()

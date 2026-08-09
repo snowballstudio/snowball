@@ -29,6 +29,7 @@ import { restoreIOSPlaybackAudioSession } from './components/audio/iosAudioSessi
 import { isPhotoIndexAvailable, pickPhotoIndexes, presentIndexedPhoto } from './components/photo-index/photoIndexService.js'
 import { ingestStepPayload, stepValueForDate } from './stepDataService.js'
 import { conversationBrainPercent, emptyConversationRecord, readConversationRecord, saveConversationRecord } from './components/call/conversationDataService.js'
+import { exportSnowletUserRecords, importSnowletUserRecords } from './components/data/userDataTransferService.js'
 
 const STORAGE_KEY = 'healthy-snowball-v8'
 const TEST_PASSWORD = 'snowball'
@@ -82,9 +83,9 @@ const VIDEO_MAP = {
 
 const REWARD_VIDEO = '/three_days_bonus.mp4'
 
-const USAGE_TEXT = `声明：雪粒是一款生活管理APP，旨在梳理与自律，其中数据分析仅供参考，不构成诊断与建议。
+const USAGE_TEXT = `雪粒是一款生活管理APP，旨在梳理与自律，其中数据分析仅供参考，不构成诊断与建议。
 
-数据来自用户的授权提供，仅存在用户本机。
+数据均来自用户授权提供，仅存于本机。
 
 雪粒的形象可随每天的数据变化而变化。
 
@@ -2131,8 +2132,13 @@ function StatusWord({ type = 'good', children }) {
 
 function TodayStatusModal({ report, onClose }) {
   if (!report) return null
+
+  const platformClass = Capacitor.isNativePlatform()
+    ? `todayStatusOverlay--${Capacitor.getPlatform()}`
+    : 'todayStatusOverlay--web'
+
   return (
-    <div className="todayStatusOverlay" role="dialog" aria-modal="true" aria-label="查看今日状态">
+    <div className={`todayStatusOverlay ${platformClass}`} role="dialog" aria-modal="true" aria-label="查看今日状态">
       <div className="todayStatusPaper">
         <button type="button" className="todayStatusBack" onClick={onClose} aria-label="返回主页">&lt;</button>
         <h2>查看今日状态</h2>
@@ -3016,17 +3022,17 @@ function App() {
     const brainReady = currentBrainScore >= 10
 
     const stepText = stepMissing
-      ? <>昨天的步数还没回来，雪粒先安静地等着你补上。</>
+      ? <>昨天的步数还没更新，雪粒默认偏瘦。</>
       : stepGreat
-        ? <>昨天运动特别足，雪粒今天<StatusWord type="gold">胖嘟嘟</StatusWord>的，很有精神。</>
+        ? <>昨天走路多，雪粒今天<StatusWord type="gold">胖嘟嘟</StatusWord>的。</>
         : stepGood
-          ? <>昨天运动够了，雪粒的体型保持得<StatusWord type="good">正好</StatusWord>。</>
-          : <>昨天活动偏少，雪粒有点<StatusWord type="warn">偏瘦</StatusWord>。</>
+          ? <>昨天步数够了，雪粒的体型<StatusWord type="good">正好</StatusWord>。</>
+          : <>昨天步数偏少，雪粒有点<StatusWord type="warn">偏瘦</StatusWord>。</>
 
     const sleepText = sleepMissing
-      ? <>昨天的离机时间还没有记录，雪粒的毛发状态还在等待更新。</>
+      ? <>昨天的休息时间未记录，雪粒的毛形默认稀疏。</>
       : sleepGoodFlag
-        ? <>昨天休息比较准时，雪粒的毛形<StatusWord type="good">浓密</StatusWord>柔软。</>
+        ? <>昨天休息比较准时，雪粒的毛形<StatusWord type="good">浓密</StatusWord>。</>
         : <>昨天休息有点晚，雪粒毛形变得<StatusWord type="warn">稀疏</StatusWord>。</>
 
     const foodText = foodMissing
@@ -3047,7 +3053,7 @@ function App() {
     } else if (goodCount >= 2) {
       summaryLine = <>今天还可以继续改进，才会到<StatusWord type="good">最佳状态</StatusWord>。</>
     } else {
-      summaryLine = <>今天比较普通，改进作息，争取恢复<StatusWord type="good">状态</StatusWord>。</>
+      summaryLine = <>今天比较普通，继续努力，恢复<StatusWord type="good">状态</StatusWord>。</>
     }
 
     let companionLine
@@ -3603,6 +3609,37 @@ function App() {
     }
     setVersionTapCount(next)
     versionTapTimerRef.current = window.setTimeout(() => setVersionTapCount(0), 3500)
+  }
+
+  async function exportUserRecords() {
+    try {
+      const result = await exportSnowletUserRecords(data)
+      if (result?.method === 'cancelled') return
+      const counts = result?.counts || {}
+      window.alert(
+        `记录已导出：饮食/心情 ${counts.daily || 0} 天，足迹 ${counts.footprints || 0} 条，物品 ${counts.things || 0} 条，人物 ${counts.people || 0} 条。`
+      )
+    } catch (error) {
+      console.error('导出雪粒记录失败：', error)
+      window.alert(String(error?.message || error || '导出失败，请稍后再试。'))
+    }
+  }
+
+  async function importUserRecords() {
+    try {
+      const result = await importSnowletUserRecords(data)
+      if (!result || result.cancelled) return
+
+      setData(result.nextData)
+
+      const s = result.summary || {}
+      window.alert(
+        `导入完成：饮食/心情新增 ${s.dailyAdded || 0} 天、合并 ${s.dailyMerged || 0} 天；足迹新增 ${s.footprintsAdded || 0} 条；物品新增 ${s.thingsAdded || 0} 条；人物新增 ${s.peopleAdded || 0} 条。重复记录已自动跳过。`
+      )
+    } catch (error) {
+      console.error('导入雪粒记录失败：', error)
+      window.alert(String(error?.message || error || '导入失败，请检查记录文件。'))
+    }
   }
 
   function closeDeveloperMode() {
@@ -4870,7 +4907,7 @@ const homeFloatingFootprintMemory = ''
         deviceData={DeviceData}
       />
       {usageModal && (
-        <div className="noticeOverlay usageInfoOverlay" role="dialog" aria-modal="true" aria-label="使用说明">
+        <div className="noticeOverlay usageInfoOverlay" role="dialog" aria-modal="true" aria-label="说明">
           <div className="noticeBox usageInfoBox">
             <div className="usageInfoHeader">
               <button
@@ -4879,7 +4916,7 @@ const homeFloatingFootprintMemory = ''
                 aria-label="返回主页"
                 onClick={() => { setUsageDocument(''); setUsageModal(false) }}
               >‹</button>
-              <h2>使用说明</h2>
+              <h2>说明</h2>
               <span className="usageInfoHeaderSpacer" aria-hidden="true" />
             </div>
             <div className="usageInfoText">{USAGE_TEXT}</div>
@@ -4892,9 +4929,15 @@ const homeFloatingFootprintMemory = ''
                 <button type="button" className="developerModeLine" onClick={closeDeveloperMode}>开发者模式已开启 · 点此关闭</button>
               )}
             </div>
-            <div className="usageLegalLinks" aria-label="法律文件">
-              <button type="button" onClick={() => setUsageDocument('privacy')}>隐私政策</button>
-              <button type="button" onClick={() => setUsageDocument('terms')}>用户协议</button>
+            <div className="usageFooterLinks">
+              <div className="usageLegalLinks" aria-label="法律文件">
+                <button type="button" onClick={() => setUsageDocument('privacy')}>隐私政策</button>
+                <button type="button" onClick={() => setUsageDocument('terms')}>用户协议</button>
+              </div>
+              <div className="usageRecordLinks" aria-label="记录导入导出">
+                <button type="button" onClick={exportUserRecords}>导出记录</button>
+                <button type="button" onClick={importUserRecords}>导入记录</button>
+              </div>
             </div>
           </div>
         </div>
