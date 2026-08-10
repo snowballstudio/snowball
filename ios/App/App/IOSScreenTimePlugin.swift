@@ -8,6 +8,7 @@ import UIKit
 @objc(IOSScreenTimePlugin)
 public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     private var homeMiniHost: UIViewController?
+    private var primeReportHost: UIViewController?
 
 
     public let identifier = "IOSScreenTimePlugin"
@@ -16,6 +17,7 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "getAuthorizationStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestAuthorization", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "primeScreenTimeReports", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "presentReport", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "presentSevenDayReport", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "presentSevenDayDailyTable", returnType: CAPPluginReturnPromise),
@@ -42,7 +44,14 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             do {
                 try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
                 await MainActor.run {
-                    call.resolve(self.statusPayload())
+                    /*
+                     全新安装时，授权成功并不等于 DeviceActivityReport Extension
+                     已经真正启动。授权完成后立即做一次原生预热；这里不读取数据，
+                     只把 Report View 挂入有效视图层级数秒。
+                    */
+                    self.primeScreenTimeReportView { _ in
+                        call.resolve(self.statusPayload())
+                    }
                 }
             } catch {
                 await MainActor.run {
@@ -52,6 +61,23 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                         error
                     )
                 }
+            }
+        }
+    }
+
+
+    @objc public func primeScreenTimeReports(_ call: CAPPluginCall) {
+        guard AuthorizationCenter.shared.authorizationStatus == .approved else {
+            call.reject("请先授权苹果屏幕时间。")
+            return
+        }
+
+        DispatchQueue.main.async {
+            self.primeScreenTimeReportView { primed in
+                call.resolve([
+                    "primed": primed,
+                    "authorization": self.statusPayload()
+                ])
             }
         }
     }
@@ -475,6 +501,106 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             of: calendar.startOfDay(for: day)
         ) ?? calendar.startOfDay(for: day)
     }
+
+    /*
+     MARK: - Fresh-install Screen Time Report warm-up
+
+     目的：
+     新装 APP 完成 Family Controls 授权后，主动让一个真正的
+     DeviceActivityReport 进入可布局视图层级，给 Report Extension
+     一次完整启动机会。这里不把任何 Screen Time 数据返回给 JS。
+    */
+    private func primeScreenTimeReportView(
+        completion: @escaping (Bool) -> Void
+    ) {
+        guard AuthorizationCenter.shared.authorizationStatus == .approved else {
+            completion(false)
+            return
+        }
+
+        guard let presenter = self.bridge?.viewController else {
+            completion(false)
+            return
+        }
+
+        removePrimeReportHost()
+
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: Date())
+        guard
+            let start = calendar.date(byAdding: .day, value: -7, to: today),
+            let end = calendar.date(byAdding: .day, value: 1, to: today)
+        else {
+            completion(false)
+            return
+        }
+
+        let filter = DeviceActivityFilter(
+            segment: .hourly(
+                during: DateInterval(start: start, end: end)
+            ),
+            users: .all,
+            devices: .all
+        )
+
+        let report = DeviceActivityReport(
+            DeviceActivityReport.Context("Snowball Home Mini"),
+            filter: filter
+        )
+        .background(Color.clear)
+
+        let host = UIHostingController(rootView: report)
+        host.view.backgroundColor = .clear
+        host.view.isOpaque = false
+        host.view.isUserInteractionEnabled = false
+
+        /*
+         不能把 Report 放到屏幕外或压成 1×1。
+         之前调试已经验证：部分 iPhone 只有在有效可布局尺寸下
+         才会真正启动 Report Extension。
+        */
+        let bounds = presenter.view.bounds
+        host.view.frame = CGRect(
+            x: 0,
+            y: 0,
+            width: max(240, min(bounds.width, 360)),
+            height: max(240, min(bounds.height, 360))
+        )
+        host.view.alpha = 0.02
+        host.view.autoresizingMask = [.flexibleRightMargin, .flexibleBottomMargin]
+
+        presenter.addChild(host)
+        presenter.view.insertSubview(host.view, at: 0)
+        host.didMove(toParent: presenter)
+        host.view.setNeedsLayout()
+        host.view.layoutIfNeeded()
+        primeReportHost = host
+
+        /*
+         给系统几秒钟启动 Report Extension。
+         这个 View 几乎透明、不可交互，不会覆盖雪球页面。
+        */
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            let stillCurrent = self.primeReportHost === host
+            if stillCurrent {
+                self.removePrimeReportHost()
+            }
+            completion(true)
+        }
+    }
+
+
+    private func removePrimeReportHost() {
+        guard let host = primeReportHost else {
+            return
+        }
+
+        host.willMove(toParent: nil)
+        host.view.removeFromSuperview()
+        host.removeFromParent()
+        primeReportHost = nil
+    }
+
 
     private func removeHomeMiniHost() {
         guard let host = homeMiniHost else {

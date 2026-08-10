@@ -35,6 +35,8 @@ const STORAGE_KEY = 'healthy-snowball-v8'
 const TEST_PASSWORD = 'snowball'
 const CUSTOM_YEARS_BG_IDB_KEY = 'footprint-custom-background'
 const DeviceData = registerPlugin('DeviceData')
+const IOSScreenTimeNative = registerPlugin('IOSScreenTime')
+const IOS_SCREEN_TIME_PRIMED_KEY = 'snowlet-ios-screen-time-primed-v1'
 const DEVICE_USAGE_PROMPT_KEY = 'snowball-device-usage-prompt-v1'
 const DEVICE_INITIAL_IMPORT_DAYS = 7
 
@@ -2568,6 +2570,63 @@ function App() {
       window.clearTimeout(timer)
     }
   }, [showDataPanel, dailyMode, data.editingDailyRecordId, data.editingDailyRecordDateKey])
+
+
+  /*
+    iOS 全新安装 Screen Time 初始化：
+    - 不读取、不导出任何苹果屏幕时间数据到 JS；
+    - 仅在 Family Controls 已授权后，让原生端真正挂载一次
+      DeviceActivityReport，给 Report Extension 一次完整启动机会；
+    - 成功后在本机记一次标记；失败不记标记，下一次回到前台会重试。
+  */
+  useEffect(() => {
+    if (
+      !Capacitor.isNativePlatform()
+      || Capacitor.getPlatform() !== 'ios'
+    ) return undefined
+
+    let alive = true
+    let running = false
+
+    async function primeIOSScreenTimeIfNeeded() {
+      if (!alive || running) return
+      if (localStorage.getItem(IOS_SCREEN_TIME_PRIMED_KEY) === '1') return
+
+      running = true
+      try {
+        const authorization = await getIOSScreenTimeStatus()
+        if (!alive || authorization?.status !== 'approved') return
+
+        const result = await IOSScreenTimeNative.primeScreenTimeReports()
+        if (alive && result?.primed) {
+          localStorage.setItem(IOS_SCREEN_TIME_PRIMED_KEY, '1')
+        }
+      } catch (error) {
+        // 首次授权刚完成时 iOS 可能需要短暂时间准备 Report Extension。
+        // 不把失败记为完成；用户回到前台/重新打开 APP 时会自动重试。
+        console.warn('苹果屏幕时间首次初始化暂未完成，将稍后重试。', error)
+      } finally {
+        running = false
+      }
+    }
+
+    function handleIOSPrimeVisible() {
+      if (document.visibilityState === 'visible') {
+        window.setTimeout(primeIOSScreenTimeIfNeeded, 800)
+      }
+    }
+
+    const firstTimer = window.setTimeout(primeIOSScreenTimeIfNeeded, 1200)
+    document.addEventListener('visibilitychange', handleIOSPrimeVisible)
+    window.addEventListener('focus', handleIOSPrimeVisible)
+
+    return () => {
+      alive = false
+      window.clearTimeout(firstTimer)
+      document.removeEventListener('visibilitychange', handleIOSPrimeVisible)
+      window.removeEventListener('focus', handleIOSPrimeVisible)
+    }
+  }, [])
 
 
   useEffect(() => {
