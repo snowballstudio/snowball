@@ -16,8 +16,8 @@
 
     /* 顶部猫背景 */
     --m-home-hero-blur: 2.5px;
-    --m-home-hero-brightness: 0.90;
-    --m-home-hero-saturate: 0.90;
+    --m-home-hero-brightness: 1.0;
+    --m-home-hero-saturate: 0.95;
     --m-home-hero-scale: 1.04;
 
     /* 顶部文字与猫 */
@@ -94,12 +94,12 @@
   html,
   body,
   #root {
-    background: #000 !important;
+    background: #151515 !important;
   }
 
   .app,
   .phoneShell {
-    background: #000 !important;
+    background: #15151515 !important;
     color: #f4f0e6 !important;
   }
 
@@ -356,7 +356,7 @@
   display: grid;
   gap: 0;
   padding: 4px 0;
-  background: rgba(7, 18, 32, 0.38);
+  background: rgba(7, 8, 32, 0.38);
   border-radius: 22px;
   border: 1px solid rgba(230, 235, 240, 0.08);
   overflow: hidden;

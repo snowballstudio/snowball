@@ -37,6 +37,14 @@ export async function exportNativeRecordFile(content, fileName) {
   throw new Error('当前平台无法导出记录文件。')
 }
 
+export async function pickNativeRecordFile() {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'ios') {
+    throw new Error('记录文件原生选择器只在 iPhone 安装版 APP 中启用。')
+  }
+
+  return IOSPhotoIndexNative.pickRecordFile()
+}
+
 
 export function isPhotoIndexAvailable() {
   return isIOSPhotoIndexAvailable() || isAndroidPhotoIndexAvailable()

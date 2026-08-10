@@ -4,7 +4,7 @@ import {
   readConversationRecord,
   saveConversationRecord,
 } from '../call/conversationDataService.js'
-import { exportNativeRecordFile } from '../photo-index/photoIndexService.js'
+import { exportNativeRecordFile, pickNativeRecordFile } from '../photo-index/photoIndexService.js'
 
 const EXPORT_APP = 'Snowlet'
 const EXPORT_KIND = 'snowlet-user-records'
@@ -263,14 +263,25 @@ async function saveJsonFile(payload) {
   return { fileName, method: 'download' }
 }
 
-function chooseJsonFile() {
+async function chooseJsonFile() {
+  // iPhone 安装版继续走上一轮新增的原生 UIDocumentPicker。
+  // Android / 华为仍保持原来的网页文件选择路径，不改变已验证行为。
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
+    const result = await pickNativeRecordFile()
+    if (!result || result.cancelled) return null
+
+    return {
+      file: null,
+      fileName: String(result.fileName || ''),
+      text: String(result.content || ''),
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json,application/json'
 
-    // iPhone Safari 对 display:none 的动态 file input 有时不会真正打开选择器。
-    // 保持元素存在于页面中，只把它缩到不可见；读取完成后再移除。
     Object.assign(input.style, {
       position: 'fixed',
       right: '0',
@@ -284,13 +295,17 @@ function chooseJsonFile() {
 
     let settled = false
     let readTimer = null
+    let pickerTimer = null
 
     const cleanup = () => {
       if (readTimer) {
         window.clearTimeout(readTimer)
         readTimer = null
       }
-      window.removeEventListener('focus', handleWindowFocus)
+      if (pickerTimer) {
+        window.clearTimeout(pickerTimer)
+        pickerTimer = null
+      }
       input.remove()
     }
 
@@ -308,19 +323,8 @@ function chooseJsonFile() {
       reject(error)
     }
 
-    const handleWindowFocus = () => {
-      // 用户从系统文件选择器返回但没有选择文件时，视为取消。
-      window.setTimeout(() => {
-        if (!settled && !input.files?.length) finishResolve(null)
-      }, 500)
-    }
-
-    input.addEventListener('change', () => {
-      const file = input.files?.[0]
-      if (!file) {
-        finishResolve(null)
-        return
-      }
+    const readSelectedFile = file => {
+      if (!file || settled) return
 
       const reader = new FileReader()
 
@@ -330,9 +334,16 @@ function chooseJsonFile() {
       }, 15000)
 
       reader.onload = () => {
+        const content = String(reader.result || '')
+        if (!content.trim()) {
+          finishReject(new Error('记录文件内容为空，请重新选择雪粒导出的 JSON 文件。'))
+          return
+        }
+
         finishResolve({
           file,
-          text: String(reader.result || ''),
+          fileName: String(file.name || ''),
+          text: content,
         })
       }
 
@@ -344,11 +355,40 @@ function chooseJsonFile() {
         if (!settled) finishReject(new Error('记录文件读取已中止。'))
       }
 
-      reader.readAsText(file, 'utf-8')
+      try {
+        reader.readAsText(file, 'utf-8')
+      } catch (error) {
+        finishReject(error)
+      }
+    }
+
+    input.addEventListener('change', () => {
+      const file = input.files?.[0]
+      if (!file) {
+        finishResolve(null)
+        return
+      }
+      readSelectedFile(file)
     })
 
-    window.addEventListener('focus', handleWindowFocus)
+    // Safari / 新版浏览器支持 file input 的 cancel 事件时，明确处理用户取消。
+    // 不再使用 window.focus 判断取消：iPhone Safari 返回页面时 focus
+    // 可能早于 change/input.files 更新，旧逻辑会把真正选中的文件误判成“取消”。
+    input.addEventListener('cancel', () => {
+      finishResolve(null)
+    })
+
     document.body.appendChild(input)
+
+    // 只作为兜底：某些旧浏览器既不发 change 也不发 cancel 时，
+    // 不让 Promise 永久悬挂。正常选择文件不会等到这里。
+    pickerTimer = window.setTimeout(() => {
+      if (!settled) {
+        const file = input.files?.[0]
+        if (file) readSelectedFile(file)
+        else finishResolve(null)
+      }
+    }, 120000)
 
     try {
       input.click()
@@ -463,6 +503,7 @@ export async function importSnowletUserRecords(data = {}) {
   let dailyAdded = 0
   let dailyMerged = 0
   let dailySkipped = 0
+  const importedDailyDateSet = new Set()
 
   for (const raw of daily) {
     const incoming = userConversationRecord(raw)
@@ -470,6 +511,11 @@ export async function importSnowletUserRecords(data = {}) {
       dailySkipped += 1
       continue
     }
+
+    // 只要备份中这一天存在有效的饮食/心情原始记录，就交给 App 在导入后
+    // 用当前版本的识别词表重新计算日常表。即使原始文字与本机完全重复，也要重算，
+    // 这样修改主数据后重新导入同一份备份，也能刷新派生关键词。
+    importedDailyDateSet.add(incoming.date)
 
     const current = await readConversationRecord(incoming.date)
     const nextFood = mergeTextLines(current.foodDescription, incoming.food)
@@ -539,6 +585,7 @@ export async function importSnowletUserRecords(data = {}) {
   return {
     cancelled: false,
     nextData,
+    importedDailyDates: [...importedDailyDateSet],
     summary: {
       dailyAdded,
       dailyMerged,

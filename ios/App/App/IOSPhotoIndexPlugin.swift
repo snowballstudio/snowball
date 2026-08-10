@@ -4,11 +4,13 @@ import Photos
 import PhotosUI
 import QuartzCore
 import UIKit
+import UniformTypeIdentifiers
 
 @objc(IOSPhotoIndexPlugin)
 public final class IOSPhotoIndexPlugin: CAPPlugin,
     CAPBridgedPlugin,
-    PHPickerViewControllerDelegate {
+    PHPickerViewControllerDelegate,
+    UIDocumentPickerDelegate {
 
     public let identifier = "IOSPhotoIndexPlugin"
     public let jsName = "IOSPhotoIndex"
@@ -25,10 +27,17 @@ public final class IOSPhotoIndexPlugin: CAPPlugin,
         CAPPluginMethod(
             name: "exportRecordFile",
             returnType: CAPPluginReturnPromise
+        ),
+        CAPPluginMethod(
+            name: "pickRecordFile",
+            returnType: CAPPluginReturnPromise
         )
     ]
 
     private var pendingPickerCall: CAPPluginCall?
+    private var pendingRecordImportCall: CAPPluginCall?
+    private var pendingRecordExportCall: CAPPluginCall?
+    private var pendingRecordExportURL: URL?
 
     @objc public func pickPhotos(_ call: CAPPluginCall) {
         guard pendingPickerCall == nil else {
@@ -110,6 +119,12 @@ public final class IOSPhotoIndexPlugin: CAPPlugin,
     }
 
     @objc public func exportRecordFile(_ call: CAPPluginCall) {
+        guard pendingRecordExportCall == nil,
+              pendingRecordImportCall == nil else {
+            call.reject("记录文件选择器已经打开。")
+            return
+        }
+
         let content = call.getString("content") ?? ""
         var fileName = call.getString("fileName") ?? "雪粒记录.json"
 
@@ -139,43 +154,117 @@ public final class IOSPhotoIndexPlugin: CAPPlugin,
                 return
             }
 
-            let activity = UIActivityViewController(
-                activityItems: [fileURL],
-                applicationActivities: nil
+            // iOS 备份文件直接交给系统“文件”保存器。
+            // 这样导出的 JSON 是长期可见文件，不再只存在于临时分享目录。
+            let picker = UIDocumentPickerViewController(
+                forExporting: [fileURL],
+                asCopy: true
             )
+            picker.delegate = self
+            picker.modalPresentationStyle = .formSheet
 
-            activity.completionWithItemsHandler = {
-                _,
-                completed,
-                _,
-                error in
-
-                try? FileManager.default.removeItem(at: fileURL)
-
-                if let error {
-                    call.reject("记录文件没有导出成功。", nil, error)
-                    return
-                }
-
-                call.resolve([
-                    "cancelled": !completed,
-                    "saved": completed
-                ])
-            }
-
-            if let popover = activity.popoverPresentationController {
-                popover.sourceView = presenter.view
-                popover.sourceRect = CGRect(
-                    x: presenter.view.bounds.midX,
-                    y: presenter.view.bounds.midY,
-                    width: 1,
-                    height: 1
-                )
-                popover.permittedArrowDirections = []
-            }
-
-            presenter.present(activity, animated: true)
+            self.pendingRecordExportCall = call
+            self.pendingRecordExportURL = fileURL
+            presenter.present(picker, animated: true)
         }
+    }
+
+    @objc public func pickRecordFile(_ call: CAPPluginCall) {
+        guard pendingRecordImportCall == nil,
+              pendingRecordExportCall == nil else {
+            call.reject("记录文件选择器已经打开。")
+            return
+        }
+
+        DispatchQueue.main.async {
+            guard let presenter = self.bridge?.viewController else {
+                call.reject("找不到雪粒主页面。")
+                return
+            }
+
+            let picker = UIDocumentPickerViewController(
+                forOpeningContentTypes: [.json],
+                asCopy: true
+            )
+            picker.delegate = self
+            picker.allowsMultipleSelection = false
+            picker.modalPresentationStyle = .formSheet
+
+            self.pendingRecordImportCall = call
+            presenter.present(picker, animated: true)
+        }
+    }
+
+    public func documentPicker(
+        _ controller: UIDocumentPickerViewController,
+        didPickDocumentsAt urls: [URL]
+    ) {
+        if let exportCall = pendingRecordExportCall {
+            pendingRecordExportCall = nil
+            cleanupPendingRecordExportFile()
+            exportCall.resolve([
+                "cancelled": false,
+                "saved": true
+            ])
+            return
+        }
+
+        guard let importCall = pendingRecordImportCall else { return }
+        pendingRecordImportCall = nil
+
+        guard let fileURL = urls.first else {
+            importCall.resolve(["cancelled": true])
+            return
+        }
+
+        let didAccess = fileURL.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess {
+                fileURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        do {
+            let data = try Data(contentsOf: fileURL)
+            guard let content = String(data: data, encoding: .utf8) else {
+                importCall.reject("记录文件不是 UTF-8 文本，无法读取。")
+                return
+            }
+
+            importCall.resolve([
+                "cancelled": false,
+                "fileName": fileURL.lastPathComponent,
+                "content": content
+            ])
+        } catch {
+            importCall.reject("记录文件无法读取。", nil, error)
+        }
+    }
+
+    public func documentPickerWasCancelled(
+        _ controller: UIDocumentPickerViewController
+    ) {
+        if let exportCall = pendingRecordExportCall {
+            pendingRecordExportCall = nil
+            cleanupPendingRecordExportFile()
+            exportCall.resolve([
+                "cancelled": true,
+                "saved": false
+            ])
+            return
+        }
+
+        if let importCall = pendingRecordImportCall {
+            pendingRecordImportCall = nil
+            importCall.resolve(["cancelled": true])
+        }
+    }
+
+    private func cleanupPendingRecordExportFile() {
+        if let url = pendingRecordExportURL {
+            try? FileManager.default.removeItem(at: url)
+        }
+        pendingRecordExportURL = nil
     }
 
     @objc public func presentPhoto(_ call: CAPPluginCall) {
