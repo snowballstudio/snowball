@@ -466,7 +466,7 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
                 totalsByDate[day, default: 0] +=
                     segment.totalActivityDuration
 
-                if segment.totalActivityDuration > 0 {
+                if segment.totalActivityDuration >= 30 {
                     let hourStart = segment.dateInterval.start
                     var candidate = segment.longestActivity?.end
 
@@ -711,7 +711,7 @@ private enum SnowballReportBuilder {
                 totalsByDate[segmentDay, default: 0] +=
                     segment.totalActivityDuration
 
-                guard segment.totalActivityDuration > 0 else {
+                guard segment.totalActivityDuration >= 30 else {
                     continue
                 }
 
