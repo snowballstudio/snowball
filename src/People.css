@@ -2415,3 +2415,417 @@
   }
 }
 
+
+
+/* ======================================================
+   2026-08-10｜人间人物编辑页紧凑版 + 自主印象色板
+   ====================================================== */
+
+/* 人物圆圈：颜色直接来自用户选色；性别头像始终清晰黑色。 */
+.personDot img {
+  opacity: 1 !important;
+  filter: brightness(0) !important;
+  mix-blend-mode: normal !important;
+}
+
+.peopleTableColorCell {
+  display: flex;
+  align-items: center;
+}
+.peopleTableColorCell i {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(35, 45, 52, 0.18);
+}
+
+/* 编辑框整体压缩。 */
+.peopleEditor {
+  width: min(520px, 94vw);
+  padding: 16px 18px !important;
+}
+
+.peopleEditor h3 {
+  display: none !important;
+}
+
+.peopleEditor label:not(.peoplePhotoUploadButton) {
+  gap: 4px !important;
+  margin-bottom: 7px !important;
+  font-size: 13px !important;
+}
+
+.peopleEditor input,
+.peopleEditor select,
+.peopleEditor textarea {
+  padding: 7px 10px !important;
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  box-sizing: border-box !important;
+}
+
+.peopleEditorGrid {
+  gap: 10px !important;
+}
+
+.peopleFieldError {
+  font-size: 11px !important;
+  margin-top: 1px !important;
+}
+
+/* 姓名 + 昵称、关系 + 联系：双列对称。 */
+.peopleNameNickGrid,
+.peopleRelationContactGrid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+}
+
+/* 从 / 至年月：同一行，年份约 5 位字符宽、月份约 3 位字符宽。 */
+.peopleDateRangeLine {
+  display: grid;
+  grid-template-columns:
+    auto minmax(5ch, 1fr) minmax(3ch, .58fr)
+    auto minmax(5ch, 1fr) minmax(3ch, .58fr);
+  align-items: center;
+  gap: 6px;
+  margin: 1px 0 8px;
+}
+
+.peopleDateRangeLabel {
+  color: #39485a;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.peopleDateToLabel {
+  margin-left: 3px;
+}
+
+.peopleDateRangeLine .peopleYearInput,
+.peopleDateRangeLine .peopleMonthInput {
+  min-width: 0 !important;
+  width: 100% !important;
+  padding-left: 7px !important;
+  padding-right: 7px !important;
+}
+
+/* 印象色板：横向红橙黄绿蓝紫；纵向白→纯色→黑。 */
+.peopleImpressionField {
+  position: relative;
+}
+
+.peopleColorPicker {
+  position: relative;
+}
+
+.peopleColorBoard {
+  position: relative;
+  width: 100%;
+  height: 92px;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+  border: 1px solid rgba(50, 60, 67, 0.14);
+  background:
+    linear-gradient(to bottom,
+      rgba(255,255,255,0.96) 0%,
+      rgba(255,255,255,0) 49%,
+      rgba(0,0,0,0) 51%,
+      rgba(0,0,0,0.94) 100%),
+    linear-gradient(to right,
+      #f04444 0%,
+      #f58a35 18%,
+      #e7d93e 35%,
+      #54b96b 52%,
+      #4a84d8 72%,
+      #8d5ac7 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
+}
+
+.peopleColorSelected {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.86);
+  box-shadow: 0 1px 5px rgba(30,38,45,.34);
+  pointer-events: none;
+}
+
+/* 备注保留最后，但压缩高度。 */
+.peopleEditor .peopleNoteField textarea {
+  min-height: 58px !important;
+  height: 58px !important;
+  resize: none !important;
+  line-height: 1.35 !important;
+}
+
+.peopleEditorActions {
+  gap: 10px !important;
+  margin-top: 2px !important;
+}
+
+.peopleEditorActions button {
+  padding: 8px 12px !important;
+}
+
+/* 手机端目标：打开编辑框时尽量一屏看见“保存 / 取消”。 */
+@media (max-width: 900px) {
+  .peopleEditorOverlay > .peopleEditor {
+    width: calc(100% - 34px) !important;
+    padding: 14px 16px !important;
+  }
+
+  .peopleEditor label:not(.peoplePhotoUploadButton) {
+    margin-bottom: 6px !important;
+  }
+
+  .peopleColorBoard {
+    height: 82px !important;
+  }
+
+  .peopleEditor .peopleNoteField textarea {
+    min-height: 52px !important;
+    height: 52px !important;
+  }
+
+  .peopleEditorActions button {
+    padding: 7px 10px !important;
+  }
+}
+
+
+/* ======================================================
+   2026-08-10｜人物编辑第二轮微调
+   - 输入组间距恢复到约 10px
+   - 关系 / 联系等高
+   - 印象色板更柔和、更高
+   - 修复人物圆圈颜色被旧 !important 背景规则覆盖的问题
+   ====================================================== */
+
+/* 关键修复：旧版后段曾把 personDot 强制 background-color: transparent !important。
+   现在由 JSX 传入 --person-color，并在最终规则中用 !important 正确显示。 */
+.personDot {
+  background-image: none !important;
+  background-color: var(--person-color, #c9d2cd) !important;
+}
+
+/* 各输入组之间统一恢复约 10px 的呼吸空间。 */
+.peopleEditor label:not(.peoplePhotoUploadButton) {
+  margin-bottom: 10px !important;
+}
+
+.peopleEditorGrid {
+  row-gap: 10px !important;
+  column-gap: 10px !important;
+  margin-bottom: 0 !important;
+}
+
+/* 每个双列组本身由内部 label 的 10px bottom margin 提供组间距。 */
+.peopleNameNickGrid,
+.peopleRelationContactGrid {
+  margin-bottom: 0 !important;
+}
+
+/* “关系”和“联系”视觉高度严格一致。 */
+.peopleRelationContactGrid input,
+.peopleRelationContactGrid select {
+  height: 38px !important;
+  min-height: 38px !important;
+  line-height: 1.2 !important;
+  box-sizing: border-box !important;
+}
+
+/* 从/至年月组与上下组之间保持约 10px。 */
+.peopleDateRangeLine {
+  margin-top: 0 !important;
+  margin-bottom: 10px !important;
+}
+
+.peopleDateRangeLine input {
+  height: 38px !important;
+  min-height: 38px !important;
+}
+
+/* 印象组下方也保持同样间距。 */
+.peopleImpressionField {
+  margin-bottom: 10px !important;
+}
+
+/* 色板：去掉视觉上的黑边，改淡灰边框，增加约 10px 高度。
+   使用偏粉雾/柔和的基础色，避免高饱和“彩虹条”感。 */
+.peopleColorBoard {
+  height: 102px !important;
+  border: 1px solid rgba(91, 99, 103, 0.18) !important;
+  outline: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    0 1px 4px rgba(48, 56, 60, 0.04) !important;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.96) 0%,
+      rgba(255,255,255,0.56) 24%,
+      rgba(255,255,255,0.02) 49%,
+      rgba(0,0,0,0.02) 53%,
+      rgba(0,0,0,0.34) 76%,
+      rgba(0,0,0,0.88) 100%
+    ),
+    linear-gradient(
+      to right,
+      #d96b6b 0%,
+      #dda16d 18%,
+      #d8cb72 35%,
+      #79b58a 52%,
+      #739bc5 72%,
+      #9a7bb8 100%
+    ) !important;
+}
+
+/* 备注和按钮之间也统一约 10px。 */
+.peopleEditor .peopleNoteField {
+  margin-bottom: 10px !important;
+}
+
+.peopleEditorActions {
+  margin-top: 0 !important;
+}
+
+/* 手机端不要再把色板压回旧高度；保持这轮 102px。 */
+@media (max-width: 900px) {
+  .peopleEditor label:not(.peoplePhotoUploadButton) {
+    margin-bottom: 10px !important;
+  }
+
+  .peopleDateRangeLine,
+  .peopleImpressionField,
+  .peopleEditor .peopleNoteField {
+    margin-bottom: 10px !important;
+  }
+
+  .peopleColorBoard {
+    height: 102px !important;
+  }
+}
+
+
+/* ======================================================
+   2026-08-10｜人物印象色板第三轮
+   - 色板更柔和
+   - 人物圆圈实际颜色降饱和度
+   - 彻底清除色板顶部黑线
+   - 备注增加约 40px 高度
+   ====================================================== */
+
+/* 色板本身只负责“看起来舒服、容易选”。
+   这里用更灰柔的六色色相，并用白/透明/深灰叠层形成自然明暗。 */
+.peopleColorBoard {
+  position: relative !important;
+  height: 102px !important;
+  border: 1px solid rgba(116, 122, 120, 0.16) !important;
+  border-top-color: rgba(116, 122, 120, 0.12) !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.97) 0%,
+      rgba(255,255,255,0.68) 22%,
+      rgba(255,255,255,0.10) 48%,
+      rgba(29,34,33,0.04) 54%,
+      rgba(29,34,33,0.34) 78%,
+      rgba(20,24,23,0.82) 100%
+    ),
+    linear-gradient(
+      to right,
+      #dc3434 0%,
+      #FF8C00 20%,
+      #f6df45 40%,
+      #42bc63 60%,
+      #38A7FF 80%,
+      #9b6dc4 100%
+    ) !important;
+}
+
+/* 某些 iOS/WebKit 会给可聚焦 role=button 元素画顶部 focus/active 线。
+   显式关闭所有 focus/active 外框和伪元素，避免那一道黑线。 */
+.peopleColorBoard:focus,
+.peopleColorBoard:focus-visible,
+.peopleColorBoard:active {
+  outline: none !important;
+  box-shadow: none !important;
+  border-top-color: rgba(116, 122, 120, 0.12) !important;
+}
+
+.peopleColorBoard::before,
+.peopleColorBoard::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* 备注比上一版增加约 40px。 */
+.peopleEditor .peopleNoteField textarea {
+  min-height: 98px !important;
+  height: 98px !important;
+}
+
+@media (max-width: 900px) {
+  .peopleColorBoard {
+    height: 102px !important;
+  }
+
+  .peopleEditor .peopleNoteField textarea {
+    min-height: 92px !important;
+    height: 92px !important;
+  }
+}
+
+
+/* ======================================================
+   2026-08-10｜色板两项定点修复
+   1. 黄色选区由 JSX 的分段 Hue 映射修复；
+   2. 去掉 iOS/WebKit 一直出现的色板顶部黑线。
+   本段不修改现有色板颜色、饱和度、明度数值。
+   ====================================================== */
+
+/*
+  黑线处理：
+  不再让 .peopleColorBoard 自己承担 border。
+  iOS/WebKit 对可交互/可聚焦层的上边缘有时会画出深色 hairline；
+  现在 board 完全无边框，淡灰框交给外层 picker 绘制并裁切。
+*/
+.peopleColorPicker {
+  border-radius: 14px !important;
+  padding: 1px !important;
+  background: rgba(116, 122, 120, 0.16) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.peopleColorBoard,
+.peopleColorBoard:focus,
+.peopleColorBoard:focus-visible,
+.peopleColorBoard:active {
+  border: 0 !important;
+  border-top: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/*
+  裁掉 WebKit 可能残留在元素最外缘的 1px hairline；
+  不改变色板实际视觉内容和现有渐变数值。
+*/
+.peopleColorBoard {
+  width: 100% !important;
+  border-radius: 13px !important;
+  clip-path: inset(0.5px round 13px) !important;
+}

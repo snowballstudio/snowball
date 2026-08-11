@@ -82,3 +82,13 @@
     max-width: 100%;
   }
 }
+
+
+/* ======================================================
+   V1.1｜仅 iOS 原生 App：离机时间表顶部安全区
+   Safari 网页版、Android/华为不进入此规则。
+   ====================================================== */
+.offscreenTimeDataPage.offscreenTimeDataPageIOSNative {
+  box-sizing: border-box !important;
+  padding-top: max(env(safe-area-inset-top, 0px), 44px) !important;
+}

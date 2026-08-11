@@ -1434,3 +1434,144 @@
   }
 }
 
+/* ======================================================
+   V1.4｜每日营养数据浅色易读版
+   仅调整详情表视觉与入口；所有营养计算、筛选和数据逻辑保持不变。
+   ====================================================== */
+.nutritionDetailPage {
+  background:
+    linear-gradient(
+      180deg,
+      #d2ded8 0%,
+      #c4d1cb 18%,
+      #e9efec 48%,
+      #f4f6f4 72%,
+      #e4ebe7 100%
+    ) !important;
+  color: #303532 !important;
+}
+
+.nutritionDetailTop {
+  height: 78px !important;
+  padding: 0 20px 23px !important;
+  border-bottom: 1px solid rgba(70, 82, 76, 0.18) !important;
+  background: rgba(159, 188, 171, 0.1) !important;
+}
+
+.nutritionDetailTop .nutritionBackBtn {
+  top: 25px !important;
+  color: #303532 !important;
+  font-size: 28px !important;
+  text-shadow: none !important;
+}
+
+.nutritionDetailTop h2 {
+  color: #303532 !important;
+  font-size: 18px !important;
+  text-shadow: none !important;
+}
+
+.nutritionDetailTop .nutritionDetailRawLink {
+  position: absolute !important;
+  right: 20px !important;
+  bottom: 23px !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #b18b2f !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  text-shadow: none !important;
+}
+
+/* 介绍行已从 JSX 删除，表格直接承接标题区，释放原来的 42px。 */
+.nutritionDetailTableWrap {
+  height: calc(100dvh - 78px) !important;
+  background: transparent !important;
+}
+
+.nutritionDetailTable {
+  color: #303532 !important;
+}
+
+/* 数据 HEADER：灰色底 + 金色字。 */
+.nutritionDetailTable th {
+  color: #d7b85b !important;
+  background: #707774 !important;
+  border-right-color: rgba(255,255,255,.13) !important;
+  border-bottom-color: rgba(255,255,255,.16) !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,.18) !important;
+}
+
+.nutritionDetailTable th:first-child,
+.nutritionDetailTable th:nth-child(2) {
+  background: #707774 !important;
+  color: #d7b85b !important;
+}
+
+/* 表格正文全部深灰黑；浅银绿色半透明底保留页面渐变感。 */
+.nutritionDetailTable td {
+  color: #343936 !important;
+  background: rgba(246, 249, 247, 0.58) !important;
+  border-right-color: rgba(74, 88, 80, 0.11) !important;
+  border-bottom-color: rgba(74, 88, 80, 0.13) !important;
+}
+
+.nutritionDetailTable td:first-child,
+.nutritionDetailTable td:nth-child(2) {
+  background: rgba(231, 239, 235, 0.96) !important;
+}
+
+.nutritionDetailTable tbody tr:nth-child(even) td {
+  background: rgba(220, 231, 225, 0.58) !important;
+}
+
+.nutritionDetailTable tbody tr:nth-child(even) td:first-child,
+.nutritionDetailTable tbody tr:nth-child(even) td:nth-child(2) {
+  background: rgba(216, 228, 222, 0.98) !important;
+}
+
+/* 食物真名继续加粗。 */
+.nutritionDetailFoodName {
+  color: #272c29 !important;
+  font-weight: 700 !important;
+}
+
+.nutritionDetailEmpty {
+  color: rgba(48, 53, 50, 0.70) !important;
+}
+
+@media (max-width: 900px) {
+  .nutritionDetailTop {
+    height: 72px !important;
+    padding: 0 18px 21px !important;
+  }
+
+  .nutritionDetailTop .nutritionBackBtn {
+    top: 19px !important;
+    font-size: 28px !important;
+  }
+
+  .nutritionDetailTop h2 {
+    font-size: 18px !important;
+  }
+
+  .nutritionDetailTop .nutritionDetailRawLink {
+    right: 18px !important;
+    bottom: 21px !important;
+    font-size: 12px !important;
+  }
+
+  .nutritionDetailTableWrap {
+    height: calc(100dvh - 72px) !important;
+  }
+}
+

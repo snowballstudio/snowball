@@ -5,6 +5,15 @@ function valueText(value) {
   return value === null || value === undefined || value === '' ? '—' : String(value)
 }
 
+
+function dateText(value) {
+  if (!value) return '—'
+  const parts = String(value).trim().split(/[\/-]/)
+  if (parts.length !== 3) return String(value)
+  const [year, month, day] = parts
+  return `${year.padStart(4, '0')}/${month.padStart(2, '0')}/${day.padStart(2, '0')}`
+}
+
 function timeText(value) {
   if (!value) return '—'
   try {
@@ -15,7 +24,7 @@ function timeText(value) {
 }
 
 export default function StepAutoTable({ records = [], onBack }) {
-  const rows = [...records].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+  const rows = [...records].sort((a, b) => dateText(b.date).localeCompare(dateText(a.date)))
   return (
     <div className="stepAutoPage">
       <div className="stepAutoTop">
@@ -36,7 +45,7 @@ export default function StepAutoTable({ records = [], onBack }) {
           </div>
           {rows.map((row, index) => (
             <div className="stepAutoRow" key={`${row.date}-${index}`}>
-              <span>{row.date || '—'}</span>
+              <span>{dateText(row.date)}</span>
               <span className="stepAutoStrong">{valueText(row.calculatedSteps)}</span>
               <span>{stepSourceLabel(row.calculatedSource)}</span>
               <span>{valueText(row.healthConnectSteps)}</span>
@@ -57,7 +66,7 @@ export default function StepAutoTable({ records = [], onBack }) {
                     : row.backgroundStepTestStatus || '—'}
               </span>
               <span>{valueText(row.loginCount)}</span>
-              <span>{valueText(row.previousLoginDate)}</span>
+              <span>{row.previousLoginDate ? dateText(row.previousLoginDate) : '—'}</span>
               <span>{valueText(row.cumulativeDelta)}</span>
               <span className="stepAutoNote" title={row.calculationNote || '—'}>{row.calculationNote || '—'}</span>
               <span>{timeText(row.updatedAt)}</span>

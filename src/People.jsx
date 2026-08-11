@@ -36,10 +36,6 @@ const RING_LABELS = FREQUENCY_OPTIONS.map(item => ({
   radius: RING_RADII[item],
 }))
 
-// 关键词以后主要改这里：分冷/暖两组，页面会自动生成多选按钮。
-const WARM_KEYWORDS = ['温暖', '信任', '亲近', '支持', '安心', '快乐', '珍惜', '轻松', '喜欢', '牵挂', '纯粹', '浪漫', '欣赏', '感恩', '爱']
-const COOL_KEYWORDS = ['疏远', '冷淡', '客气', '压力', '复杂', '紧张', '戒备', '遗憾', '愤怒', '应酬', '忍耐', '敌对', '负疚', '厌烦', '恨']
-
 const EMPTY_PERSON = {
   id: null,
   name: '',
@@ -52,9 +48,7 @@ const EMPTY_PERSON = {
   endYear: '',
   endMonth: '',
   frequency: '',
-  keyword: '',
-  keywords: [],
-  impressionDepth: '',
+  personColor: '#c9d2cd',
   note: '',
   witnessEntries: [],
   history: [],
@@ -179,10 +173,9 @@ function selfSizeFromBirth(birthDate, targetMonth) {
   return Math.round(baseSize * growth)
 }
 
-function normalizeKeywords(person) {
-  if (Array.isArray(person?.keywords)) return person.keywords.filter(Boolean)
-  if (person?.keyword) return String(person.keyword).split(/[、,，\s]+/).filter(Boolean)
-  return []
+function normalizePersonColor(value) {
+  const color = String(value || '').trim()
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? color : '#c9d2cd'
 }
 
 function snapshotOf(person) {
@@ -198,8 +191,7 @@ function snapshotOf(person) {
     endYear: normalized.endYear,
     endMonth: normalized.endMonth,
     frequency: normalized.frequency,
-    keywords: normalizeKeywords(normalized),
-    impressionDepth: normalized.impressionDepth,
+    personColor: normalized.personColor,
     note: normalized.note,
   }
 }
@@ -240,8 +232,6 @@ function sizeFromTime(person, birthDate, targetMonth) {
   if (!selfMonths) return 0
   const personMonths = monthsKnown(person, targetMonth)
   const selfSize = selfSizeFromBirth(birthDate, targetMonth)
-  // 关系时长比例对应圆的面积比例；直径按面积比例开平方。
-  // 最小面积保留为“我”的 10%，避免新认识的人小到无法辨认。
   const areaRatio = Math.max(0.10, personMonths / selfMonths)
   return Math.round(clamp(selfSize * Math.sqrt(areaRatio), 12, 180))
 }
@@ -250,61 +240,177 @@ function distanceFromFrequency(frequency) {
   return RING_RADII[frequency] || RING_RADII['数月']
 }
 
-function keywordTone(keywords) {
-  const list = Array.isArray(keywords) ? keywords : []
-  const warm = list.filter(word => WARM_KEYWORDS.includes(word)).length
-  const cool = list.filter(word => COOL_KEYWORDS.includes(word)).length
-  if (warm > cool) return { tone: 'warm', dominantCount: warm }
-  if (cool > warm) return { tone: 'cold', dominantCount: cool }
-
-  // 冷暖词数量相同时，按用户最先选择的词决定色系，保持结果稳定。
-  const first = list[0]
-  if (WARM_KEYWORDS.includes(first)) return { tone: 'warm', dominantCount: warm }
-  if (COOL_KEYWORDS.includes(first)) return { tone: 'cold', dominantCount: cool }
-  return { tone: 'warm', dominantCount: Math.max(1, warm) }
-}
-
-function keywordCountBand(count) {
-  if (count >= 7) return '7words'
-  if (count >= 4) return '4to6words'
-  return '1to3words'
-}
-
-function keywordRatioBand(dominantCount, totalCount) {
-  const ratio = totalCount > 0 ? dominantCount / totalCount : 0.5
-  return ratio >= 0.75 ? '3to4quarter' : '2to3quarter'
-}
-
 function dotColorStyle(person) {
-  const keywords = normalizeKeywords(person)
-  if (!keywords.length) {
-    return {
-      background: 'rgba(222, 225, 224, 0.78)',
-      borderColor: 'rgba(80, 88, 96, 0.14)',
+  return {
+    '--person-color': normalizePersonColor(person?.personColor),
+    borderColor: 'rgba(40, 46, 50, 0.18)',
+  }
+}
+
+function iconFadeStyle() {
+  // 性别头像固定为清晰黑色，不再由“印象值”控制透明度。
+  return {
+    opacity: 1,
+    filter: 'brightness(0)',
+  }
+}
+
+function hslToHex(h, s, l) {
+  const hue = ((Number(h) % 360) + 360) % 360
+  const sat = clamp(Number(s), 0, 100) / 100
+  const light = clamp(Number(l), 0, 100) / 100
+  const c = (1 - Math.abs(2 * light - 1)) * sat
+  const x = c * (1 - Math.abs((hue / 60) % 2 - 1))
+  const m = light - c / 2
+  let r = 0
+  let g = 0
+  let b = 0
+  if (hue < 60) [r, g, b] = [c, x, 0]
+  else if (hue < 120) [r, g, b] = [x, c, 0]
+  else if (hue < 180) [r, g, b] = [0, c, x]
+  else if (hue < 240) [r, g, b] = [0, x, c]
+  else if (hue < 300) [r, g, b] = [x, 0, c]
+  else [r, g, b] = [c, 0, x]
+  const toHex = value => Math.round((value + m) * 255).toString(16).padStart(2, '0')
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
+
+function hexToRgb(hex) {
+  const value = String(hex || '').replace('#', '')
+  return {
+    r: parseInt(value.slice(0, 2), 16),
+    g: parseInt(value.slice(2, 4), 16),
+    b: parseInt(value.slice(4, 6), 16),
+  }
+}
+
+function rgbToHex({ r, g, b }) {
+  const toHex = value => clamp(Math.round(value), 0, 255).toString(16).padStart(2, '0')
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
+
+function mixRgb(a, b, t) {
+  const amount = clamp(t, 0, 1)
+  return {
+    r: a.r + (b.r - a.r) * amount,
+    g: a.g + (b.g - a.g) * amount,
+    b: a.b + (b.b - a.b) * amount,
+  }
+}
+
+function mixRgba(a, b, t) {
+  const amount = clamp(t, 0, 1)
+  return {
+    r: a.r + (b.r - a.r) * amount,
+    g: a.g + (b.g - a.g) * amount,
+    b: a.b + (b.b - a.b) * amount,
+    a: a.a + (b.a - a.a) * amount,
+  }
+}
+
+function compositeOver(base, overlay) {
+  const alpha = clamp(overlay.a, 0, 1)
+  return {
+    r: overlay.r * alpha + base.r * (1 - alpha),
+    g: overlay.g * alpha + base.g * (1 - alpha),
+    b: overlay.b * alpha + base.b * (1 - alpha),
+  }
+}
+
+/*
+  这两组 stop 与 People.css 当前真正显示的两层渐变完全一致。
+  所以预览小圆圈/人物圆圈使用“屏幕上看到的颜色”，不再用另一套 HSL 估算。
+*/
+const PEOPLE_BOARD_HORIZONTAL_STOPS = [
+  { p: 0.00, c: '#dc3434' },
+  { p: 0.20, c: '#FF8C00' },
+  { p: 0.40, c: '#f6df45' },
+  { p: 0.60, c: '#42bc63' },
+  { p: 0.80, c: '#38A7FF' },
+  { p: 1.00, c: '#9b6dc4' },
+]
+
+const PEOPLE_BOARD_VERTICAL_STOPS = [
+  { p: 0.00, c: { r: 255, g: 255, b: 255, a: 0.97 } },
+  { p: 0.22, c: { r: 255, g: 255, b: 255, a: 0.68 } },
+  { p: 0.48, c: { r: 255, g: 255, b: 255, a: 0.10 } },
+  { p: 0.54, c: { r: 29,  g: 34,  b: 33,  a: 0.04 } },
+  { p: 0.78, c: { r: 29,  g: 34,  b: 33,  a: 0.34 } },
+  { p: 1.00, c: { r: 20,  g: 24,  b: 23,  a: 0.82 } },
+]
+
+function interpolateStops(stops, position, colorGetter, mixer) {
+  const p = clamp(position, 0, 1)
+  for (let index = 0; index < stops.length - 1; index += 1) {
+    const left = stops[index]
+    const right = stops[index + 1]
+    if (p <= right.p) {
+      const span = Math.max(0.0001, right.p - left.p)
+      const t = (p - left.p) / span
+      return mixer(colorGetter(left), colorGetter(right), t)
     }
   }
-  const totalCount = keywords.length
-  const { tone, dominantCount } = keywordTone(keywords)
-  const file = `${tone}_${keywordCountBand(totalCount)}_${keywordRatioBand(dominantCount, totalCount)}.png`
-
-  return {
-    backgroundImage: `url(/refine/${file})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundRepeat: 'no-repeat',
-  }
+  return colorGetter(stops[stops.length - 1])
 }
 
-function iconFadeStyle(person) {
-  const score = clamp(Number(person.impressionDepth ?? 5), 1, 10)
-  const opacity = 0.10 + ((score - 1) / 9) * 0.90
-  const brightness = 2.55 - ((score - 1) / 9) * 1.55
-  const contrast = 0.36 + ((score - 1) / 9) * 0.64
-  return {
-    opacity,
-    filter: `grayscale(1) brightness(${brightness}) contrast(${contrast})`,
-  }
+function colorFromBoardPoint(xRatio, yRatio) {
+  const base = interpolateStops(
+    PEOPLE_BOARD_HORIZONTAL_STOPS,
+    xRatio,
+    stop => hexToRgb(stop.c),
+    mixRgb,
+  )
+
+  const overlay = interpolateStops(
+    PEOPLE_BOARD_VERTICAL_STOPS,
+    yRatio,
+    stop => stop.c,
+    mixRgba,
+  )
+
+  return rgbToHex(compositeOver(base, overlay))
 }
+
+function ImpressionColorBoard({ value, onChange }) {
+  const boardRef = useRef(null)
+  const draggingRef = useRef(false)
+
+  function choose(event) {
+    const board = boardRef.current
+    if (!board) return
+    const rect = board.getBoundingClientRect()
+    const xRatio = clamp((event.clientX - rect.left) / Math.max(1, rect.width), 0, 1)
+    const yRatio = clamp((event.clientY - rect.top) / Math.max(1, rect.height), 0, 1)
+    onChange(colorFromBoardPoint(xRatio, yRatio))
+  }
+
+  return (
+    <div className="peopleColorPicker">
+      <div
+        ref={boardRef}
+        className="peopleColorBoard"
+        aria-label="选择人物印象颜色"
+        onPointerDown={event => {
+          draggingRef.current = true
+          event.currentTarget.setPointerCapture?.(event.pointerId)
+          choose(event)
+        }}
+        onPointerMove={event => {
+          if (draggingRef.current) choose(event)
+        }}
+        onPointerUp={event => {
+          draggingRef.current = false
+          event.currentTarget.releasePointerCapture?.(event.pointerId)
+        }}
+        onPointerCancel={() => {
+          draggingRef.current = false
+        }}
+      />
+      <span className="peopleColorSelected" style={{ background: normalizePersonColor(value) }} aria-hidden="true" />
+    </div>
+  )
+}
+
 function relationPoint(person, angleDeg = 0) {
   const angle = angleDeg * Math.PI / 180
   const radius = distanceFromFrequency(person.frequency)
@@ -369,7 +475,7 @@ function sortValue(person, key, targetMonth = currentMonthValue()) {
   if (key === 'start') return monthIndex(person.startYear, person.startMonth) || 0
   if (key === 'end') return monthIndex(person.endYear, person.endMonth) || 999999
   if (key === 'frequency') return FREQUENCY_OPTIONS.indexOf(person.frequency)
-  if (key === 'impressionDepth') return Number(person.impressionDepth || 0)
+  if (key === 'personColor') return person.personColor || ''
   if (key === 'note') return person.note || ''
   if (key === 'updatedAt') return Number(person.updatedAt || person.id || 0)
   if (key === 'monthsKnown') return monthsKnown(person, targetMonth)
@@ -377,8 +483,6 @@ function sortValue(person, key, targetMonth = currentMonthValue()) {
 }
 
 function normalizePerson(person) {
-  const keywords = normalizeKeywords(person)
-  const rawDepth = person?.impressionDepth
   return {
     ...EMPTY_PERSON,
     ...(person || {}),
@@ -386,11 +490,7 @@ function normalizePerson(person) {
     group: person?.group === '' ? '' : (PEOPLE_GROUPS.includes(person?.group) ? person.group : '其他'),
     gender: person?.gender === '' ? '' : (PEOPLE_GENDERS.includes(person?.gender) ? person.gender : '女'),
     frequency: person?.frequency === '' ? '' : (FREQUENCY_OPTIONS.includes(person?.frequency) ? person.frequency : '数月'),
-    keywords,
-    keyword: keywords.length ? keywords.join('、') : '',
-    impressionDepth: rawDepth === '' || rawDepth === undefined || rawDepth === null
-      ? ''
-      : clamp(Number(rawDepth), 1, 10),
+    personColor: normalizePersonColor(person?.personColor),
     witnessEntries: Array.isArray(person?.witnessEntries) ? person.witnessEntries : (person?.witnessText ? [person.witnessText] : []),
     history: Array.isArray(person?.history) ? person.history : [],
     photos: Array.isArray(person?.photos) ? person.photos : [],
@@ -400,7 +500,7 @@ function normalizePerson(person) {
 function validNickname(value) {
   const text = String(value || '').trim()
   if (!text) return false
-  if (/^[A-Za-z]+$/.test(text)) return true
+  if (/^[A-Za-z]{1,4}$/.test(text)) return true
   return /^[\u3400-\u9fff]{1,2}$/.test(text)
 }
 
@@ -413,15 +513,7 @@ function durationText(person, targetMonth) {
 }
 
 function impressionPhrase(person) {
-  const keywords = normalizeKeywords(person)
-  const hasDepth = person.impressionDepth !== '' && person.impressionDepth !== undefined && person.impressionDepth !== null
-  if (!keywords.length && !hasDepth) return '尚待补充'
-  const { tone } = keywordTone(keywords)
-  const score = hasDepth ? clamp(Number(person.impressionDepth), 1, 10) : 5
-  const clarity = hasDepth ? (score >= 8 ? '清晰' : score >= 5 ? '淡淡' : '已经变浅') : '尚未标明深浅'
-  if (!keywords.length) return clarity
-  const temperature = tone === 'warm' ? '温暖' : '冷静'
-  return `${clarity}而${temperature}`
+  return person?.personColor ? '由你亲自选定颜色' : '尚待补充'
 }
 
 function changedFields(before, after) {
@@ -429,8 +521,7 @@ function changedFields(before, after) {
   const checks = [
     ['end', `${before.endYear}-${before.endMonth}`, `${after.endYear}-${after.endMonth}`],
     ['frequency', before.frequency, after.frequency],
-    ['impression', before.impressionDepth, after.impressionDepth],
-    ['keywords', normalizeKeywords(before).join('|'), normalizeKeywords(after).join('|')],
+    ['color', before.personColor, after.personColor],
     ['note', before.note, after.note],
     ['start', `${before.startYear}-${before.startMonth}`, `${after.startYear}-${after.startMonth}`],
     ['relation', before.relation, after.relation],
@@ -455,7 +546,7 @@ function buildWitnessText(before, person, savedMonth) {
   if (changes.includes('frequency')) {
     return `${monthText}，你更新了与${displayName}的联系频率。人与人的距离会改变，记录也随之移动。`.slice(0, 100)
   }
-  if (changes.includes('impression') || changes.includes('keywords')) {
+  if (changes.includes('color')) {
     return `${monthText}，你重新写下了对${displayName}的印象。时间推移，记忆的颜色和清晰程度也会变化。`.slice(0, 100)
   }
   if (changes.includes('note')) {
@@ -466,38 +557,6 @@ function buildWitnessText(before, person, savedMonth) {
   }
   return ''
 }
-
-function KeywordPicker({ value, onChange }) {
-  const selected = Array.isArray(value) ? value : []
-  function toggle(word) {
-    const next = selected.includes(word)
-      ? selected.filter(item => item !== word)
-      : [...selected, word]
-    onChange(next)
-  }
-
-  return (
-    <div className="peopleKeywordPicker">
-      <div>
-        <strong>暖色</strong>
-        <div className="peopleKeywordButtons">
-          {WARM_KEYWORDS.map(word => (
-            <button type="button" key={word} className={selected.includes(word) ? 'active warm' : ''} onClick={() => toggle(word)}>{word}</button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <strong>冷色</strong>
-        <div className="peopleKeywordButtons">
-          {COOL_KEYWORDS.map(word => (
-            <button type="button" key={word} className={selected.includes(word) ? 'active cool' : ''} onClick={() => toggle(word)}>{word}</button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 
 const PEOPLE_MEDIA_DB = 'snowball-people-media-v1'
 const PEOPLE_MEDIA_STORE = 'photos'
@@ -911,7 +970,7 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
     const nickname = String(draft.nickname || '').trim()
     if (!name) return
     if (!validNickname(nickname)) {
-      setNicknameError('昵称必填：限两个汉字，或一个英文单词。')
+      setNicknameError('昵称必填：限2个汉字或4个英文字母。')
       return
     }
 
@@ -923,7 +982,6 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
       name,
       nickname,
       relation: String(draft.relation || '').trim(),
-      keyword: normalizeKeywords(draft).join('、'),
       note: String(draft.note || '').trim(),
       id: draft.id || Date.now(),
       updatedAt: Date.now(),
@@ -1228,7 +1286,7 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
                 </select>
               </div>
               {[
-                ['relation', '关系'], ['gender', '性别'], ['start', '开始'], ['end', '结束'], ['frequency', '联系频率'], ['impressionDepth', '印象值'], ['actions', ''], ['note', '备注'], ['witness', '雪粒的见证语'],
+                ['relation', '关系'], ['gender', '性别'], ['start', '开始'], ['end', '结束'], ['frequency', '联系'], ['personColor', '印象'], ['actions', ''], ['note', '备注'], ['witness', '雪粒的见证语'],
               ].map(([key, label]) => (
                 <button type="button" key={key} onClick={() => toggleSort(key)}>
                   {label}{sortKey === key ? (sortDirection === 'asc' ? ' ↑' : ' ↓') : ''}
@@ -1236,7 +1294,7 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
               ))}
             </div>
 
-            {tablePeople.length === 0 && <p className="peopleEmpty">这里还没有人物。可以从左下角新增第一个人。</p>}
+            {tablePeople.length === 0 && <p className="peopleEmpty">这里还没有记录。可以从左下角新增第一个人。</p>}
 
             {tablePeople.map(person => (
               <div className="peopleTableRow" key={person.id}>
@@ -1248,7 +1306,7 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
                 <span>{formatDateParts(person.startYear, person.startMonth)}</span>
                 <span>{formatDateParts(person.endYear, person.endMonth)}</span>
                 <span>{person.frequency || '—'}</span>
-                <span>{person.impressionDepth || '—'}</span>
+                <span className="peopleTableColorCell"><i style={{ background: normalizePersonColor(person.personColor) }} /></span>
                 <span className="peopleActions">
                   <button type="button" title="删除" aria-label={`删除${person.name}`} className="delete peopleTrashBtn" onClick={() => requestDelete(person)}>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13M10 11v5m4-5v5" /></svg>
@@ -1294,7 +1352,7 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
             </header>
             <div className="peopleInfoBody">
               <p>圆圈越大，表示关系时间越长。距离越近，表示联系越频繁。</p>
-              <p>颜色记录人间冷暖，关键词越多，色彩越明确。人物图标越深，表示印象越清晰。</p>
+              <p>颜色可代表印象冷暖深浅，也可以随机选择。</p>
               <p>默认看到的是今天，也可以选择过去或未来月份，看图形变化。</p>
               <p>人物资料可随时更新，点圆圈添加或删改照片。关系停留或变化，都可留在记录里。</p>
             </div>
@@ -1463,36 +1521,37 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
         <div className="peopleEditorOverlay">
           <div className="peopleEditor">
             <h3>{editing === 'new' ? '' : ''}</h3>
-            <label>姓名<input value={draft.name} onChange={event => updateDraft('name', event.target.value)} placeholder="必填，建议填全名" /></label>
-            <label>昵称<span className="peopleFieldHint">限两个汉字或一个英文单词，必填。</span><input value={draft.nickname} onChange={event => { setNicknameError(''); updateDraft('nickname', event.target.value) }} placeholder="例如：妈妈，王总，JACK" />{nicknameError && <small className="peopleFieldError">{nicknameError}</small>}</label>
+
+            <div className="peopleEditorGrid peopleNameNickGrid">
+              <label>姓名<input value={draft.name} onChange={event => updateDraft('name', event.target.value)} placeholder="必填，建议填全名" /></label>
+              <label>昵称<input value={draft.nickname} onChange={event => { setNicknameError(''); updateDraft('nickname', event.target.value) }} placeholder="限2汉字或4字母" />{nicknameError && <small className="peopleFieldError">{nicknameError}</small>}</label>
+            </div>
+
             <div className="peopleEditorGrid">
               <label>组别<select value={draft.group} onChange={event => updateDraft('group', event.target.value)}><option value="">请选择</option>{PEOPLE_GROUPS.map(group => <option key={group}>{group}</option>)}</select></label>
               <label>性别<select value={draft.gender} onChange={event => updateDraft('gender', event.target.value)}><option value="">请选择</option>{PEOPLE_GENDERS.map(gender => <option key={gender}>{gender}</option>)}</select></label>
             </div>
-            <label>关系<input value={draft.relation} onChange={event => updateDraft('relation', event.target.value)} placeholder="建议具体，例如大学同学，直接上司，老客户" /></label>
-            <div className="peopleEditorGrid">
-              <label>开始年份<input inputMode="numeric" value={draft.startYear} onChange={event => updateDraft('startYear', event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="例如：2020" /></label>
-              <label>月份<input inputMode="numeric" value={draft.startMonth} onChange={event => updateDraft('startMonth', event.target.value.replace(/[^0-9]/g, '').slice(0, 2))} placeholder="例如：6，10" /></label>
+
+            <div className="peopleEditorGrid peopleRelationContactGrid">
+              <label>关系<input value={draft.relation} onChange={event => updateDraft('relation', event.target.value)} placeholder="例如大学同学" /></label>
+              <label>联系<select value={draft.frequency} onChange={event => updateDraft('frequency', event.target.value)}><option value="">请选择</option>{FREQUENCY_OPTIONS.map(item => <option key={item}>{item}</option>)}</select></label>
             </div>
-            <div className="peopleEditorGrid">
-              <label>结束年份<input inputMode="numeric" value={draft.endYear} onChange={event => updateDraft('endYear', event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="关系存续时可空" /></label>
-              <label>月份<input inputMode="numeric" value={draft.endMonth} onChange={event => updateDraft('endMonth', event.target.value.replace(/[^0-9]/g, '').slice(0, 2))} placeholder="关系存续时可空" /></label>
+
+            <div className="peopleDateRangeLine">
+              <span className="peopleDateRangeLabel">从</span>
+              <input className="peopleYearInput" aria-label="开始年份" inputMode="numeric" value={draft.startYear} onChange={event => updateDraft('startYear', event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="年份" />
+              <input className="peopleMonthInput" aria-label="开始月份" inputMode="numeric" value={draft.startMonth} onChange={event => updateDraft('startMonth', event.target.value.replace(/[^0-9]/g, '').slice(0, 2))} placeholder="月" />
+              <span className="peopleDateRangeLabel peopleDateToLabel">至</span>
+              <input className="peopleYearInput" aria-label="结束年份" inputMode="numeric" value={draft.endYear} onChange={event => updateDraft('endYear', event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="年份" />
+              <input className="peopleMonthInput" aria-label="结束月份" inputMode="numeric" value={draft.endMonth} onChange={event => updateDraft('endMonth', event.target.value.replace(/[^0-9]/g, '').slice(0, 2))} placeholder="月" />
             </div>
-            <label>联系频率<select value={draft.frequency} onChange={event => updateDraft('frequency', event.target.value)}><option value="">请选择</option>{FREQUENCY_OPTIONS.map(item => <option key={item}>{item}</option>)}</select></label>
-            <label>印象关键词（多选，数量不限）<KeywordPicker value={normalizeKeywords(draft)} onChange={value => updateDraft('keywords', value)} /></label>
-            <label>印象值<input type="number" min="1" max="10" step="1" value={draft.impressionDepth} placeholder="请输入数字1-10表示印象深浅。" onChange={event => {
-              const value = event.target.value
-              if (value === '') {
-                updateDraft('impressionDepth', '')
-                return
-              }
-              const onlyNumber = value.replace(/[^0-9]/g, '').slice(0, 2)
-              updateDraft('impressionDepth', onlyNumber)
-            }} onBlur={() => {
-              if (draft.impressionDepth !== '') updateDraft('impressionDepth', clamp(Number(draft.impressionDepth), 1, 10))
-            }} /></label>
-            <div className="peopleDepthBar" aria-hidden="true"><span style={{ width: `${draft.impressionDepth === '' ? 0 : clamp(Number(draft.impressionDepth), 1, 10) * 10}%` }} /></div>
-            <label>备注<textarea value={draft.note} onChange={event => updateDraft('note', event.target.value)} placeholder="联系方式，重要事件等。" /></label>
+
+            <label className="peopleImpressionField">印象
+              <ImpressionColorBoard value={draft.personColor} onChange={value => updateDraft('personColor', value)} />
+            </label>
+
+            <label className="peopleNoteField">备注<textarea value={draft.note} onChange={event => updateDraft('note', event.target.value)} placeholder="联系方式，重要事件等。" /></label>
+
             <div className="peopleEditorActions">
               <button type="button" onClick={savePerson}>保存</button>
               <button type="button" onClick={closeEditor}>取消</button>

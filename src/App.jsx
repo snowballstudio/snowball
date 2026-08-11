@@ -39,6 +39,9 @@ const IOSScreenTimeNative = registerPlugin('IOSScreenTime')
 const IOS_SCREEN_TIME_PRIMED_KEY = 'snowlet-ios-screen-time-primed-v1'
 const DEVICE_USAGE_PROMPT_KEY = 'snowball-device-usage-prompt-v1'
 const DEVICE_INITIAL_IMPORT_DAYS = 7
+// 临时关闭每天 05:00 后首次进入时的“雪粒的今日回顾”弹窗。
+// 回顾数据计算、每日一次标记和其它逻辑全部保留；下一版需要恢复时改为 true 即可。
+const SHOW_DAILY_REVIEW_MODAL = false
 
 function openSnowballMediaDb() {
   return new Promise((resolve, reject) => {
@@ -3347,10 +3350,12 @@ function App() {
       sleepOk,
     )
 
-    setDailyModal({
-      title: '雪粒的今日回顾',
-      text: summary,
-    })
+    if (SHOW_DAILY_REVIEW_MODAL) {
+      setDailyModal({
+        title: '雪粒的今日回顾',
+        text: summary,
+      })
+    }
 
     setData(prev => ({
       ...prev,
@@ -5182,6 +5187,11 @@ max-width:78px !important;
               foodNutritionMap={FOOD_NUTRITION_MAP}
               heavyTasteOptions={HEAVY_TASTE_OPTIONS}
               onBackHome={() => setShowDataPanel(false)}
+              onOpenRawData={() => {
+                setDailyViewTab('food')
+                setDailyMode('home')
+                setShowDataPanel(true)
+              }}
             />
           ) : dailyMode === 'train' ? (
             <Train

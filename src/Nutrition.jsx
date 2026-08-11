@@ -596,6 +596,7 @@ export default function Nutrition({
   foodNutritionMap,
   heavyTasteOptions,
   onBackHome,
+  onOpenRawData,
 }) {
   const [showNutritionDetail, setShowNutritionDetail] = useState(false)
   const [showNutritionInfo, setShowNutritionInfo] = useState(false)
@@ -681,11 +682,13 @@ export default function Nutrition({
         <div className="nutritionDetailTop">
           <button type="button" className="nutritionBackBtn" onClick={() => setShowNutritionDetail(false)} aria-label="返回营养光谱">‹</button>
           <h2>每日营养数据</h2>
-          <span>{nutritionDetailRows.length}项</span>
-        </div>
-
-        <div className="nutritionDetailIntro">
-          每个日常食物真名占一行；营养匹配来自主名通用 Mapping 与真名专属 Mapping。
+          <button
+            type="button"
+            className="nutritionDetailRawLink"
+            onClick={onOpenRawData}
+          >
+            原始数据
+          </button>
         </div>
 
         <div
@@ -703,7 +706,6 @@ export default function Nutrition({
                 <th>食物真名</th>
                 <th>主名</th>
                 <th>类型</th>
-                <th>口味</th>
                 <th>维生素</th>
                 <th>矿物质</th>
                 <th>脂肪类</th>
@@ -717,14 +719,13 @@ export default function Nutrition({
                   <td className="nutritionDetailFoodName">{row.realName}</td>
                   <td>{row.primaryName}</td>
                   <td>{FOOD_TYPE_LABEL[row.foodType] || row.foodType}</td>
-                  <td>{row.taste}</td>
                   <td>{listText(row.vitamins)}</td>
                   <td>{listText(row.minerals)}</td>
                   <td>{listText(row.fats)}</td>
                   <td>{listText(row.others)}</td>
                 </tr>
               )) : (
-                <tr><td colSpan="9" className="nutritionDetailEmpty">日常表中还没有食物记录</td></tr>
+                <tr><td colSpan="8" className="nutritionDetailEmpty">日常表中还没有食物记录</td></tr>
               )}
             </tbody>
           </table>

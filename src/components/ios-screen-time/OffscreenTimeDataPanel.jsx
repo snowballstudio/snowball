@@ -4,7 +4,16 @@ import './OffscreenTimeDataPanel.css'
 export default function OffscreenTimeDataPanel({
   records = [],
   onBack,
+  showMonitorDeveloperLink = false,
+  onOpenMonitorDeveloper,
 }) {
+  // 仅原生 iOS App 需要额外补偿顶部安全区。
+  // Safari 网页版和 Android 不加此 class，避免破坏目前正常的布局。
+  const isNativeIOS =
+    typeof window !== 'undefined' &&
+    window.Capacitor?.isNativePlatform?.() === true &&
+    window.Capacitor?.getPlatform?.() === 'ios'
+
   const sortedRecords = [...records].sort((a, b) =>
     String(b?.date || '').localeCompare(
       String(a?.date || '')
@@ -12,17 +21,28 @@ export default function OffscreenTimeDataPanel({
   )
 
   return (
-    <div className="dailyPage dailySubPage offscreenTimeDataPage">
+    <div className={`dailyPage dailySubPage offscreenTimeDataPage${isNativeIOS ? ' offscreenTimeDataPageIOSNative' : ''}`}>
       <div className="dailyTableCard offscreenTimeDataCard">
         <div className="offscreenTimeTitleLine">
           <h2>离机时间表</h2>
-          <button
-            type="button"
-            className="dailyAddDateBtn"
-            onClick={onBack}
-          >
-            返回
-          </button>
+          <div className="offscreenTimeTitleActions">
+            {showMonitorDeveloperLink && (
+              <button
+                type="button"
+                className="offscreenMonitorDeveloperLink"
+                onClick={onOpenMonitorDeveloper}
+              >
+                Monitor 调试
+              </button>
+            )}
+            <button
+              type="button"
+              className="dailyAddDateBtn"
+              onClick={onBack}
+            >
+              返回
+            </button>
+          </div>
         </div>
 
 
