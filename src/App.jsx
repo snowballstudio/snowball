@@ -22,6 +22,7 @@ import {
 import {
   recalculateOffscreenRecord,
   getIOSScreenTimeStatus,
+  requestIOSScreenTimeAuthorization,
   openIOSScreenTimeReport,
   openIOSSevenDayDailyTable,
 } from './components/ios-screen-time/iosScreenTimeService.js'
@@ -37,6 +38,7 @@ const CUSTOM_YEARS_BG_IDB_KEY = 'footprint-custom-background'
 const DeviceData = registerPlugin('DeviceData')
 const IOSScreenTimeNative = registerPlugin('IOSScreenTime')
 const IOS_SCREEN_TIME_PRIMED_KEY = 'snowlet-ios-screen-time-primed-v1'
+const IOS_SCREEN_TIME_AUTH_PROMPT_KEY = 'snowlet-ios-screen-time-auth-prompt-v1'
 const DEVICE_USAGE_PROMPT_KEY = 'snowball-device-usage-prompt-v1'
 const DEVICE_INITIAL_IMPORT_DAYS = 7
 // 临时关闭每天 05:00 后首次进入时的“雪粒的今日回顾”弹窗。
@@ -2577,10 +2579,10 @@ function App() {
 
   /*
     iOS 全新安装 Screen Time 初始化：
-    - 不读取、不导出任何苹果屏幕时间数据到 JS；
-    - 仅在 Family Controls 已授权后，让原生端真正挂载一次
-      DeviceActivityReport，给 Report Extension 一次完整启动机会；
-    - 成功后在本机记一次标记；失败不记标记，下一次回到前台会重试。
+    1. 首次安装先检查 Family Controls / Screen Time 授权；
+    2. 未授权时自动触发一次苹果系统授权提示；
+    3. 授权成功后立即 prime DeviceActivityReport，让 Report Extension 真正启动；
+    4. 已授权用户不会重复弹授权；prime 失败则下次回前台继续重试。
   */
   useEffect(() => {
     if (
@@ -2591,13 +2593,25 @@ function App() {
     let alive = true
     let running = false
 
-    async function primeIOSScreenTimeIfNeeded() {
+    async function authorizeAndPrimeIOSScreenTimeIfNeeded() {
       if (!alive || running) return
       if (localStorage.getItem(IOS_SCREEN_TIME_PRIMED_KEY) === '1') return
 
       running = true
       try {
-        const authorization = await getIOSScreenTimeStatus()
+        let authorization = await getIOSScreenTimeStatus()
+        if (!alive) return
+
+        if (
+          authorization?.status !== 'approved'
+          && localStorage.getItem(IOS_SCREEN_TIME_AUTH_PROMPT_KEY) !== '1'
+        ) {
+          // 只在全新安装首次进入时主动请求一次。
+          // 先记“已触发”，避免同一次启动 focus/visibility 多次重复弹系统框。
+          localStorage.setItem(IOS_SCREEN_TIME_AUTH_PROMPT_KEY, '1')
+          authorization = await requestIOSScreenTimeAuthorization()
+        }
+
         if (!alive || authorization?.status !== 'approved') return
 
         const result = await IOSScreenTimeNative.primeScreenTimeReports()
@@ -2605,9 +2619,9 @@ function App() {
           localStorage.setItem(IOS_SCREEN_TIME_PRIMED_KEY, '1')
         }
       } catch (error) {
-        // 首次授权刚完成时 iOS 可能需要短暂时间准备 Report Extension。
-        // 不把失败记为完成；用户回到前台/重新打开 APP 时会自动重试。
-        console.warn('苹果屏幕时间首次初始化暂未完成，将稍后重试。', error)
+        // 授权或 Report Extension 刚启动时可能需要短暂准备。
+        // prime 未成功时不记完成，后续回到前台会继续重试。
+        console.warn('苹果屏幕时间首次授权/初始化暂未完成，将稍后重试。', error)
       } finally {
         running = false
       }
@@ -2615,11 +2629,11 @@ function App() {
 
     function handleIOSPrimeVisible() {
       if (document.visibilityState === 'visible') {
-        window.setTimeout(primeIOSScreenTimeIfNeeded, 800)
+        window.setTimeout(authorizeAndPrimeIOSScreenTimeIfNeeded, 800)
       }
     }
 
-    const firstTimer = window.setTimeout(primeIOSScreenTimeIfNeeded, 1200)
+    const firstTimer = window.setTimeout(authorizeAndPrimeIOSScreenTimeIfNeeded, 1800)
     document.addEventListener('visibilitychange', handleIOSPrimeVisible)
     window.addEventListener('focus', handleIOSPrimeVisible)
 
