@@ -2510,6 +2510,9 @@ function App() {
   const [dailyDateModal, setDailyDateModal] = useState(null)
   const [usageModal, setUsageModal] = useState(false)
   const [usageDocument, setUsageDocument] = useState('')
+  const [dataAuthorizationOpen, setDataAuthorizationOpen] = useState(false)
+  const [dataAuthorizationStatus, setDataAuthorizationStatus] = useState(null)
+  const [dataAuthorizationBusy, setDataAuthorizationBusy] = useState('')
   const [versionTapCount, setVersionTapCount] = useState(0)
   const versionTapTimerRef = useRef(null)
   const screenOpenTimerRef = useRef(null)
@@ -3674,6 +3677,105 @@ function App() {
         title: '重新获取失败',
         text: String(error?.message || error || '雪粒内部数据暂不可用。'),
       })
+    }
+  }
+
+  async function refreshDataAuthorizationStatus() {
+    if (!Capacitor.isNativePlatform()) {
+      setDataAuthorizationStatus({ platform: 'web', steps: false, screen: false })
+      return
+    }
+
+    const platform = Capacitor.getPlatform()
+    try {
+      const deviceStatus = await DeviceData.getStatus()
+      let screenAuthorized = false
+
+      if (platform === 'ios') {
+        const screenStatus = await getIOSScreenTimeStatus()
+        screenAuthorized = screenStatus?.status === 'approved'
+      } else if (platform === 'android') {
+        screenAuthorized = Boolean(deviceStatus?.usageAccessGranted)
+      }
+
+      const stepsAuthorized = platform === 'ios'
+        ? Boolean(deviceStatus?.healthPermissionGranted)
+        : Boolean(
+            deviceStatus?.activityRecognitionPermissionGranted
+            || deviceStatus?.healthPermissionGranted
+          )
+
+      setDataAuthorizationStatus({
+        platform,
+        steps: stepsAuthorized,
+        screen: screenAuthorized,
+      })
+    } catch (error) {
+      console.warn('读取数据授权状态失败。', error)
+      setDataAuthorizationStatus({ platform, steps: false, screen: false })
+    }
+  }
+
+  async function openDataAuthorization() {
+    setDataAuthorizationOpen(true)
+    await refreshDataAuthorizationStatus()
+  }
+
+  async function authorizeStepsFromUsage() {
+    if (!Capacitor.isNativePlatform()) return
+    setDataAuthorizationBusy('steps')
+    try {
+      const platform = Capacitor.getPlatform()
+      let status = await DeviceData.getStatus()
+
+      if (platform === 'ios') {
+        await DeviceData.requestHealthPermissions()
+      } else if (platform === 'android') {
+        if (status?.stepCounterAvailable && !status?.activityRecognitionPermissionGranted) {
+          await DeviceData.requestActivityRecognitionPermission()
+        }
+        status = await DeviceData.getStatus()
+        if (status?.healthAvailable && !status?.healthPermissionGranted) {
+          await DeviceData.requestHealthPermissions()
+        }
+      }
+      await refreshDataAuthorizationStatus()
+    } catch (error) {
+      console.warn('步数授权未完成。', error)
+      window.alert('步数授权未完成，请按系统提示允许后再试。')
+      await refreshDataAuthorizationStatus()
+    } finally {
+      setDataAuthorizationBusy('')
+    }
+  }
+
+  async function authorizeScreenTimeFromUsage() {
+    if (!Capacitor.isNativePlatform()) return
+    setDataAuthorizationBusy('screen')
+    try {
+      const platform = Capacitor.getPlatform()
+
+      if (platform === 'ios') {
+        const authorization = await requestIOSScreenTimeAuthorization()
+        if (authorization?.status === 'approved') {
+          try {
+            const result = await IOSScreenTimeNative.primeScreenTimeReports()
+            if (result?.primed) localStorage.setItem(IOS_SCREEN_TIME_PRIMED_KEY, '1')
+          } catch (error) {
+            console.warn('苹果屏幕时间报表初始化暂未完成。', error)
+          }
+        }
+      } else if (platform === 'android') {
+        await DeviceData.openUsageAccessSettings()
+      }
+
+      window.setTimeout(refreshDataAuthorizationStatus, platform === 'android' ? 1200 : 200)
+    } catch (error) {
+      console.warn('屏幕时间授权未完成。', error)
+      window.alert('屏幕时间授权未完成，请按系统提示允许后再试。')
+      await refreshDataAuthorizationStatus()
+    } finally {
+      setDataAuthorizationBusy('')
     }
   }
 
@@ -5048,6 +5150,9 @@ const homeFloatingFootprintMemory = ''
               <span className="usageInfoHeaderSpacer" aria-hidden="true" />
             </div>
             <div className="usageInfoText">{USAGE_TEXT}</div>
+            <div className="usageAuthorizationLink">
+              <button type="button" onClick={openDataAuthorization}>数据授权</button>
+            </div>
             <div className="usageVersionBlock">
               <p>雪粒 Snowlet</p>
               <button type="button" className="usageVersionTap" onClick={handleVersionTap}>Version 1.2</button>
@@ -5070,6 +5175,52 @@ const homeFloatingFootprintMemory = ''
           </div>
         </div>
       )}
+      {usageModal && dataAuthorizationOpen && (
+        <div className="usageAuthorizationOverlay" role="dialog" aria-modal="true" aria-label="数据授权">
+          <div className="usageAuthorizationPanel">
+            <div className="usageAuthorizationHeader">
+              <button type="button" className="usageAuthorizationBack" aria-label="返回说明" onClick={() => setDataAuthorizationOpen(false)}>‹</button>
+              <h2>数据授权</h2>
+              <span aria-hidden="true" />
+            </div>
+
+            {!Capacitor.isNativePlatform() ? (
+              <p className="usageAuthorizationNote">数据授权仅在安装后的手机 APP 中设置。</p>
+            ) : (
+              <>
+                <div className="usageAuthorizationRow">
+                  <div>
+                    <strong>步数</strong>
+                    <small>{dataAuthorizationStatus?.steps ? '已授权' : '未授权'}</small>
+                  </div>
+                  {!dataAuthorizationStatus?.steps && (
+                    <button type="button" disabled={dataAuthorizationBusy === 'steps'} onClick={authorizeStepsFromUsage}>
+                      {dataAuthorizationBusy === 'steps' ? '授权中…' : '授权'}
+                    </button>
+                  )}
+                </div>
+
+                <div className="usageAuthorizationRow">
+                  <div>
+                    <strong>屏幕时间</strong>
+                    <small>{dataAuthorizationStatus?.screen ? '已授权' : '未授权'}</small>
+                  </div>
+                  {!dataAuthorizationStatus?.screen && (
+                    <button type="button" disabled={dataAuthorizationBusy === 'screen'} onClick={authorizeScreenTimeFromUsage}>
+                      {dataAuthorizationBusy === 'screen' ? '授权中…' : '授权'}
+                    </button>
+                  )}
+                </div>
+
+                <p className="usageAuthorizationNote">
+                  如首次安装时跳过授权，可随时在这里重新设置。
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {usageModal && usageDocument && (
         <div className="usageDocumentOverlay" role="dialog" aria-modal="true" aria-label={usageDocument === 'privacy' ? '隐私政策' : '用户协议'}>
           <div className="usageDocumentPanel">

@@ -4844,7 +4844,7 @@ button.dailyScreenValuePlain { cursor: pointer; }
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
-  color: rgba(241,223,177,0.9) !important;
+  color: #f4f0e6 !important;
   font-size: 12px !important;
   font-weight: 500 !important;
   text-decoration: underline !important;
@@ -4940,7 +4940,7 @@ button.dailyScreenValuePlain { cursor: pointer; }
   border-radius: 0 !important;
   background: transparent !important;
   font-size: 12px !important;
-  font-weight: 500 !important;
+  font-weight: 350 !important;
   text-decoration: underline !important;
   text-underline-offset: 3px !important;
   box-shadow: none !important;
@@ -4948,10 +4948,135 @@ button.dailyScreenValuePlain { cursor: pointer; }
 }
 
 .usageFooterLinks .usageLegalLinks button {
-  color: rgba(241,223,177,0.9) !important;
+  color: #e5e4e0 !important;
 }
 
 .usageFooterLinks .usageRecordLinks button {
-  color: #dad6d6 !important;
+  color: #f4f0e6 !important;
+}
+
+/* ======================================================
+   2026-08-11｜使用说明：数据授权入口与补授权页面
+   ====================================================== */
+.usageAuthorizationLink {
+  margin: 18px 0 18px !important;
+  padding: 0 !important;
+}
+
+.usageAuthorizationLink button {
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 2px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: rgba(241,223,177,0.9) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px !important;
+  box-shadow: none !important;
+  text-align: left !important;
+}
+
+.usageAuthorizationOverlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 120100 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  padding:
+    max(12px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left)) !important;
+  background: rgba(2,8,15,0.78) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.usageAuthorizationPanel {
+  width: min(520px, 100%) !important;
+  margin: 0 auto !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(230,235,240,0.16) !important;
+  border-radius: 20px !important;
+  background: #0d1828 !important;
+  color: #f4f0e6 !important;
+  box-shadow: 0 30px 90px rgba(0,0,0,0.58) !important;
+}
+
+.usageAuthorizationHeader {
+  display: grid !important;
+  grid-template-columns: 40px minmax(0, 1fr) 40px !important;
+  align-items: center !important;
+  padding: 12px 16px !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+.usageAuthorizationHeader h2 {
+  margin: 0 !important;
+  text-align: center !important;
+  font-size: 22px !important;
+  font-weight: 650 !important;
+}
+
+.usageAuthorizationBack {
+  width: 36px !important;
+  height: 36px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: rgba(244,240,230,0.92) !important;
+  font-size: 28px !important;
+  line-height: 1 !important;
+}
+
+.usageAuthorizationRow {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 18px !important;
+  margin: 0 20px !important;
+  padding: 18px 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+.usageAuthorizationRow > div {
+  display: grid !important;
+  gap: 5px !important;
+}
+
+.usageAuthorizationRow strong {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+}
+
+.usageAuthorizationRow small {
+  color: rgba(223,231,244,0.68) !important;
+  font-size: 12px !important;
+}
+
+.usageAuthorizationRow button {
+  width: auto !important;
+  min-width: 58px !important;
+  margin: 0 !important;
+  padding: 7px 13px !important;
+  border: 1px solid rgba(241,223,177,0.46) !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: rgba(241,223,177,0.95) !important;
+  font-size: 12px !important;
+}
+
+.usageAuthorizationNote {
+  margin: 16px 20px 20px !important;
+  color: rgba(223,231,244,0.62) !important;
+  font-size: 12px !important;
+  line-height: 1.65 !important;
 }
 
