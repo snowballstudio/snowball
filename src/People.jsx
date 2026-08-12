@@ -1236,7 +1236,7 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
           <div className="peopleMapCanvas" ref={mapCanvasRef}>
           <div className="peopleGraphLayer"></div>
             <img className="peopleWitnessCat" src="/refine/people_background_cat.png" alt="雪粒在见证人间" />
-            {!activeBirthDate && <div className="peopleInitialDatePrompt">请先在“设置”中填写初始年月，人际关系图将随后自动生成。</div>}
+            {!activeBirthDate && <div className="peopleInitialDatePrompt">请在设置中填写初始年月，新增人物资料后，人际关系图将自动生成。</div>}
             {activeBirthDate && RING_LABELS.map(ring => (
               <div
                 key={ring.key}
@@ -1294,7 +1294,7 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
               ))}
             </div>
 
-            {tablePeople.length === 0 && <p className="peopleEmpty">这里还没有记录。可以从左下角新增第一个人。</p>}
+            {tablePeople.length === 0 && <p className="peopleEmpty"></p>}
 
             {tablePeople.map(person => (
               <div className="peopleTableRow" key={person.id}>
