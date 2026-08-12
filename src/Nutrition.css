@@ -1575,3 +1575,46 @@
   }
 }
 
+
+/* ======================================================
+   V1.3｜营养页发布版简化
+   仅隐藏视觉，保留原云朵、猫、猫动图逻辑。
+   ====================================================== */
+
+/* 云朵在任何情况下都不显示；原 JSX 逻辑保留。 */
+.dailyNutritionPage .nutritionCloudNote {
+  display: none !important;
+}
+
+/* 静态猫与猫动图在任何情况下都不显示；原切换逻辑保留。 */
+.dailyNutritionPage .nutritionInsightCat,
+.dailyNutritionPage .nutritionInsightCatMotion,
+.dailyNutritionPage .dailyInsightCat.nutritionInsightCat {
+  display: none !important;
+}
+
+/* 原云朵文字独立显示在数据表上方，左对齐。 */
+@media (max-width: 900px) {
+  .dailyNutritionPage .nutritionTasteSummary {
+    position: absolute !important;
+    left: calc(
+      var(--nutrition-table-left) -
+      (var(--nutrition-table-width) / 2)
+    ) !important;
+    top: calc(var(--nutrition-table-top) - 30px) !important;
+    width: var(--nutrition-table-width) !important;
+    z-index: 6 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #ffffff !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    line-height: 1.25 !important;
+    letter-spacing: 0 !important;
+    text-align: left !important;
+    text-shadow: none !important;
+    white-space: normal !important;
+    pointer-events: none !important;
+    box-sizing: border-box !important;
+  }
+}

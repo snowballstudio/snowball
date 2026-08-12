@@ -1711,8 +1711,8 @@ function nutritionTasteSentence(tasteStats = {}) {
   const total = Number(tasteStats.total || 0)
   const heavyPct = Math.round(Number(tasteStats.heavyRatio || 0) * 100)
 
-  if (!total) return '还没有记录口味，彩虹暂时不会出现。'
-  if (heavyPct === 0) return '你的饮食口味正常，彩虹长度不受影响。'
+  if (!total) return '* 还没有记录口味，彩虹暂时不会出现。'
+  if (heavyPct === 0) return '* 你的饮食口味正常，彩虹长度不受影响。'
   if (heavyPct >= 100) return '！你的饮食口味过重，彩虹无法显示。'
   return `！你的饮食口味偏重，彩虹长度不完整。`
 }

@@ -772,11 +772,17 @@ private enum SnowballReportBuilder {
         for await deviceData in data {
             for await segment in deviceData.activitySegments {
                 totalDuration += segment.totalActivityDuration
-                returnedDates.insert(
-                    calendar.startOfDay(
-                        for: segment.dateInterval.start
+
+                // 平均值只统计真正有屏幕时间记录的日期。
+                // Apple 可能为查询区间返回 0 时长 segment；
+                // 这种空白日不能进入周均 / 前周 / 月均的除数。
+                if segment.totalActivityDuration > 0 {
+                    returnedDates.insert(
+                        calendar.startOfDay(
+                            for: segment.dateInterval.start
+                        )
                     )
-                )
+                }
 
                 for await categoryActivity in segment.categories {
                     let rawCategory =
@@ -959,7 +965,8 @@ struct SnowballDashboardWeekReport: DeviceActivityReportScene {
         await SnowballReportBuilder.dashboard(
             representing: data,
             rangeLabel: "周均",
-            divisor: 7
+            divisor: 7,
+            useReturnedDayCount: true
         )
     }
 }
@@ -976,7 +983,8 @@ struct SnowballDashboardPreviousWeekReport: DeviceActivityReportScene {
         await SnowballReportBuilder.dashboard(
             representing: data,
             rangeLabel: "前周",
-            divisor: 7
+            divisor: 7,
+            useReturnedDayCount: true
         )
     }
 }
@@ -992,7 +1000,8 @@ struct SnowballDashboardMonthReport: DeviceActivityReportScene {
         await SnowballReportBuilder.dashboard(
             representing: data,
             rangeLabel: "月均",
-            divisor: 30
+            divisor: 30,
+            useReturnedDayCount: true
         )
     }
 }

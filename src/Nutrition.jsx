@@ -797,6 +797,10 @@ export default function Nutrition({
             </div>
           )}
 
+          <div className="nutritionTasteSummary" aria-live="polite">
+            {nutritionTasteLine}
+          </div>
+
           <div className="dailyCornerTable dailyCornerTableRight nutritionTablePanel">
             <div className="nutritionTableNavLine">
               <div className="dailyRangeTabs nutritionRangeTabs">

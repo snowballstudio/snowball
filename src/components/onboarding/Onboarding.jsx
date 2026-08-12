@@ -9,8 +9,8 @@ import {
   markPermissionIntroCompleted,
 } from './onboardingStorage'
 
-const TERMS_URL = 'https://snowballstudio.github.io/snowball/terms.html'
-const PRIVACY_URL = 'https://snowballstudio.github.io/snowball/privacy.html'
+const TERMS_URL = 'http://106.14.156.178/terms.html'
+const PRIVACY_URL = 'http://106.14.156.178/privacy.html'
 
 function openDocument(url) {
   window.open(url, '_blank', 'noopener,noreferrer')

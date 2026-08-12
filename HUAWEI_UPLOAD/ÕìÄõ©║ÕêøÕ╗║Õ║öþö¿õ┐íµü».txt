@@ -1,3 +1,0 @@
-应用名称：雪球
-平台：Android
-软件包名称（Package name）：com.snowball.health
