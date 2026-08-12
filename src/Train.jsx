@@ -47,6 +47,39 @@ export const APP_ALIAS_TABLE = {
   今日头条: ['今日头条', '头条', 'Toutiao', 'Jinri Toutiao'],
   YouTube: ['YouTube', 'Youtube', 'YouTube Kids'],
   快手: ['快手', 'Kuaishou', 'Kwai'],
+
+  豆瓣阅读: ['豆瓣阅读', 'Douban Read', 'Douban Reading'],
+  网易云阅读: ['网易云阅读', 'NetEase Cloud Reading', 'NetEase Reading'],
+  邮件: ['邮件', 'Mail', 'Email', 'E-mail', 'Gmail', 'Google Mail', 'Outlook', 'Microsoft Outlook'],
+  电话: ['电话', 'Phone', 'Dialer', 'Phone by Google', 'Google Phone'],
+  短信: ['短信', '信息', 'Messages', 'Message', 'Messaging', 'Google Messages', 'Messages by Google'],
+  照片: ['照片', 'Photos', 'Google Photos', '图库', 'Gallery', '相册', 'Huawei Gallery', 'HUAWEI Gallery'],
+  相机: ['相机', 'Camera', 'Google Camera'],
+  雪粒: ['雪粒', 'Snowlet'],
+
+  虎扑: ['虎扑', 'Hupu', 'HUPU'],
+  陌陌: ['陌陌', 'MOMO', 'Momo'],
+  探探: ['探探', 'Tantan'],
+  X: ['X', 'Twitter', 'X Twitter', 'X (Twitter)'],
+  Discord: ['Discord'],
+  WhatsApp: ['WhatsApp', 'WhatsApp Messenger'],
+
+  kimi: ['kimi', 'Kimi', 'Kimi智能助手', 'Kimi 智能助手'],
+  飞书: ['飞书', 'Feishu', 'Lark'],
+  钉钉: ['钉钉', 'DingTalk', 'Dingtalk'],
+
+  红果: ['红果', '红果短剧', '红果免费短剧'],
+  番茄小说: ['番茄小说', '番茄免费小说', 'Tomato Novel'],
+  晋江小说阅读: ['晋江小说阅读', '晋江文学城', '晋江'],
+  七猫小说: ['七猫小说', '七猫免费小说', 'Qimao'],
+  起点小说: ['起点小说', '起点读书', '起点中文网', 'Qidian', 'Qidian Reader'],
+  王者荣耀: ['王者荣耀', 'Honor of Kings'],
+  和平精英: ['和平精英', 'Game for Peace'],
+  开心消消乐: ['开心消消乐'],
+  欢乐斗地主: ['欢乐斗地主', '腾讯欢乐斗地主'],
+  蛋仔派对: ['蛋仔派对', 'Eggy Party'],
+  洛克王国: ['洛克王国', 'Roco Kingdom'],
+  金铲铲之战: ['金铲铲之战', 'Battle of Golden Spatula'],
 }
 
 function compactAppName(value) {
@@ -103,10 +136,8 @@ const TRAIN_MOTION = {
   widthScale: 0.35,
 
   // 速度倍率。1 是原始速度；0.8 更快；1.2 更慢。
-  speedScale: 2,
+  speedScale: 1,
 
-  // 行驶距离额外增加/减少的像素。正数多跑一点，负数少跑一点。
-  distanceExtraPx: 0,
 
   // 透明度倍率。1 是原始透明度；0.8 更淡；1.1 更亮，最高会自动限制为 1。
   opacityScale: 1,
@@ -126,13 +157,30 @@ function trainMotionDuration(baseDuration) {
 }
 
 function trainMotionDistance(baseDistance) {
-  const extra = Number(TRAIN_MOTION.distanceExtraPx || 0)
-  if (!extra) return baseDistance
-  return `calc(${baseDistance} + ${extra}px)`
+  // 路程不再按打开次数或其它倍率扩张。
+  // App.jsx 统一传入 100vw，使 --train-duration 就是真实整段运行时间。
+  return baseDistance
 }
 
 function trainMotionOpacity(baseOpacity) {
   return Math.max(0, Math.min(1, Number(baseOpacity || 0) * TRAIN_MOTION.opacityScale))
+}
+
+
+function trainImageForRow(item, dailyTrainRows, trainImageForCategory) {
+  if (item?.key !== 'other') return trainImageForCategory(item?.key)
+
+  const usedMainKeys = new Set(
+    (dailyTrainRows || [])
+      .map(row => row?.key)
+      .filter(key => ['utility', 'social', 'ai', 'entertainment'].includes(key))
+  )
+
+  const borrowedKey = ['utility', 'social', 'ai', 'entertainment']
+    .find(key => !usedMainKeys.has(key))
+    || 'utility'
+
+  return trainImageForCategory(borrowedKey)
 }
 
 export default function Train({
@@ -251,16 +299,6 @@ export default function Train({
 
       <div className="dailyInsightCard informationTrainCard trainInsightCard">
         <img className="dailyInsightBg trainInsightBg" src="/refine/information_platform.png" alt="信息列车背景" />
-        <PngSequence
-          className="dailyInsightCat trainInsightCat"
-          prefix="/refine/watch"
-          maxFrames={5}
-          frameMs={280}
-          fallback="/refine/watch01.png"
-          ariaLabel="信息列车守望猫"
-        />
-
-
         <div className="dailyInsightContent trainInsightContent">
           <div className={`informationTrainStage ${trainIsRunning ? 'isRunning' : 'isWaiting'}`} key={`train-${dailyStatRange}-${trainRunKey}`} aria-hidden="true">
             {dailyTrainRows.map((item, index) => {
@@ -280,7 +318,7 @@ export default function Train({
                   }}
                 >
                   <div className="informationTrainRunner">
-                    <img className="informationTrainImage" src={trainImageForCategory(item.key)} alt="" />
+                    <img className="informationTrainImage" src={trainImageForRow(item, dailyTrainRows, trainImageForCategory)} alt="" />
                     <div className="informationTrainIcons">
                       {topApps.map(app => (
                         appIconMap[app] ? (

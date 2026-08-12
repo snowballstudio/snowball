@@ -101,7 +101,7 @@ const USAGE_TEXT = `雪粒是一款生活管理APP，旨在梳理与自律，其
 饮食均衡 → 毛色雪白
 心情正面 → 眼睛圆亮
 
-步数和屏幕时间经首次授权后，每天自动获取，可手动更改。
+步数和屏幕时间经首次授权后可自动更新。注：华为手机请在设置中开启“手动管理”以获得步数。
 
 饮食和心情数据来自每天与雪粒通话，点录音图标后开始语音录入，可空格发送切断或快进。
 
@@ -955,10 +955,12 @@ const DAILY_EDIT_REASONS = ['未能自动获取数据', '手机数据错误（�
 
 
 const APP_CATEGORY_MAP = {
-  utility: { label: '功能型', color: 'gold', apps: ['支付宝', '地图', '百度', '微信读书','美团','雪粒','拼多多', '京东', '天猫','浏览器', '淘宝' ]},
-  social: { label: '社交', color: 'red', apps: ['微信', '抖音', '微博', '小红书', '知乎', 'QQ', 'Instagram', 'FaceBook', 'Soul'] },
-  ai: { label: 'AI', color: 'blue', apps: ['DeepSeek','豆包', 'GPT', 'Gemini', 'Claude', '千问', '元宝'] },
-  entertainment: { label: '娱乐', color: 'silver', apps: ['哔哩哔哩', '腾讯视频', '爱奇艺', '优酷', '今日头条','YouTube', '快手'] },
+  utility: { label: '功能型', color: 'gold', apps: ['支付宝', '地图', '百度', '微信读书','豆瓣阅读','网易云阅读','邮件','电话','短信','照片','相机',
+    '美团','雪粒','拼多多', '京东', '天猫','浏览器', '淘宝' ]},
+  social: { label: '社交', color: 'red', apps: ['微信', '抖音', '微博', '小红书', '知乎', '虎扑', '陌陌','探探','X','QQ', 'Instagram', 'Discord', 'WhatsApp','FaceBook', 'Soul'] },
+  ai: { label: 'AI', color: 'blue', apps: ['DeepSeek','豆包', 'GPT', 'Gemini', 'Claude', 'kimi','飞书','钉钉', '千问', '元宝'] },
+  entertainment: { label: '娱乐', color: 'silver', apps: ['哔哩哔哩', '腾讯视频', '西瓜视频','央视频','咪咕视频','爱奇艺', '优酷', '今日头条','红果','番茄小说','晋江小说阅读','七猫小说',
+    '起点小说','王者荣耀','和平精英','开心消消乐','欢乐斗地主','蛋仔派对','洛克王国','金铲铲之战','YouTube', '快手'] },
   other: { label: '其它', color: 'green', apps: [] },
 }
 
@@ -1020,31 +1022,31 @@ function trainTopApps(item, limit = 5) {
 }
 
 function trainWidthForStats(item) {
-  const minutes = Number(item?.minutes || 0)
-  // 时长越长，车身越长；这一版把火车视觉尺寸整体放大。
-  return Math.round(Math.max(340, Math.min(980, 340 + minutes * 3.2)))
+  const minutes = Math.max(0, Number(item?.minutes || 0))
+
+  // 车身长度按屏幕使用时长线性变化：
+  // 0 分钟 = 340px；10 小时（600 分钟）= 980px；10 小时以上封顶。
+  const cappedMinutes = Math.min(600, minutes)
+  return Math.round(340 + cappedMinutes * (640 / 600))
 }
 
-function trainSpeedForStats(item, maxPickups = 1) {
+function trainSpeedForStats(item) {
   const pickups = Math.max(0, Number(item?.pickups || 0))
-  const max = Math.max(1, Number(maxPickups || 1))
-  // 打开次数越多，速度越快：按当前 TAB 内最大打开次数做线性映射。
-  // 最高频约 3 秒跑完，最低频约 16 秒跑完；差异会非常明显。
-  const ratio = Math.max(0, Math.min(1, pickups / max))
-  const slow = 16
-  const fast = 3
-  return Number((slow - ratio * (slow - fast)).toFixed(2))
+
+  // 速度按打开次数线性分配：
+  // 0 次 = 10 秒；300 次及以上 = 3 秒；中间按比例连续变化。
+  const cappedPickups = Math.min(300, pickups)
+  const duration = 10 - (cappedPickups / 300) * 7
+  return Number(duration.toFixed(2))
 }
 
 function trainOpacityForStats(item) {
   return Number(item?.minutes || 0) > 0 || Number(item?.pickups || 0) > 0 ? 1 : 0.36
 }
 
-function trainDistanceForStats(item) {
-  const width = trainWidthForStats(item)
-  const pickups = Number(item?.pickups || 0)
-  const extra = Math.round(Math.min(760, Math.max(0, pickups * 22)))
-  return `calc(100vw + ${width}px + ${720 + extra}px)`
+function trainDistanceForStats() {
+  // 固定为一个屏幕宽，避免打开次数同时改变“速度”和“路程”。
+  return '100vw'
 }
 
 
@@ -1801,15 +1803,49 @@ function appStatsFromEntries(entries = [], range = 'today', screenRecords = []) 
 
   scoped.forEach(entry => {
     const app = String(entry.app || '').trim()
-    if (!app) return
+    const realAppName = String(
+      entry.realAppName
+      || entry.rawAppName
+      || entry.systemAppName
+      || entry.appName
+      || entry.packageName
+      || ''
+    ).trim()
+
+    const minutes = Number(entry.minutes || 0)
+    const pickups = Number(entry.pickups || 0)
+
+    if (!app) {
+      base.other.minutes += minutes
+      base.other.pickups += pickups
+      if (realAppName) {
+        base.other.apps.set(realAppName, (base.other.apps.get(realAppName) || 0) + minutes)
+      }
+      return
+    }
+
     const key = screenCategoryForApp(app)
-    if (key === 'other') return
+    if (key === 'other') {
+      base.other.minutes += minutes
+      base.other.pickups += pickups
+      const otherName = realAppName || app
+      if (otherName) {
+        base.other.apps.set(otherName, (base.other.apps.get(otherName) || 0) + minutes)
+      }
+      return
+    }
+
     const bucket = base[key]
-    bucket.minutes += Number(entry.minutes || 0)
-    bucket.pickups += Number(entry.pickups || 0)
-    bucket.apps.set(app, (bucket.apps.get(app) || 0) + Number(entry.minutes || 0))
+    bucket.minutes += minutes
+    bucket.pickups += pickups
+    bucket.apps.set(app, (bucket.apps.get(app) || 0) + minutes)
   })
 
+  /*
+    系统总屏幕时间继续只作为兜底：
+    如果系统总数大于全部 APP 明细的合计，只把剩余差额补给“其它”。
+    已经直接归入“其它”的未知 APP 不会重复计算。
+  */
   const systemTotal = screenTotalMinutesForRange(screenRecords, range)
   const detailTotal = Object.values(base).reduce((sum, item) => sum + item.minutes, 0)
   base.other.minutes += Math.max(0, systemTotal - detailTotal)
@@ -1835,34 +1871,42 @@ function appTop10FromEntries(entries = [], range = 'today', screenRecords = []) 
   const appMap = new Map()
 
   scoped.forEach(entry => {
-    const app = String(entry.app || '').trim()
+    /*
+      TOP10 直接使用手机系统返回的真实 APP 名称。
+      entry.app（雪粒统一名称）只保留给四种火车归类使用，
+      不再参与 TOP10 名称或筛选。
+    */
+    const app = String(
+      entry.realAppName
+      || entry.rawAppName
+      || entry.systemAppName
+      || entry.appName
+      || entry.packageName
+      || entry.app
+      || ''
+    ).trim()
     if (!app) return
+
     const old = appMap.get(app) || { app, minutes: 0, pickups: 0 }
     old.minutes += Number(entry.minutes || 0)
     old.pickups += Number(entry.pickups || 0)
     appMap.set(app, old)
   })
 
-  const rawTop = [...appMap.values()]
+  return [...appMap.values()]
     .sort((a, b) => (b.minutes - a.minutes) || (b.pickups - a.pickups))
     .slice(0, 10)
-
-  const systemTotal = screenTotalMinutesForRange(screenRecords, range)
-  const listedTotal = rawTop.reduce((sum, item) => sum + Number(item.minutes || 0), 0)
-  const otherMinutes = Math.max(0, systemTotal - listedTotal)
-  const rows = otherMinutes > 0 ? [...rawTop, { app: '其它', minutes: otherMinutes, pickups: 0 }] : rawTop
-
-  return rows.map(item => {
-    const minutes = item.minutes / divisor
-    const pickups = item.pickups / divisor
-    return {
-      ...item,
-      minutes,
-      pickups,
-      hoursText: `${(minutes / 60).toFixed(1)} h`,
-      pickupText: item.app === '其它' ? '—' : `${Math.round(pickups)}次`,
-    }
-  })
+    .map(item => {
+      const minutes = item.minutes / divisor
+      const pickups = item.pickups / divisor
+      return {
+        ...item,
+        minutes,
+        pickups,
+        hoursText: `${(minutes / 60).toFixed(1)} h`,
+        pickupText: `${Math.round(pickups)}次`,
+      }
+    })
 }
 
 
@@ -2713,7 +2757,12 @@ function App() {
         const today = formatDateForDaily(todayText())
         const yesterday = yesterdayText()
         const current = currentStoredData()
-        const dailySupported = Boolean(status?.healthPermissionGranted)
+        const dailySupported = platform === 'android'
+          ? Boolean(
+              (status?.stepCounterAvailable && status?.activityRecognitionPermissionGranted)
+              || status?.healthPermissionGranted
+            )
+          : Boolean(status?.healthPermissionGranted)
         const screenSupported = platform === 'android' && Boolean(status?.usageAccessGranted)
         if (!dailySupported && !screenSupported) return
 
@@ -3177,15 +3226,27 @@ function App() {
   const dailyTasteStats = useMemo(() => tasteStatsFromRecords(latestRecords, dailyStatRange), [latestRecords, dailyStatRange])
   const nutritionTasteLine = useMemo(() => nutritionTasteSentence(dailyTasteStats), [dailyTasteStats])
   const dailyAppStats = useMemo(() => appStatsFromEntries(dailyScreenEntries, dailyStatRange, data.screenRecords || []), [dailyScreenEntries, dailyStatRange, data.screenRecords])
-  const dailyTrainRows = useMemo(() => (dailyAppStats || [])
-    .filter(item => TRAIN_VISUAL_ROWS.includes(item.key))
-    .filter(item => Number(item?.minutes || 0) > 0 || Number(item?.pickups || 0) > 0), [dailyAppStats])
+  const dailyTrainRows = useMemo(() => {
+    const rows = dailyAppStats || []
+
+    const mainRows = rows
+      .filter(item => TRAIN_VISUAL_ROWS.includes(item.key))
+      .filter(item => Number(item?.minutes || 0) > 0 || Number(item?.pickups || 0) > 0)
+
+    if (mainRows.length >= 4) return mainRows
+
+    const otherRow = rows.find(item => item.key === 'other')
+    const hasOther = otherRow
+      && (Number(otherRow?.minutes || 0) > 0 || Number(otherRow?.pickups || 0) > 0)
+
+    return hasOther ? [...mainRows, otherRow] : mainRows
+  }, [dailyAppStats])
   const dailyTrainMaxPickups = useMemo(() => Math.max(1, ...dailyTrainRows.map(item => Number(item?.pickups || 0))), [dailyTrainRows])
   const dailyTrainMaxDuration = useMemo(() => Math.max(3, ...dailyTrainRows.map(item => trainSpeedForStats(item, dailyTrainMaxPickups))), [dailyTrainRows, dailyTrainMaxPickups])
   const dailyTopApps = useMemo(() => appTop10FromEntries(dailyScreenEntries, dailyStatRange, data.screenRecords || []), [dailyScreenEntries, dailyStatRange, data.screenRecords])
   const dailyTopAppSummary = useMemo(() => ({
     minutes: (dailyTopApps || []).reduce((sum, item) => sum + Number(item?.minutes || 0), 0),
-    pickups: (dailyTopApps || []).filter(item => item.app !== '其它').reduce((sum, item) => sum + Number(item?.pickups || 0), 0),
+    pickups: (dailyTopApps || []).reduce((sum, item) => sum + Number(item?.pickups || 0), 0),
   }), [dailyTopApps])
   const dailyScreenRows = useMemo(() => (dailyScreenEntries || []).filter(row => dateKey(row.date) === dateKey(selectedScreenDate)).sort((a, b) => b.minutes - a.minutes), [dailyScreenEntries, selectedScreenDate])
 
@@ -3225,7 +3286,7 @@ function App() {
 
       resetTimer = window.setTimeout(() => {
         if (!cancelled) startCycle()
-      }, Math.round((3000 + dailyTrainMaxDuration * 500 + 900)))
+      }, Math.round((3000 + dailyTrainMaxDuration * 1000 + 900)))
     }
 
     startCycle()
@@ -3730,16 +3791,36 @@ function App() {
 
       if (platform === 'ios') {
         await DeviceData.requestHealthPermissions()
+        status = await DeviceData.getStatus()
       } else if (platform === 'android') {
         if (status?.stepCounterAvailable && !status?.activityRecognitionPermissionGranted) {
           await DeviceData.requestActivityRecognitionPermission()
         }
+
         status = await DeviceData.getStatus()
+
         if (status?.healthAvailable && !status?.healthPermissionGranted) {
           await DeviceData.requestHealthPermissions()
+          status = await DeviceData.getStatus()
         }
       }
+
+      const stepsGranted = platform === 'ios'
+        ? Boolean(status?.healthPermissionGranted)
+        : Boolean(
+            (status?.stepCounterAvailable && status?.activityRecognitionPermissionGranted)
+            || status?.healthPermissionGranted
+          )
+
       await refreshDataAuthorizationStatus()
+
+      if (stepsGranted) {
+        window.alert('步数授权已开启。')
+      } else if (platform === 'android') {
+        window.alert('步数权限仍未开启。请在手机“设置 → 应用 → 雪粒 → 权限”中允许“身体活动/活动识别”，然后返回雪粒再试。')
+      } else {
+        window.alert('步数权限仍未开启，请按系统提示允许后再试。')
+      }
     } catch (error) {
       console.warn('步数授权未完成。', error)
       window.alert('步数授权未完成，请按系统提示允许后再试。')

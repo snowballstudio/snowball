@@ -1072,7 +1072,7 @@ export default function Footprint({
               <div className="footprintHistoryPanel">
                 <h3></h3>
                 {footprintsByYear.length === 0 ? (
-                  <p className="footprintHistoryEmpty">还没有足迹。可以先进入地图，添加第一条记录。</p>
+                  <p className="footprintHistoryEmpty">...还没有记录。可以先进入子页面添加足迹。</p>
                 ) : (
                   <div className="footprintYearList">
                     {footprintsByYear.map(group => {

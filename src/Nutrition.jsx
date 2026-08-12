@@ -725,7 +725,7 @@ export default function Nutrition({
                   <td>{listText(row.others)}</td>
                 </tr>
               )) : (
-                <tr><td colSpan="8" className="nutritionDetailEmpty">日常表中还没有食物记录</td></tr>
+                <tr><td colSpan="8" className="nutritionDetailEmpty"></td></tr>
               )}
             </tbody>
           </table>

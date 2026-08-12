@@ -27,13 +27,13 @@
   --fp-home-bg-drift-scale: 1.00;
   --fp-home-bg-drift-x: 0px;
   --fp-home-bg-drift-duration: 24s;
-  --fp-home-title-top: 22px;
+  --fp-home-title-top: 20px;
   --fp-home-title-size: 22px;
   --fp-home-title-color: #ffffff;
   --fp-home-back-left: 18px;
-  --fp-home-back-top: 18px;
+  --fp-home-back-top: 14px;
   --fp-home-back-size: 28px;
-  --fp-home-summary-top: 60px;
+  --fp-home-summary-top: 56px;
   --fp-home-summary-left: 38px;
   --fp-home-summary-width: calc(80% - 44px);
   --fp-home-summary-size: 13px;
@@ -63,7 +63,7 @@
   --fp-home-cat-opacity: 0.9;
 
   /* 主页历史列表：位置 */
-  --fp-history-top: calc(var(--fp-home-bg-height) + 25px);
+  --fp-history-top: calc(var(--fp-home-bg-height) + 24px);
   --fp-history-left: 16px;
   --fp-history-right: 16px;
   --fp-history-bottom: 84px;
@@ -1153,8 +1153,8 @@
 @media (max-width: 900px) {
   :root {
     --fp-home-bg-height: 30vh;
-    --fp-home-title-top: 23px;
-    --fp-home-summary-top: 70px;
+    --fp-home-title-top: 20px;
+    --fp-home-summary-top: 66px;
     --fp-scene-top: 18px;
     --fp-scene-right: 14px;
     --fp-history-left: 14px;

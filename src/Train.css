@@ -11,11 +11,11 @@
 @media (max-width: 900px) {
   :root {
     /* 顶部返回与标题 */
-    --train-title-top: 24px;
+    --train-title-top: 20px;
     --train-title-size: 22px;
     --train-title-color: #ffffff;
     --train-back-left: 18px;
-    --train-back-top: 18px;
+    --train-back-top: 14px;
     --train-back-size: 28px;
 
     /* 背景 */
@@ -39,9 +39,9 @@
     --train-meta-text-size: 12px;
 
     /* APP使用榜：整体位置与大小 */
-    --train-panel-left: 3vw;
-    --train-panel-top: 42.5vh;
-    --train-panel-width: min(400px, 72vw);
+    --train-panel-left: 50%;
+    --train-panel-top: 40vh;
+    --train-panel-width: min(420px, calc(72vw + 20px));
     --train-panel-padding: 12px;
     --train-panel-radius: 18px;
     --train-panel-bg: linear-gradient(180deg, rgba(172, 185, 198, 0.23), rgba(70, 86, 102, 0.18)), rgba(12, 22, 34, 0.72);
@@ -66,7 +66,7 @@
     --train-table-radius: 14px;
     --train-table-padding-y: 4px;
     --train-table-padding-x: 8px;
-    --train-grid-cols: minmax(0, 1.2fr) 0.81fr 0.77fr;
+    --train-grid-cols: minmax(0, 1fr) 68px 64px;
     --train-grid-gap: 4px;
     --train-header-size: 12px;
     --train-row-size: 12px;
@@ -233,7 +233,7 @@
   position: absolute !important;
   left: 0 !important;
   right: 0 !important;
-  top: var(--train-top) !important;
+  top: var(--train-top ) !important;
   height: 172px !important;
   opacity: var(--train-opacity) !important;
 }
@@ -380,10 +380,11 @@
 .dailyTrainPage .trainCornerTable {
   position: absolute !important;
   z-index: 7 !important;
-  left: 4vw !important;
+  left: 50% !important;
   top: 15vh !important;
   bottom: auto !important;
-  width: min(430px, 50vw) !important;
+  width: min(450px, calc(50vw + 20px)) !important;
+  transform: translateX(-50%) !important;
   padding: 14px !important;
   border-radius: 18px !important;
   display: grid !important;
@@ -449,7 +450,7 @@
 .trainLedHeader,
 .trainLedRow {
   display: grid !important;
-  grid-template-columns: minmax(0, 1.35fr) 0.75fr 0.92fr !important;
+  grid-template-columns: minmax(0, 1fr) 98px 120px !important;
   align-items: center !important;
   gap: 8px !important;
   text-align: center !important;
@@ -548,9 +549,10 @@
 
 @media (max-width: 900px) {
   .dailyTrainPage .trainCornerTable {
-    left: var(--train-panel-left, 4vw) !important;
+    left: var(--train-panel-left, 50%) !important;
     top: var(--train-panel-top, 15vh) !important;
-    width: var(--train-panel-width, min(430px, 72vw)) !important;
+    width: var(--train-panel-width, min(450px, calc(72vw + 20px))) !important;
+    transform: translateX(-50%) !important;
     padding: var(--train-panel-padding, 12px) !important;
     border-radius: var(--train-panel-radius, 18px) !important;
     background: var(--train-panel-bg) !important;
@@ -1011,5 +1013,17 @@ html,body{
     padding-bottom: 42px !important;
     background: #ffffff !important;
   }
+}
+
+/* ======================================================
+   2026-08-11｜信息列车：暂时隐藏火车上的 APP 图标
+   仅隐藏视觉显示；图标映射、APP 分类、topApps 计算逻辑全部保留。
+   ====================================================== */
+.dailyTrainPage .informationTrainIcons {
+  display: none !important;
+}
+
+.informationTrainStage {
+  transform: translateY(-20px) !important;
 }
 

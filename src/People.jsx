@@ -1236,7 +1236,7 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
           <div className="peopleMapCanvas" ref={mapCanvasRef}>
           <div className="peopleGraphLayer"></div>
             <img className="peopleWitnessCat" src="/refine/people_background_cat.png" alt="雪粒在见证人间" />
-            {!activeBirthDate && <div className="peopleInitialDatePrompt">请先在“设置”中填写初始年月，人间图随后自动生成。</div>}
+            {!activeBirthDate && <div className="peopleInitialDatePrompt">请先在“设置”中填写初始年月，人际关系图将随后自动生成。</div>}
             {activeBirthDate && RING_LABELS.map(ring => (
               <div
                 key={ring.key}
@@ -1577,7 +1577,7 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
         <div className="peopleEditorOverlay">
           <div className="peopleEditor peopleBirthdayEditor">
             <h3>设置</h3>
-            <p>初始年月是“我”来到人间的起点，也可以按自己的理解设置。人物圆圈按关系持续月数与人生月数的比例生成；没有填写时，人物记录可以保存，但人间图暂不生成。</p>
+            <p>初始年月是“我”来到人间的起点，即生日。人物圆圈按关系持续时间与年龄比例生成；没有填写时，人物记录可以保存，但人际关系图暂不生成。</p>
             <div className="peopleEditorGrid peopleBirthdayGrid">
               <label>
                 初始年份
