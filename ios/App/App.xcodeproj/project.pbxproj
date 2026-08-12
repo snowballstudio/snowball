@@ -18,6 +18,10 @@
 		6BEBE8C3301391DF00E03C7A /* SnowballScreenTimeReport.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 6BEBE8B7301391DF00E03C7A /* SnowballScreenTimeReport.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6BEBE8D33013A82400E03C7A /* IOSAudioSessionPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBE8D23013A82400E03C7A /* IOSAudioSessionPlugin.swift */; };
 		6BEBE8D53013ACC800E03C7A /* IOSScreenTimePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBE8D43013ACC800E03C7A /* IOSScreenTimePlugin.swift */; };
+		6BEBE8E7301B8C7500E03C7A /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6BEBE8E6301B8C7400E03C7A /* DeviceActivity.framework */; };
+		6BEBE8EF301B8C7500E03C7A /* SnowballDeviceActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6BEBE8E4301B8C7400E03C7A /* SnowballDeviceActivityMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		6BEBE8F9301F0C4400E03C7A /* IOSMonitorAppPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBE8F8301F0C4400E03C7A /* IOSMonitorAppPicker.swift */; };
+		6BEBE8FB301F0C5F00E03C7A /* IOSPhotoIndexPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BEBE8FA301F0C5F00E03C7A /* IOSPhotoIndexPlugin.swift */; };
 		A1B2C3D42F00000100000001 /* DeviceDataPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D42F00000100000002 /* DeviceDataPlugin.swift */; };
 		A1B2C3D42F00000200000001 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D42F00000200000002 /* MainViewController.swift */; };
 /* End PBXBuildFile section */
@@ -29,6 +33,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 6BEBE8B6301391DF00E03C7A;
 			remoteInfo = SnowballScreenTimeReport;
+		};
+		6BEBE8ED301B8C7500E03C7A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6BEBE8E3301B8C7400E03C7A;
+			remoteInfo = SnowballDeviceActivityMonitor;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -42,6 +53,17 @@
 				6BEBE8C3301391DF00E03C7A /* SnowballScreenTimeReport.appex in Embed ExtensionKit Extensions */,
 			);
 			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6BEBE8F4301B8C7500E03C7A /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				6BEBE8EF301B8C7500E03C7A /* SnowballDeviceActivityMonitor.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -61,6 +83,10 @@
 		6BEBE8B7301391DF00E03C7A /* SnowballScreenTimeReport.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = SnowballScreenTimeReport.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6BEBE8D23013A82400E03C7A /* IOSAudioSessionPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSAudioSessionPlugin.swift; sourceTree = "<group>"; };
 		6BEBE8D43013ACC800E03C7A /* IOSScreenTimePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSScreenTimePlugin.swift; sourceTree = "<group>"; };
+		6BEBE8E4301B8C7400E03C7A /* SnowballDeviceActivityMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SnowballDeviceActivityMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6BEBE8E6301B8C7400E03C7A /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		6BEBE8F8301F0C4400E03C7A /* IOSMonitorAppPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSMonitorAppPicker.swift; sourceTree = "<group>"; };
+		6BEBE8FA301F0C5F00E03C7A /* IOSPhotoIndexPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSPhotoIndexPlugin.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		A1B2C3D42F00000100000002 /* DeviceDataPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDataPlugin.swift; sourceTree = "<group>"; };
 		A1B2C3D42F00000200000002 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
@@ -74,21 +100,19 @@
 			);
 			target = 6BEBE8B6301391DF00E03C7A /* SnowballScreenTimeReport */;
 		};
+		6BEBE8F0301B8C7500E03C7A /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				SnowballDeviceActivityMonitor.swift,
+			);
+			target = 6BEBE8E3301B8C7400E03C7A /* SnowballDeviceActivityMonitor */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		6BEBE8B8301391DF00E03C7A /* SnowballScreenTimeReport */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6BEBE8C4301391DF00E03C7A /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = SnowballScreenTimeReport;
-			sourceTree = "<group>";
-		};
+		6BEBE8B8301391DF00E03C7A /* SnowballScreenTimeReport */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (6BEBE8C4301391DF00E03C7A /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SnowballScreenTimeReport; sourceTree = "<group>"; };
+		6BEBE8E8301B8C7500E03C7A /* SnowballDeviceActivityMonitor */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (6BEBE8F0301B8C7500E03C7A /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SnowballDeviceActivityMonitor; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -107,6 +131,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6BEBE8E1301B8C7400E03C7A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6BEBE8E7301B8C7500E03C7A /* DeviceActivity.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -116,6 +148,8 @@
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				6BEBE8B8301391DF00E03C7A /* SnowballScreenTimeReport */,
+				6BEBE8E8301B8C7500E03C7A /* SnowballDeviceActivityMonitor */,
+				6BEBE8E5301B8C7400E03C7A /* Frameworks */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -125,6 +159,7 @@
 			children = (
 				504EC3041FED79650016851F /* App.app */,
 				6BEBE8B7301391DF00E03C7A /* SnowballScreenTimeReport.appex */,
+				6BEBE8E4301B8C7400E03C7A /* SnowballDeviceActivityMonitor.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -132,6 +167,8 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				6BEBE8FA301F0C5F00E03C7A /* IOSPhotoIndexPlugin.swift */,
+				6BEBE8F8301F0C4400E03C7A /* IOSMonitorAppPicker.swift */,
 				6BEBE8D23013A82400E03C7A /* IOSAudioSessionPlugin.swift */,
 				6BEBE8D43013ACC800E03C7A /* IOSScreenTimePlugin.swift */,
 				6BEBE8B230138E8500E03C7A /* AppRelease.entitlements */,
@@ -150,6 +187,14 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		6BEBE8E5301B8C7400E03C7A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				6BEBE8E6301B8C7400E03C7A /* DeviceActivity.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -161,11 +206,13 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				6BEBE8C8301391DF00E03C7A /* Embed ExtensionKit Extensions */,
+				6BEBE8F4301B8C7500E03C7A /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				6BEBE8C2301391DF00E03C7A /* PBXTargetDependency */,
+				6BEBE8EE301B8C7500E03C7A /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -197,6 +244,28 @@
 			productReference = 6BEBE8B7301391DF00E03C7A /* SnowballScreenTimeReport.appex */;
 			productType = "com.apple.product-type.extensionkit-extension";
 		};
+		6BEBE8E3301B8C7400E03C7A /* SnowballDeviceActivityMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6BEBE8F1301B8C7500E03C7A /* Build configuration list for PBXNativeTarget "SnowballDeviceActivityMonitor" */;
+			buildPhases = (
+				6BEBE8E0301B8C7400E03C7A /* Sources */,
+				6BEBE8E1301B8C7400E03C7A /* Frameworks */,
+				6BEBE8E2301B8C7400E03C7A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6BEBE8E8301B8C7500E03C7A /* SnowballDeviceActivityMonitor */,
+			);
+			name = SnowballDeviceActivityMonitor;
+			packageProductDependencies = (
+			);
+			productName = SnowballDeviceActivityMonitor;
+			productReference = 6BEBE8E4301B8C7400E03C7A /* SnowballDeviceActivityMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -211,6 +280,9 @@
 						LastSwiftMigration = 1100;
 					};
 					6BEBE8B6301391DF00E03C7A = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					6BEBE8E3301B8C7400E03C7A = {
 						CreatedOnToolsVersion = 26.6;
 					};
 				};
@@ -233,6 +305,7 @@
 			targets = (
 				504EC3031FED79650016851F /* App */,
 				6BEBE8B6301391DF00E03C7A /* SnowballScreenTimeReport */,
+				6BEBE8E3301B8C7400E03C7A /* SnowballDeviceActivityMonitor */,
 			);
 		};
 /* End PBXProject section */
@@ -258,6 +331,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6BEBE8E2301B8C7400E03C7A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -267,13 +347,22 @@
 			files = (
 				6BEBE8D53013ACC800E03C7A /* IOSScreenTimePlugin.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				6BEBE8F9301F0C4400E03C7A /* IOSMonitorAppPicker.swift in Sources */,
 				A1B2C3D42F00000100000001 /* DeviceDataPlugin.swift in Sources */,
 				6BEBE8D33013A82400E03C7A /* IOSAudioSessionPlugin.swift in Sources */,
+				6BEBE8FB301F0C5F00E03C7A /* IOSPhotoIndexPlugin.swift in Sources */,
 				A1B2C3D42F00000200000001 /* MainViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		6BEBE8B3301391DF00E03C7A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6BEBE8E0301B8C7400E03C7A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -287,6 +376,11 @@
 			isa = PBXTargetDependency;
 			target = 6BEBE8B6301391DF00E03C7A /* SnowballScreenTimeReport */;
 			targetProxy = 6BEBE8C1301391DF00E03C7A /* PBXContainerItemProxy */;
+		};
+		6BEBE8EE301B8C7500E03C7A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6BEBE8E3301B8C7400E03C7A /* SnowballDeviceActivityMonitor */;
+			targetProxy = 6BEBE8ED301B8C7500E03C7A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -521,7 +615,7 @@
 				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CODE_SIGN_ENTITLEMENTS = SnowballScreenTimeReport/SnowballScreenTimeReport.entitlements;
+				CODE_SIGN_ENTITLEMENTS = SnowballScreenTimeReport/SnowballScreenTimeReportRelease.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -542,6 +636,89 @@
 				MARKETING_VERSION = 1.0;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.snowball.health.SnowballScreenTimeReport;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		6BEBE8F2301B8C7500E03C7A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_ENTITLEMENTS = SnowballDeviceActivityMonitor/SnowballDeviceActivityMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6JT4C45LX8;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SnowballDeviceActivityMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SnowballDeviceActivityMonitor;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.snowball.health.SnowballDeviceActivityMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6BEBE8F3301B8C7500E03C7A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_ENTITLEMENTS = SnowballDeviceActivityMonitor/SnowballDeviceActivityMonitorRelease.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6JT4C45LX8;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SnowballDeviceActivityMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SnowballDeviceActivityMonitor;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.snowball.health.SnowballDeviceActivityMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -579,6 +756,15 @@
 			buildConfigurations = (
 				6BEBE8C6301391DF00E03C7A /* Debug */,
 				6BEBE8C7301391DF00E03C7A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6BEBE8F1301B8C7500E03C7A /* Build configuration list for PBXNativeTarget "SnowballDeviceActivityMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6BEBE8F2301B8C7500E03C7A /* Debug */,
+				6BEBE8F3301B8C7500E03C7A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
