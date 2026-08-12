@@ -44,14 +44,8 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             do {
                 try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
                 await MainActor.run {
-                    /*
-                     全新安装时，授权成功并不等于 DeviceActivityReport Extension
-                     已经真正启动。授权完成后立即做一次原生预热；这里不读取数据，
-                     只把 Report View 挂入有效视图层级数秒。
-                    */
-                    self.primeScreenTimeReportView { _ in
-                        call.resolve(self.statusPayload())
-                    }
+                    // 授权只负责授权；Report 初始化统一由 primeScreenTimeReports 负责。
+                    call.resolve(self.statusPayload())
                 }
             } catch {
                 await MainActor.run {
@@ -218,38 +212,14 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let calendar = Calendar.autoupdatingCurrent
-        let logicalToday = snowballDayStart(for: Date(), calendar: calendar)
-
-        guard
-            let firstDay = calendar.date(
-                byAdding: .day,
-                value: -29,
-                to: logicalToday
-            ),
-            let dayAfterToday = calendar.date(
-                byAdding: .day,
-                value: 1,
-                to: logicalToday
-            )
-        else {
+        guard let range = makeThirtyDayScreenTimeRange() else {
             call.reject("无法计算30日屏幕时间区间。")
             return
         }
 
-        let start = snowballBoundary(for: firstDay, calendar: calendar)
-        let end = snowballBoundary(for: dayAfterToday, calendar: calendar)
-
-        let filter = DeviceActivityFilter(
-            segment: .hourly(
-                during: DateInterval(
-                    start: start,
-                    end: end
-                )
-            ),
-            users: .all,
-            devices: .all
-        )
+        let logicalToday = range.logicalToday
+        let start = range.start
+        let filter = range.filter
 
         DispatchQueue.main.async {
             guard let presenter = self.bridge?.viewController else {
@@ -474,6 +444,63 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    private func makeThirtyDayScreenTimeRange(
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> (
+        logicalToday: Date,
+        start: Date,
+        end: Date,
+        filter: DeviceActivityFilter
+    )? {
+        let logicalToday = snowballDayStart(
+            for: Date(),
+            calendar: calendar
+        )
+
+        guard
+            let firstDay = calendar.date(
+                byAdding: .day,
+                value: -29,
+                to: logicalToday
+            ),
+            let nextDay = calendar.date(
+                byAdding: .day,
+                value: 1,
+                to: logicalToday
+            )
+        else {
+            return nil
+        }
+
+        let start = snowballBoundary(
+            for: firstDay,
+            calendar: calendar
+        )
+        let end = snowballBoundary(
+            for: nextDay,
+            calendar: calendar
+        )
+
+        let filter = DeviceActivityFilter(
+            segment: .hourly(
+                during: DateInterval(
+                    start: start,
+                    end: end
+                )
+            ),
+            users: .all,
+            devices: .all
+        )
+
+        return (
+            logicalToday: logicalToday,
+            start: start,
+            end: end,
+            filter: filter
+        )
+    }
+
+
     private func snowballDayStart(
         for date: Date,
         calendar: Calendar = .autoupdatingCurrent
@@ -503,12 +530,13 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     /*
-     MARK: - Fresh-install Screen Time Report warm-up
+     MARK: - Screen Time 30 日 Report warm-up
 
      目的：
-     新装 APP 完成 Family Controls 授权后，主动让一个真正的
-     DeviceActivityReport 进入可布局视图层级，给 Report Extension
-     一次完整启动机会。这里不把任何 Screen Time 数据返回给 JS。
+     Family Controls 授权成功后，主动让与正式“30日屏幕时间”
+     完全相同的 DeviceActivityReport 进入可布局视图层级。
+     既用于首次直接授权，也用于先拒绝后补授权的恢复路径。
+     这里不把 Screen Time 明细返回给 JS。
     */
     private func primeScreenTimeReportView(
         completion: @escaping (Bool) -> Void
@@ -525,27 +553,22 @@ public class IOSScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
         removePrimeReportHost()
 
-        let calendar = Calendar.autoupdatingCurrent
-        let today = calendar.startOfDay(for: Date())
-        guard
-            let start = calendar.date(byAdding: .day, value: -7, to: today),
-            let end = calendar.date(byAdding: .day, value: 1, to: today)
-        else {
+        guard let range = makeThirtyDayScreenTimeRange() else {
             completion(false)
             return
         }
 
-        let filter = DeviceActivityFilter(
-            segment: .hourly(
-                during: DateInterval(start: start, end: end)
-            ),
-            users: .all,
-            devices: .all
-        )
-
+        /*
+         Prime 与正式“30日屏幕时间”使用完全相同的 context + filter。
+         这样首次直接授权，以及先拒绝后在系统设置中补授权，
+         最终都会启动同一份 30 日 Report Scene，不再先用 8 日 Mini Report
+         建立另一套初始化状态。
+        */
         let report = DeviceActivityReport(
-            DeviceActivityReport.Context("Snowball Home Mini"),
-            filter: filter
+            DeviceActivityReport.Context(
+                "Snowball Seven Day Daily Table"
+            ),
+            filter: range.filter
         )
         .background(Color.clear)
 

@@ -37,8 +37,7 @@ const TEST_PASSWORD = 'snowball'
 const CUSTOM_YEARS_BG_IDB_KEY = 'footprint-custom-background'
 const DeviceData = registerPlugin('DeviceData')
 const IOSScreenTimeNative = registerPlugin('IOSScreenTime')
-const IOS_SCREEN_TIME_PRIMED_KEY = 'snowlet-ios-screen-time-primed-v1'
-const IOS_SCREEN_TIME_AUTH_PROMPT_KEY = 'snowlet-ios-screen-time-auth-prompt-v1'
+const IOS_SCREEN_TIME_PRIMED_KEY = 'snowlet-ios-screen-time-primed-v2'
 const DEVICE_USAGE_PROMPT_KEY = 'snowball-device-usage-prompt-v1'
 const DEVICE_INITIAL_IMPORT_DAYS = 7
 // 临时关闭每天 05:00 后首次进入时的“雪粒的今日回顾”弹窗。
@@ -2625,11 +2624,12 @@ function App() {
 
 
   /*
-    iOS 全新安装 Screen Time 初始化：
-    1. 首次安装先检查 Family Controls / Screen Time 授权；
-    2. 未授权时自动触发一次苹果系统授权提示；
-    3. 授权成功后立即 prime DeviceActivityReport，让 Report Extension 真正启动；
-    4. 已授权用户不会重复弹授权；prime 失败则下次回前台继续重试。
+    iOS Screen Time 初始化：
+    1. AuthorizationCenter 实时状态是唯一授权真相；
+    2. 只有 notDetermined 才在首次进入时主动请求一次；
+    3. denied 时不反复弹框，并清除旧 prime 标记；
+    4. 以后用户在系统设置中补授权，回到雪粒后会自动检测 approved；
+    5. approved 后统一调用原生 30 日 prime；只有 prime 成功才记完成。
   */
   useEffect(() => {
     if (
@@ -2642,33 +2642,32 @@ function App() {
 
     async function authorizeAndPrimeIOSScreenTimeIfNeeded() {
       if (!alive || running) return
-      if (localStorage.getItem(IOS_SCREEN_TIME_PRIMED_KEY) === '1') return
 
       running = true
       try {
         let authorization = await getIOSScreenTimeStatus()
         if (!alive) return
 
-        if (
-          authorization?.status !== 'approved'
-          && localStorage.getItem(IOS_SCREEN_TIME_AUTH_PROMPT_KEY) !== '1'
-        ) {
-          // 只在全新安装首次进入时主动请求一次。
-          // 先记“已触发”，避免同一次启动 focus/visibility 多次重复弹系统框。
-          localStorage.setItem(IOS_SCREEN_TIME_AUTH_PROMPT_KEY, '1')
+        if (authorization?.status === 'notDetermined') {
           authorization = await requestIOSScreenTimeAuthorization()
+          if (!alive) return
         }
 
-        if (!alive || authorization?.status !== 'approved') return
+        if (authorization?.status !== 'approved') {
+          // 被拒绝或被撤销时，旧 prime 结果不再有效。
+          localStorage.removeItem(IOS_SCREEN_TIME_PRIMED_KEY)
+          return
+        }
+
+        if (localStorage.getItem(IOS_SCREEN_TIME_PRIMED_KEY) === '1') return
 
         const result = await IOSScreenTimeNative.primeScreenTimeReports()
         if (alive && result?.primed) {
           localStorage.setItem(IOS_SCREEN_TIME_PRIMED_KEY, '1')
         }
       } catch (error) {
-        // 授权或 Report Extension 刚启动时可能需要短暂准备。
-        // prime 未成功时不记完成，后续回到前台会继续重试。
-        console.warn('苹果屏幕时间首次授权/初始化暂未完成，将稍后重试。', error)
+        // prime 未成功时不记完成，后续回到前台继续重试。
+        console.warn('苹果屏幕时间初始化暂未完成，将稍后重试。', error)
       } finally {
         running = false
       }
@@ -3837,14 +3836,23 @@ function App() {
       const platform = Capacitor.getPlatform()
 
       if (platform === 'ios') {
-        const authorization = await requestIOSScreenTimeAuthorization()
+        await requestIOSScreenTimeAuthorization()
+        const authorization = await getIOSScreenTimeStatus()
+
         if (authorization?.status === 'approved') {
           try {
+            // 手动补授权必须重新做一次完整 30 日 prime，
+            // 不能沿用拒绝前或旧版本留下的初始化标记。
+            localStorage.removeItem(IOS_SCREEN_TIME_PRIMED_KEY)
             const result = await IOSScreenTimeNative.primeScreenTimeReports()
-            if (result?.primed) localStorage.setItem(IOS_SCREEN_TIME_PRIMED_KEY, '1')
+            if (result?.primed) {
+              localStorage.setItem(IOS_SCREEN_TIME_PRIMED_KEY, '1')
+            }
           } catch (error) {
-            console.warn('苹果屏幕时间报表初始化暂未完成。', error)
+            console.warn('苹果屏幕时间30日报表初始化暂未完成。', error)
           }
+        } else {
+          localStorage.removeItem(IOS_SCREEN_TIME_PRIMED_KEY)
         }
       } else if (platform === 'android') {
         await DeviceData.openUsageAccessSettings()
@@ -5236,7 +5244,7 @@ const homeFloatingFootprintMemory = ''
             </div>
             <div className="usageVersionBlock">
               <p>雪粒 Snowlet</p>
-              <button type="button" className="usageVersionTap" onClick={handleVersionTap}>Version 1.2</button>
+              <button type="button" className="usageVersionTap" onClick={handleVersionTap}>Version 1.3</button>
               <p>Copyright © dflystudio.com</p>
               <p>专利申请中</p>
               {data.developerMode && (
