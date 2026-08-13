@@ -345,6 +345,7 @@ function nutritionStatsWithDailySummary(originalStats = [], dailySummaries = [],
 }
 
 const NUTRITION_REWARD_STORAGE_KEY = 'snowball-nutrition-7day-reward-v1'
+const NUTRITION_REWARD_POPUP_VISIBLE = false
 
 function splitTasteNames(value) {
   return String(value || '')
@@ -797,11 +798,12 @@ export default function Nutrition({
             </div>
           )}
 
-          <div className="nutritionTasteSummary" aria-live="polite">
-            {nutritionTasteLine}
-          </div>
+          <div className="nutritionDataGroup">
+            <div className="nutritionTasteSummary" aria-live="polite">
+              {nutritionTasteLine}
+            </div>
 
-          <div className="dailyCornerTable dailyCornerTableRight nutritionTablePanel">
+            <div className="dailyCornerTable dailyCornerTableRight nutritionTablePanel">
             <div className="nutritionTableNavLine">
               <div className="dailyRangeTabs nutritionRangeTabs">
                 {dailyRangeTabs.map(tab => (
@@ -833,6 +835,7 @@ export default function Nutrition({
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>
@@ -917,7 +920,7 @@ export default function Nutrition({
       </section>
     )}
 
-    {showNutritionReward && (
+    {NUTRITION_REWARD_POPUP_VISIBLE && showNutritionReward && (
       <div className="noticeOverlay nutritionRewardOverlay">
         <div className="noticeBox nutritionRewardBox">
           <h2>连续七天达标</h2>

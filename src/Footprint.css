@@ -33,7 +33,7 @@
   --fp-home-back-left: 18px;
   --fp-home-back-top: 14px;
   --fp-home-back-size: 28px;
-  --fp-home-summary-top: 56px;
+  --fp-home-summary-top: 60px;
   --fp-home-summary-left: 38px;
   --fp-home-summary-width: calc(80% - 44px);
   --fp-home-summary-size: 13px;
@@ -57,9 +57,9 @@
 
   /* 主页猫 */
   --fp-home-cat-left: 65%;
-  --fp-home-cat-top: calc(var(--fp-home-bg-height) - 110px);
+  --fp-home-cat-top: calc(var(--fp-home-bg-height) - 96px);
   --fp-home-cat-bottom: auto;
-  --fp-home-cat-width: 78px;
+  --fp-home-cat-width: 75px;
   --fp-home-cat-opacity: 0.9;
 
   /* 主页历史列表：位置 */
@@ -1154,7 +1154,7 @@
   :root {
     --fp-home-bg-height: 30vh;
     --fp-home-title-top: 20px;
-    --fp-home-summary-top: 66px;
+    --fp-home-summary-top: 60px;
     --fp-scene-top: 18px;
     --fp-scene-right: 14px;
     --fp-history-left: 14px;

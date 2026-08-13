@@ -424,14 +424,12 @@ export default function useSnowballCall({
   const chatCardRef = useRef(null)
   const recognitionRef = useRef(null)
   const voiceAudioRef = useRef(null)
-  const voiceAudioCacheRef = useRef({})
   const voicePlayTimerRef = useRef(null)
   const voiceFallbackTimerRef = useRef(null)
   const voiceFinishRef = useRef(null)
   const chatStepRef = useRef(data.chatStep || 'idle')
   const callActiveRef = useRef(false)
   const callSessionRef = useRef(0)
-  const voiceCacheGenerationRef = useRef(0)
 
   // 原生录音连续会话：
   // Android / iOS 的单次语音识别可能因停顿自动结束，
@@ -457,9 +455,10 @@ export default function useSnowballCall({
 
   useEffect(() => () => {
     callSessionRef.current += 1
+    callActiveRef.current = false
     stopSpeechRecognition()
     stopVoiceImmediately()
-    resetVoiceAudioCache()
+    disposeVoiceAudio()
   }, [])
 
   useEffect(() => {
@@ -470,47 +469,39 @@ export default function useSnowballCall({
     chatStepRef.current = data.chatStep || 'idle'
   }, [data.chatStep])
 
+  /*
+   * 一次通话始终只使用一个 HTMLAudioElement。
+   *
+   * 旧实现为了绕过 iOS/Safari 的播放限制，会在每次开始通话时把 6 段录音
+   * 全部 muted play() 一次。WebKit 会把这些 play 请求当成真实媒体任务，
+   * 即使随后 pause，也可能在录音/播放通道切换后继续兑现旧请求，于是上一轮
+   * 的声音会在下一轮堆积播放。
+   *
+   * 这里改为单一播放器：任何时刻最多只有一个媒体播放请求。切换回答时只
+   * 更换同一个播放器的 src；挂断时同步 pause + currentTime=0。会话编号
+   * 负责让所有旧异步流程失效。
+   */
   function getVoiceAudio(name) {
-    if (!voiceAudioCacheRef.current[name]) {
-      const audio = new Audio(`/refine/${name}`)
+    let audio = voiceAudioRef.current
+
+    if (!audio) {
+      audio = new Audio()
       audio.preload = 'auto'
       audio.playsInline = true
-      voiceAudioCacheRef.current[name] = audio
+      voiceAudioRef.current = audio
     }
-    return voiceAudioCacheRef.current[name]
-  }
 
-  function unlockVoiceAudio() {
-    const cacheGeneration = voiceCacheGenerationRef.current
+    if (audio.dataset.snowballVoice !== name) {
+      audio.pause()
+      audio.onended = null
+      audio.onerror = null
+      audio.currentTime = 0
+      audio.src = `/refine/${name}`
+      audio.dataset.snowballVoice = name
+      audio.load()
+    }
 
-    Object.keys(VOICE_DURATION_MS).forEach(name => {
-      try {
-        const audio = getVoiceAudio(name)
-        audio.muted = true
-        audio.currentTime = 0
-        const promise = audio.play()
-
-        if (promise && typeof promise.then === 'function') {
-          promise.then(() => {
-            audio.pause()
-            audio.currentTime = 0
-            audio.muted = cacheGeneration === voiceCacheGenerationRef.current
-              ? false
-              : true
-          }).catch(() => {
-            audio.muted = cacheGeneration === voiceCacheGenerationRef.current
-              ? false
-              : true
-          })
-        } else {
-          audio.pause()
-          audio.currentTime = 0
-          audio.muted = false
-        }
-      } catch (error) {
-        // 预解锁失败不影响后续手动通话。
-      }
-    })
+    return audio
   }
 
   function stopVoiceImmediately() {
@@ -536,33 +527,32 @@ export default function useSnowballCall({
       }
     }
 
-    voiceAudioRef.current = null
-
     const finish = voiceFinishRef.current
     voiceFinishRef.current = null
     if (typeof finish === 'function') finish()
   }
 
-  function resetVoiceAudioCache() {
-    voiceCacheGenerationRef.current += 1
+  function disposeVoiceAudio() {
+    const audio = voiceAudioRef.current
+    if (!audio) return
 
-    Object.values(voiceAudioCacheRef.current).forEach(audio => {
-      try {
-        audio.onended = null
-        audio.onerror = null
-        audio.muted = true
-        audio.pause()
-        audio.currentTime = 0
-      } catch (error) {
-        // 旧会话音频已经失效时无需额外处理。
-      }
-    })
+    try {
+      audio.onended = null
+      audio.onerror = null
+      audio.pause()
+      audio.removeAttribute('src')
+      audio.load()
+    } catch (error) {
+      // 页面卸载时播放器已经释放则无需处理。
+    }
 
-    voiceAudioCacheRef.current = {}
+    voiceAudioRef.current = null
   }
 
   async function playVoice(name, sessionId = callSessionRef.current) {
     await stopSpeechRecognition()
+
+    if (!callActiveRef.current || sessionId !== callSessionRef.current) return
 
     // iOS 语音识别结束后，必须由原生层明确把 AVAudioSession
     // 从录音模式切回 playback；单纯延迟无法稳定恢复所有声音。
@@ -575,6 +565,8 @@ export default function useSnowballCall({
       }
       await wait(120)
     }
+
+    if (!callActiveRef.current || sessionId !== callSessionRef.current) return
 
     return new Promise(resolve => {
       let finished = false
@@ -623,9 +615,7 @@ export default function useSnowballCall({
           (VOICE_DURATION_MS[name] || 3600) + 1200,
         )
 
-        voicePlayTimerRef.current = window.setTimeout(() => {
-          voicePlayTimerRef.current = null
-
+        const attemptPlay = async (retry = false) => {
           if (
             finished ||
             !callActiveRef.current ||
@@ -635,55 +625,53 @@ export default function useSnowballCall({
             return
           }
 
-          const attemptPlay = async (retry = false) => {
-            if (
-              finished ||
-              !callActiveRef.current ||
-              sessionId !== callSessionRef.current
-            ) {
-              finish()
-              return
+          try {
+            audio.muted = false
+            audio.volume = 1
+            const playPromise = audio.play()
+
+            if (playPromise && typeof playPromise.catch === 'function') {
+              await playPromise
             }
+          } catch (error) {
+            if (
+              !retry &&
+              Capacitor.getPlatform() === 'ios' &&
+              !finished &&
+              callActiveRef.current &&
+              sessionId === callSessionRef.current
+            ) {
+              await wait(360)
 
-            try {
-              audio.muted = false
-              audio.volume = 1
-              const playPromise = audio.play()
-
-              if (playPromise && typeof playPromise.catch === 'function') {
-                await playPromise
-              }
-            } catch (error) {
               if (
-                !retry &&
-                Capacitor.getPlatform() === 'ios' &&
-                !finished &&
-                callActiveRef.current &&
-                sessionId === callSessionRef.current
+                finished ||
+                !callActiveRef.current ||
+                sessionId !== callSessionRef.current
               ) {
-                await wait(360)
-
-                if (
-                  finished ||
-                  !callActiveRef.current ||
-                  sessionId !== callSessionRef.current
-                ) {
-                  finish()
-                  return
-                }
-
-                audio.pause()
-                audio.currentTime = 0
-                await attemptPlay(true)
+                finish()
                 return
               }
 
-              finish()
+              audio.pause()
+              audio.currentTime = 0
+              await attemptPlay(true)
+              return
             }
-          }
 
+            finish()
+          }
+        }
+
+        if (Capacitor.isNativePlatform()) {
+          voicePlayTimerRef.current = window.setTimeout(() => {
+            voicePlayTimerRef.current = null
+            attemptPlay()
+          }, 120)
+        } else {
+          // Safari 网页版要尽量保留当前用户手势的媒体播放授权，
+          // 不再额外排一个 120ms 的旧播放任务。
           attemptPlay()
-        }, 120)
+        }
       } catch (error) {
         finish()
       }
@@ -974,14 +962,28 @@ export default function useSnowballCall({
   async function startNativeSpeechRecognition({
     resume = false,
     skipPermissionCheck = false,
+    sessionId = callSessionRef.current,
   } = {}) {
-    if (!callActiveRef.current) return
+    if (
+      !callActiveRef.current ||
+      sessionId !== callSessionRef.current
+    ) {
+      return
+    }
 
     stopVoiceImmediately()
     clearNativeRestartTimer()
 
     if (!resume) {
       await stopSpeechRecognition()
+
+      if (
+        !callActiveRef.current ||
+        sessionId !== callSessionRef.current
+      ) {
+        return
+      }
+
       keepNativeListeningRef.current = true
       nativeCommittedTextRef.current = cleanSpeechText(data.chatInput)
       nativeCurrentTextRef.current = ''
@@ -989,7 +991,8 @@ export default function useSnowballCall({
 
     if (
       !keepNativeListeningRef.current ||
-      nativeRestartingRef.current
+      nativeRestartingRef.current ||
+      sessionId !== callSessionRef.current
     ) {
       return
     }
@@ -1030,6 +1033,13 @@ export default function useSnowballCall({
 
       listenerHandles.push(
         await SpeechRecognition.addListener('partialResults', event => {
+          if (
+            !callActiveRef.current ||
+            sessionId !== callSessionRef.current
+          ) {
+            return
+          }
+
           const currentText = cleanSpeechText(
             event?.accumulatedText ||
             event?.matches?.[0] ||
@@ -1054,6 +1064,8 @@ export default function useSnowballCall({
 
       listenerHandles.push(
         await SpeechRecognition.addListener('listeningState', event => {
+          if (sessionId !== callSessionRef.current) return
+
           const state = String(event?.state || '').toLowerCase()
           const started =
             event?.status === 'started' ||
@@ -1073,7 +1085,8 @@ export default function useSnowballCall({
 
           if (
             !keepNativeListeningRef.current ||
-            !callActiveRef.current
+            !callActiveRef.current ||
+            sessionId !== callSessionRef.current
           ) {
             setIsListening(false)
             return
@@ -1088,6 +1101,7 @@ export default function useSnowballCall({
             startNativeSpeechRecognition({
               resume: true,
               skipPermissionCheck: true,
+              sessionId,
             })
           }, 220)
         }),
@@ -1095,12 +1109,15 @@ export default function useSnowballCall({
 
       listenerHandles.push(
         await SpeechRecognition.addListener('error', event => {
+          if (sessionId !== callSessionRef.current) return
+
           console.error('原生语音识别失败：', event)
           commitNativeCurrentText()
 
           if (
             keepNativeListeningRef.current &&
-            callActiveRef.current
+            callActiveRef.current &&
+            sessionId === callSessionRef.current
           ) {
             clearNativeRestartTimer()
             nativeRestartTimerRef.current = window.setTimeout(() => {
@@ -1108,6 +1125,7 @@ export default function useSnowballCall({
               startNativeSpeechRecognition({
                 resume: true,
                 skipPermissionCheck: true,
+                sessionId,
               })
             }, 420)
           } else {
@@ -1119,9 +1137,18 @@ export default function useSnowballCall({
       recognitionRef.current = {
         type: 'native',
         listenerHandles,
+        sessionId,
       }
 
       nativeCurrentTextRef.current = ''
+
+      if (
+        !callActiveRef.current ||
+        sessionId !== callSessionRef.current
+      ) {
+        await removeNativeSpeechListeners(listenerHandles)
+        return
+      }
 
       await SpeechRecognition.start({
         language: 'zh-CN',
@@ -1131,7 +1158,12 @@ export default function useSnowballCall({
         addPunctuation: false,
       })
 
-      setIsListening(true)
+      if (
+        callActiveRef.current &&
+        sessionId === callSessionRef.current
+      ) {
+        setIsListening(true)
+      }
     } catch (error) {
       console.error('启动原生语音识别失败：', error)
 
@@ -1139,12 +1171,15 @@ export default function useSnowballCall({
       recognitionRef.current = null
       await removeNativeSpeechListeners(current?.listenerHandles || [])
 
-      commitNativeCurrentText()
+      if (sessionId === callSessionRef.current) {
+        commitNativeCurrentText()
+      }
 
       if (
         keepNativeListeningRef.current &&
         callActiveRef.current &&
-        resume
+        resume &&
+        sessionId === callSessionRef.current
       ) {
         clearNativeRestartTimer()
         nativeRestartTimerRef.current = window.setTimeout(() => {
@@ -1152,6 +1187,7 @@ export default function useSnowballCall({
           startNativeSpeechRecognition({
             resume: true,
             skipPermissionCheck: true,
+            sessionId,
           })
         }, 520)
       } else {
@@ -1168,6 +1204,7 @@ export default function useSnowballCall({
   }
 
   function startWebSpeechRecognition() {
+    const sessionId = callSessionRef.current
     const Recognition =
       window.SpeechRecognition ||
       window.webkitSpeechRecognition
@@ -1192,23 +1229,43 @@ export default function useSnowballCall({
 
       let accumulatedFinal = ''
 
-      recognition.onstart = () => setIsListening(true)
+      recognition.onstart = () => {
+        if (
+          callActiveRef.current &&
+          sessionId === callSessionRef.current
+        ) {
+          setIsListening(true)
+        }
+      }
 
       recognition.onend = () => {
         if (recognitionRef.current?.recognition === recognition) {
           recognitionRef.current = null
         }
-        setIsListening(false)
+
+        if (sessionId === callSessionRef.current) {
+          setIsListening(false)
+        }
       }
 
       recognition.onerror = () => {
         if (recognitionRef.current?.recognition === recognition) {
           recognitionRef.current = null
         }
-        setIsListening(false)
+
+        if (sessionId === callSessionRef.current) {
+          setIsListening(false)
+        }
       }
 
       recognition.onresult = event => {
+        if (
+          !callActiveRef.current ||
+          sessionId !== callSessionRef.current
+        ) {
+          return
+        }
+
         let interimText = ''
 
         for (
@@ -1235,6 +1292,7 @@ export default function useSnowballCall({
       recognitionRef.current = {
         type: 'web',
         recognition,
+        sessionId,
       }
       recognition.start()
     } catch (error) {
@@ -1260,6 +1318,8 @@ export default function useSnowballCall({
   }
 
   async function stopSpeechRecognition() {
+    const stopRequestSessionId = callSessionRef.current
+
     keepNativeListeningRef.current = false
     clearNativeRestartTimer()
     commitNativeCurrentText()
@@ -1314,9 +1374,11 @@ export default function useSnowballCall({
       }
     }
 
-    nativeCurrentTextRef.current = ''
-    nativeRestartingRef.current = false
-    setIsListening(false)
+    if (stopRequestSessionId === callSessionRef.current) {
+      nativeCurrentTextRef.current = ''
+      nativeRestartingRef.current = false
+      setIsListening(false)
+    }
   }
 
   function toggleSpeechRecognition() {
@@ -1342,10 +1404,7 @@ export default function useSnowballCall({
     nativeCommittedTextRef.current = ''
     nativeCurrentTextRef.current = ''
     clearNativeRestartTimer()
-    stopSpeechRecognition()
     stopVoiceImmediately()
-    resetVoiceAudioCache()
-    unlockVoiceAudio()
 
     callActiveRef.current = true
     chatStepRef.current = 'mood'
@@ -1377,7 +1436,6 @@ export default function useSnowballCall({
     clearNativeRestartTimer()
     stopSpeechRecognition()
     stopVoiceImmediately()
-    resetVoiceAudioCache()
     setCallActive(false)
 
     setData(prev => ({

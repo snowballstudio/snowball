@@ -14,10 +14,40 @@ export default function OffscreenTimeDataPanel({
     window.Capacitor?.isNativePlatform?.() === true &&
     window.Capacitor?.getPlatform?.() === 'ios'
 
-  const sortedRecords = [...records].sort((a, b) =>
-    String(b?.date || '').localeCompare(
-      String(a?.date || '')
-    )
+  function normalizedDateParts(value) {
+    const match = String(value || '').trim().match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/)
+    if (!match) return null
+
+    const year = Number(match[1])
+    const month = Number(match[2])
+    const day = Number(match[3])
+
+    if (
+      !Number.isInteger(year) ||
+      month < 1 || month > 12 ||
+      day < 1 || day > 31
+    ) {
+      return null
+    }
+
+    return { year, month, day }
+  }
+
+  function dateSortValue(value) {
+    const parts = normalizedDateParts(value)
+    if (!parts) return 0
+    return parts.year * 10000 + parts.month * 100 + parts.day
+  }
+
+  function displayDate(value) {
+    const parts = normalizedDateParts(value)
+    if (!parts) return value || '—'
+
+    return `${String(parts.year).padStart(4, '0')}/${String(parts.month).padStart(2, '0')}/${String(parts.day).padStart(2, '0')}`
+  }
+
+  const sortedRecords = [...records].sort(
+    (a, b) => dateSortValue(b?.date) - dateSortValue(a?.date)
   )
 
   return (
@@ -62,7 +92,7 @@ export default function OffscreenTimeDataPanel({
                 className="offscreenTimeRow"
                 key={row.id || `${row.date}-${index}`}
               >
-                <span>{row.date || '—'}</span>
+                <span>{displayDate(row.date)}</span>
                 <span>{row.calculatedOffscreenTime || '—'}</span>
                 <span>{row.dataSource || '—'}</span>
                 <span>{row.androidOffscreenTime || '—'}</span>

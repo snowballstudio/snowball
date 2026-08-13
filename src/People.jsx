@@ -1180,7 +1180,7 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
         <header className="peopleTopBar">
           <button className="peopleBackBtn" type="button" onClick={onClose} aria-label="返回">‹</button>
           <div className="peopleTitleBlock">
-            <h2>人间的我</h2>
+            <h2>人际简图</h2>
             <p></p>
           </div>
           <button className="peopleInfoBtn" type="button" onClick={() => setShowPeopleInfo(true)}>说明</button>

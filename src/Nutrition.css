@@ -23,10 +23,13 @@
     --nutrition-bg-brightness: 1.05;
     --nutrition-bg-saturate: 0.95;
 
+    /* 页面两大主体纵向中心：以后优先微调这两个参数 */
+    --nutrition-rainbow-center-y: 23dvh;
+    --nutrition-data-center-y: 62dvh;
+
     /* 彩虹整体 */
-    --nutrition-rainbow-top: 122px;
     --nutrition-rainbow-left: 50%;
-    --nutrition-rainbow-scale: 0.58;
+    --nutrition-rainbow-scale: 0.53;
     --nutrition-rainbow-radius: 999px;
     --nutrition-rainbow-dim-color: rgba(178, 184, 190, 0.58);
     --nutrition-rainbow-empty-color: transparent;
@@ -73,7 +76,6 @@
     --nutrition-cloud-text-shadow: 0 0 7px rgba(255, 255, 255, 0.144), 0 2px 7px rgba(0,0,0,.46);
 
     /* 表格和TAB */
-    --nutrition-table-top: 450px;
     --nutrition-table-left: 50%;
     --nutrition-table-width: calc(100vw - 56px);
     --nutrition-table-bg: rgba(101, 104, 102, 0.664);
@@ -233,11 +235,11 @@
 @media (max-width: 900px) {
   .dailyNutritionPage .rainbowSpectrum {
     left: var(--nutrition-rainbow-left) !important;
-    top: var(--nutrition-rainbow-top) !important;
+    top: var(--nutrition-rainbow-center-y) !important;
     width: 620px !important;
     height: 320px !important;
-    transform: translateX(-50%) scale(var(--nutrition-rainbow-scale)) !important;
-    transform-origin: top center !important;
+    transform: translate(-50%, -50%) scale(var(--nutrition-rainbow-scale)) !important;
+    transform-origin: center center !important;
     overflow: visible !important;
   }
 
@@ -456,15 +458,24 @@
     --nutrition-note-col-width: 3600px;
   }
 
-  .dailyNutritionPage .nutritionTablePanel,
-  .dailyNutritionPage .dailyCornerTableRight {
+  .dailyNutritionPage .nutritionDataGroup {
     position: absolute !important;
     left: var(--nutrition-table-left) !important;
-    top: var(--nutrition-table-top) !important;
+    top: var(--nutrition-data-center-y) !important;
+    width: var(--nutrition-table-width) !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 5 !important;
+  }
+
+  .dailyNutritionPage .nutritionTablePanel,
+  .dailyNutritionPage .dailyCornerTableRight {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
     right: auto !important;
     bottom: auto !important;
-    width: var(--nutrition-table-width) !important;
-    transform: translateX(-50%) !important;
+    width: 100% !important;
+    transform: none !important;
     z-index: 5 !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -1596,15 +1607,12 @@
 /* 原云朵文字独立显示在数据表上方，左对齐。 */
 @media (max-width: 900px) {
   .dailyNutritionPage .nutritionTasteSummary {
-    position: absolute !important;
-    left: calc(
-      var(--nutrition-table-left) -
-      (var(--nutrition-table-width) / 2)
-    ) !important;
-    top: calc(var(--nutrition-table-top) - 30px) !important;
-    width: var(--nutrition-table-width) !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
     z-index: 6 !important;
-    margin: 0 !important;
+    margin: 0 0 15px 0 !important;
     padding: 0 !important;
     color: #ffffff !important;
     font-size: 12px !important;

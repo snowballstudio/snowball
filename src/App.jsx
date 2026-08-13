@@ -4570,7 +4570,7 @@ function App() {
       homePositions: { ...(prev.homePositions || {}), [footprintView]: pendingHomePosition },
       lastSavedAt: Date.now(),
     }))
-    setFootprintModal({ title: '住址已设置', text: `${FOOTPRINT_TYPES[footprintView]}地图的家已经设置好了。以后粒会从这里出发。` })
+    setFootprintModal({ title: '住址已设置', text: `${FOOTPRINT_TYPES[footprintView]}地图的家设置好了，以后会从这里出发。` })
     setYearsMode('browseFull')
   }
 
@@ -5246,7 +5246,7 @@ const homeFloatingFootprintMemory = ''
               <p>雪粒 Snowlet</p>
               <button type="button" className="usageVersionTap" onClick={handleVersionTap}>Version 1.3</button>
               <p>Copyright © dflystudio.com</p>
-              <p>专利申请中</p>
+              <p>联系电话：(0086)18146431516</p>
               {data.developerMode && (
                 <button type="button" className="developerModeLine" onClick={closeDeveloperMode}>开发者模式已开启 · 点此关闭</button>
               )}

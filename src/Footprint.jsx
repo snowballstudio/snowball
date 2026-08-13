@@ -625,7 +625,7 @@ export default function Footprint({
                       style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                       title={`${group.item.place} · ${group.count}次`}
                       onClick={() => openMarkerGroup(group)}
-                      aria-label={`${group.item.place}，去过${group.count}次`}
+                      aria-label={`${group.item.place}，共去过${group.count}次`}
                     />
                   )
                 })}
@@ -731,7 +731,7 @@ export default function Footprint({
       
               {yearsMode === 'setHome' ? (
                 <div className="yearsCard footprintEditorCard footprintHomeSetCard">
-                  <p className="footprintTip">请在地图上点击家的位置。保存后，雪粒会从这里出发。</p>
+                  <p className="footprintTip">请在地图上点击家的位置。保存后，行程将从这里出发。</p>
                   <div className="footprintHomeSetPreview">
                     {pendingHomePosition ? `当前位置：${pendingHomePosition.x}%，${pendingHomePosition.y}%` : '还没有选择位置'}
                   </div>
@@ -1027,7 +1027,7 @@ export default function Footprint({
               <p>
                 {footprintRangeParts ? (
                   <>
-                    <strong>{footprintRangeParts.first.y}</strong>年<strong>{footprintRangeParts.first.m}</strong>月 ~ <strong>{footprintRangeParts.last.y}</strong>年<strong>{footprintRangeParts.last.m}</strong>月，去过
+                   从 <strong>{footprintRangeParts.first.y}</strong>年<strong>{footprintRangeParts.first.m}</strong>月至 <strong>{footprintRangeParts.last.y}</strong>年<strong>{footprintRangeParts.last.m}</strong>月，共去过
                   </>
                 ) : (
                   <>尚未开始记录，你去过</>
@@ -1082,7 +1082,7 @@ export default function Footprint({
                         <section className={`footprintYearGroup ${open ? 'open' : 'collapsed'}`} key={group.year}>
                           <button type="button" className="footprintYearHeader" onClick={() => toggleYear(group.year)}>
                             <span>{open ? '−' : '+'} {group.year}年</span>
-                            <small>去过 {group.items.length} 个地方{topPlaces ? ` · ${topPlaces}` : ''}</small>
+                            <small>共去过 {group.items.length} 个地方{topPlaces ? ` · ${topPlaces}` : ''}</small>
                           </button>
                           {open && (
                             <div className="footprintYearItems">
