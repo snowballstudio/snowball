@@ -111,8 +111,30 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		6BEBE8B8301391DF00E03C7A /* SnowballScreenTimeReport */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (6BEBE8C4301391DF00E03C7A /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SnowballScreenTimeReport; sourceTree = "<group>"; };
-		6BEBE8E8301B8C7500E03C7A /* SnowballDeviceActivityMonitor */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (6BEBE8F0301B8C7500E03C7A /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SnowballDeviceActivityMonitor; sourceTree = "<group>"; };
+		6BEBE8B8301391DF00E03C7A /* SnowballScreenTimeReport */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6BEBE8C4301391DF00E03C7A /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = SnowballScreenTimeReport;
+			sourceTree = "<group>";
+		};
+		6BEBE8E8301B8C7500E03C7A /* SnowballDeviceActivityMonitor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6BEBE8F0301B8C7500E03C7A /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = SnowballDeviceActivityMonitor;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
