@@ -563,17 +563,13 @@ struct SnowballHomeMiniView: View {
         return formatter
     }()
 
-    // 与主页网页版本一致：说明文字浅灰白，数据使用状态栏金色。
-    private let labelColor = Color(
-        red: 225.0 / 255.0,
-        green: 228.0 / 255.0,
-        blue: 231.0 / 255.0
-    ).opacity(0.90)
+    // 与主页网页版本一致：说明文字白色，数据使用雪地数字蓝色。
+    private let labelColor = Color.white
 
     private let valueColor = Color(
-        red: 241.0 / 255.0,
-        green: 223.0 / 255.0,
-        blue: 177.0 / 255.0
+        red: 24.0 / 255.0,
+        green: 199.0 / 255.0,
+        blue: 255.0 / 255.0
     )
 
     var body: some View {
@@ -605,7 +601,7 @@ struct SnowballHomeMiniView: View {
                 .accessibilityHidden(true)
 
             HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text("日均")
+                Text("日均小时")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(labelColor)
 
@@ -627,7 +623,7 @@ struct SnowballHomeMiniView: View {
                 .padding(.horizontal, 7)
 
             HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text("末次")
+                Text("末次活动")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(labelColor)
 

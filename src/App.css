@@ -5080,3 +5080,129 @@ button.dailyScreenValuePlain { cursor: pointer; }
   line-height: 1.65 !important;
 }
 
+/* ======================================================
+   2026-08-15｜使用说明：主页背景入口与选择框格式
+   1. “数据授权 / 更换主页背景”同一行、同金色；
+   2. 与下方落款恢复正常行距；
+   3. 背景选择框改为白底灰黑字、蓝色标题，顶部约 80px。
+   ====================================================== */
+
+/* 两个入口并排。JSX 不需要改。 */
+.usageAuthorizationLink,
+.usageHomeBackgroundLink {
+  display: inline-flex !important;
+  width: 50% !important;
+  box-sizing: border-box !important;
+  vertical-align: middle !important;
+  margin: 12px 0 8px !important;
+  padding: 0 !important;
+}
+
+.usageAuthorizationLink {
+  justify-content: flex-start !important;
+}
+
+.usageHomeBackgroundLink {
+  justify-content: flex-end !important;
+  padding-right: 140px !important;
+}
+
+/* 两组文字完全统一为原“数据授权”的金色格式。 */
+.usageAuthorizationLink button,
+.usageHomeBackgroundLink button {
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 2px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: rgba(241,223,177,0.90) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px !important;
+  box-shadow: none !important;
+  text-align: left !important;
+}
+
+/* 选择页：背景保持轻遮罩，但不再是深黑弹窗。 */
+.homeBackgroundOverlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 120200 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  padding:
+    max(80px, calc(env(safe-area-inset-top) + 54px))
+    16px
+    max(16px, env(safe-area-inset-bottom)) !important;
+  background: rgba(18, 28, 40, 0.28) !important;
+  backdrop-filter: blur(3px) !important;
+  -webkit-backdrop-filter: blur(3px) !important;
+}
+
+.homeBackgroundPanel {
+  width: min(410px, 94vw) !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(70, 82, 94, 0.18) !important;
+  border-radius: 20px !important;
+  background: #ffffff !important;
+  color: #3d4650 !important;
+  box-shadow: 0 18px 46px rgba(20, 34, 48, 0.20) !important;
+}
+
+/* 标题只改颜色；字号、大小、对齐沿用现有设置。 */
+.homeBackgroundHeader {
+  border-bottom: 1px solid rgba(70, 82, 94, 0.12) !important;
+  background: #ffffff !important;
+}
+
+.homeBackgroundHeader h2 {
+  color: #2474c6 !important;
+}
+
+.homeBackgroundBack {
+  color: #58636e !important;
+}
+
+/* 两个选项保留原来的字号、间距和对齐，只换浅色体系。 */
+.homeBackgroundChoice {
+  background: #ffffff !important;
+  color: #3d4650 !important;
+  border-bottom: 1px solid rgba(70, 82, 94, 0.11) !important;
+}
+
+.homeBackgroundChoice:active {
+  background: #f4f7fa !important;
+}
+
+.homeBackgroundPhotoIcon,
+.homeBackgroundSystemIcon {
+  color: #66727e !important;
+}
+
+.homeBackgroundChoiceText strong {
+  color: #353e47 !important;
+}
+
+.homeBackgroundChoiceText small {
+  color: #7b858f !important;
+}
+
+.homeBackgroundCheck {
+  border-color: rgba(86, 100, 114, 0.52) !important;
+  background: #ffffff !important;
+  color: #ffffff !important;
+}
+
+.homeBackgroundCheck.checked {
+  border-color: #4f91cf !important;
+  background: #4f91cf !important;
+  color: #ffffff !important;
+}
+

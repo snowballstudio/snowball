@@ -405,12 +405,23 @@ struct SevenDayAverageReport: DeviceActivityReportScene {
         let totalDuration = days.reduce(0) {
             $0 + $1.totalDuration
         }
-        let averageDuration = totalDuration / 7.0
+
+        // Apple 可能在授权刚完成、重装或历史数据不完整时返回空白日。
+        // 日均只除以真正有屏幕时间数据的日期数，不再固定除以 7。
+        let recordedDays = days.filter {
+            $0.totalDuration > 0
+        }
+        let recordedDayCount = recordedDays.count
+        let averageDuration = recordedDayCount > 0
+            ? recordedDays.reduce(0) {
+                $0 + $1.totalDuration
+            } / Double(recordedDayCount)
+            : 0
 
         return SevenDayAverageConfiguration(
             averageDuration: averageDuration,
             totalDuration: totalDuration,
-            dayCount: 7,
+            dayCount: recordedDayCount,
             days: days
         )
     }
@@ -627,12 +638,18 @@ struct SevenDayDailyTableReport: DeviceActivityReportScene {
                 to: logicalToday
             ).map { calendar.startOfDay(for: $0) }
         }
-        let completedTotal = completedDays.reduce(0) {
-            $0 + (totalsByDate[$1] ?? 0)
+        let completedDurations = completedDays.compactMap { day -> TimeInterval? in
+            let duration = totalsByDate[day] ?? 0
+            return duration > 0 ? duration : nil
         }
+        let completedTotal = completedDurations.reduce(0, +)
+        let completedDayCount = completedDurations.count
+        let completedAverage = completedDayCount > 0
+            ? completedTotal / Double(completedDayCount)
+            : 0
 
         return SevenDayAverageConfiguration(
-            averageDuration: completedTotal / 7.0,
+            averageDuration: completedAverage,
             totalDuration: days.reduce(0) {
                 $0 + $1.totalDuration
             },
@@ -741,18 +758,29 @@ private enum SnowballReportBuilder {
             }
         }
 
-        var total: TimeInterval = 0
+        var recordedDurations: [TimeInterval] = []
         for offset in 0..<7 {
             let date = calendar.date(
                 byAdding: .day,
                 value: -offset,
                 to: yesterday
             ) ?? yesterday
-            total += totalsByDate[calendar.startOfDay(for: date)] ?? 0
+            let normalized = calendar.startOfDay(for: date)
+            let duration = totalsByDate[normalized] ?? 0
+
+            // 空白日不进入主页“日均小时”的分母。
+            if duration > 0 {
+                recordedDurations.append(duration)
+            }
         }
 
+        let total = recordedDurations.reduce(0, +)
+        let averageHours = recordedDurations.isEmpty
+            ? 0
+            : total / Double(recordedDurations.count) / 3600.0
+
         return SnowballHomeMiniConfiguration(
-            sevenDayAverageHours: total / 7.0 / 3600.0,
+            sevenDayAverageHours: averageHours,
             lastActivityDate: lastCandidate
         )
     }

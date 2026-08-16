@@ -64,9 +64,10 @@ export const APP_ALIAS_TABLE = {
   Discord: ['Discord'],
   WhatsApp: ['WhatsApp', 'WhatsApp Messenger'],
 
-  kimi: ['kimi', 'Kimi', 'Kimi智能助手', 'Kimi 智能助手'],
+  kimi: ['kimi', 'Kimi', 'Kimi Code','Kimi智能助手', 'Kimi 智能助手'],
   飞书: ['飞书', 'Feishu', 'Lark'],
-  钉钉: ['钉钉', 'DingTalk', 'Dingtalk'],
+  其它AI: ['钉钉', 'DingTalk', 'Grok', 'Grok AI', 'Midjourney','Meoo','秒悟', '月之暗面', '即梦', '可灵', 'Kling AI', 
+    'AI画画','Canva', 'Leonardo.Ai',  '扣子编程',  'Work Buddy'],
 
   红果: ['红果', '红果短剧', '红果免费短剧'],
   番茄小说: ['番茄小说', '番茄免费小说', 'Tomato Novel'],

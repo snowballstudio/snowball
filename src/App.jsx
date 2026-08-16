@@ -35,6 +35,7 @@ import { exportSnowletUserRecords, importSnowletUserRecords } from './components
 const STORAGE_KEY = 'healthy-snowball-v8'
 const TEST_PASSWORD = 'snowball'
 const CUSTOM_YEARS_BG_IDB_KEY = 'footprint-custom-background'
+const CUSTOM_HOME_BG_IDB_KEY = 'home-custom-background'
 const DeviceData = registerPlugin('DeviceData')
 const IOSScreenTimeNative = registerPlugin('IOSScreenTime')
 const IOS_SCREEN_TIME_PRIMED_KEY = 'snowlet-ios-screen-time-primed-v2'
@@ -93,8 +94,7 @@ const USAGE_TEXT = `雪粒是一款生活管理APP，旨在梳理与自律，其
 
 数据均来自用户授权提供，仅存于本机。
 
-雪粒的形象可随每天的数据变化而变化。
-
+雪粒的形象可随每天的数据变化而变化：
 步数越多 → 体型越壮
 及时休息 → 毛形浓密
 饮食均衡 → 毛色雪白
@@ -104,11 +104,9 @@ const USAGE_TEXT = `雪粒是一款生活管理APP，旨在梳理与自律，其
 
 饮食和心情数据来自每天与雪粒通话，点录音图标后开始语音录入，可空格发送切断或快进。
 
-苹果手机的屏幕时间数据因技术规定，仅能展示，用户可通过每天“道晚安”录入休息时间。
+苹果手机用户可通过临睡前“道晚安”自动录入休息时间，或与雪粒通话回答第3个问题，告知昨天休息时间。
 
-任何用户都可与雪粒通话，回答第3个关于想法的问题，自动记入状态数据“上次休息”。
-
-详情参见底部五个功能的说明页面。足迹、物馆、人间可无数量限制管理相册。
+五个功能页面分别有说明，足迹、物馆和人间可无数量限制管理相册。
 `
 
 // =========================
@@ -172,7 +170,7 @@ const CHINA_PLACES = [
   '北京', '天津', '上海', '重庆', '河北', '山西', '辽宁', '吉林', '黑龙江', '江苏', '浙江', '安徽', '福建', '江西', '山东', '河南', '湖北', '湖南', '广东', '海南', '四川', '贵州', '云南', '陕西', '甘肃', '青海', '台湾', '内蒙古', '广西', '西藏', '宁夏', '新疆', '香港', '澳门'
 ]
 
-const LOCAL_PLACES = ['公园', '海边', '餐饮', '商场', '公务','展馆', '亲友', '娱乐', '医院', '学校', '山野']
+const LOCAL_PLACES = ['公园', '休闲', '餐饮', '购物', '公务','展馆', '亲友', '娱乐', '医疗', '学习', '山野']
 
 
 const FOOTPRINT_PLACE_OPTIONS = {
@@ -193,8 +191,8 @@ const FOOTPRINT_POSITIONS = {
     北京: { x: 66, y: 39 }, 天津: { x: 71, y: 41 }, 上海: { x: 75, y: 60 }, 重庆: { x: 51, y: 69 }, 河北: { x: 64, y: 44 }, 山西: { x: 60, y: 47 }, 辽宁: { x: 74, y: 34 }, 吉林: { x: 78, y: 28 }, 黑龙江: { x: 78, y: 19 }, 江苏: { x: 71, y: 56 }, 浙江: { x: 71, y: 67 }, 安徽: { x: 68, y: 58 }, 福建: { x: 69, y: 76 }, 江西: { x: 65, y: 70 }, 山东: { x: 68, y: 50 }, 河南: { x: 61, y: 55 }, 湖北: { x: 58, y: 63 }, 湖南: { x: 59, y: 74 }, 广东: { x: 62, y: 83 }, 海南: { x: 56, y: 94 }, 四川: { x: 43, y: 63 }, 贵州: { x: 51, y: 75 }, 云南: { x: 41, y: 81 }, 陕西: { x: 54, y: 56 }, 甘肃: { x: 47, y: 53}, 青海: { x: 35, y: 49 }, 台湾: { x: 76, y: 80 }, 内蒙古: { x: 58, y: 35 }, 广西: { x: 52, y: 83 }, 西藏: { x: 27, y: 63 }, 宁夏: { x: 51, y: 47 }, 新疆: { x: 26, y: 33 }, 香港: { x: 65, y: 88 }, 澳门: { x: 61, y: 87 },
   },
   local: {
-    公园: { x: 45, y: 48 }, 海边: { x: 80, y: 74 }, 餐饮: { x: 25, y: 75 }, 商场: { x: 40, y: 20 }, 展馆: { x: 56, y: 15 }, 亲友: { x: 23, y: 42 }, 娱乐: { x: 88, y: 34 }, 山野: { x: 10, y: 20 },
-    医院: { x: 50, y: 35 }, 学校: { x: 72, y: 50 }, 公务场所: { x: 70, y: 28 },
+    公园: { x: 45, y: 48 }, 休闲: { x: 80, y: 74 }, 餐饮: { x: 25, y: 75 }, 购物: { x: 40, y: 20 }, 展馆: { x: 56, y: 15 }, 亲友: { x: 23, y: 42 }, 娱乐: { x: 88, y: 34 }, 山野: { x: 10, y: 20 },
+    医疗: { x: 50, y: 35 }, 学习: { x: 72, y: 50 }, 公务: { x: 70, y: 28 },
   },
 }
 
@@ -247,7 +245,7 @@ function footprintPosition(item) {
 function localPlaceIcon(place) {
   const icons = {
     公园: '🌳',
-    海边: '🌊',
+    休闲: '🌊',
     餐饮: '🍽️',
     商场: '🛍️',
     展馆: '📚',
@@ -303,6 +301,7 @@ const DEFAULT = {
   installDate: todayText(),
   yearsScene: 'beach',
   customYearsSceneImage: '',
+  homeBackgroundMode: 'system',
   footprintDraft: { year: '', month: '', type: 'local', place: '', detail: '', note: '', photos: [] },
   footprints: [],
   things: [],
@@ -905,16 +904,16 @@ const FOOD_NUTRITION_MAP = {
 const DAILY_FOOD_OPTIONS = DAILY_FOOD_GROUPS.flatMap(group => group.options)
 
 const TASTE_GROUPS = [
-  { key: 'normal', label: '正常口味', options: ['清淡', '常规', '正常口味', '寻常', '生吃', '一般口味',
-     '空气炸锅', '烤箱', '普通','家常','新鲜', '凉拌', '淡', '清炒', '素', '少油', '少盐','葱油',
-     '糖醋','普通','随意', '家常','平常',  '蒸', '炒',  '清炒', '爆炒', '拌', '酱油', 
+  { key: 'normal', label: '正常口味', options: ['清淡', '常规', '默认常规','正常口味', '寻常', '生吃', '一般口味',
+     '空气炸锅', '烤箱', '普通','家常','新鲜', '凉拌', '淡', '清炒', '素', '少油', '少盐','葱油','麻油',
+     '糖醋','普通','随意', '家常','平常',  '蒸', '炒',  '清炒', '爆炒', '拌', '酱油', '糟卤', '卤', '酱香', 
       '椒盐',  '蒜蓉',  '耗油', '清蒸', '小炒', '煎', '煮', '水煮', '烧', '烤', 
       '慢炖', '小火炖', '炖', '炸','炖','红烧','正常'] },
 
   { key: 'heavy', label: '过重口味', options: ['重油','油炸', '油淋', '香烟', '奶油', '黄油', '猪油', '牛油', 
     '白酒', '红油', '油焖','烟熏', '油泼','烟', '腊肠', '腊肉', '湖南菜', '湘菜', '川菜', 
-    '腊牛肉', '熏', '油爆','高糖', '蛋糕','巧克力','奶糖','碳酸','咖啡', '孜然',
-    '可乐', '红牛', '雪碧', '七喜', '泡椒',  '泡菜', '剁椒', '咸鱼', '酸辣',
+    '腊牛肉', '熏', '油爆','高糖', '蛋糕','巧克力','奶糖','碳酸','咖啡', '孜然','甜甜',
+    '可乐', '红牛', '雪碧', '七喜', '泡椒',  '泡菜', '剁椒', '咸鱼', '酸辣','皮蛋','咸蛋','咸鸭蛋',
     '咸肉', '炭烧', '重辣','培根','咸鸡', '重盐', '盐水', '腌制', '豆豉','霉豆腐','臭豆腐',
     '老干妈', '辣酱', '榨菜','腌','辛辣', '油辣子', '饭扫光', '剁辣椒', 
     '烤串', '烤肉', '火锅', '麻辣烫', '麻辣','烧烤'] },
@@ -931,7 +930,7 @@ const MOOD_GROUPS = [
     '还行', '安心','荣誉','尊重','省心','保护','安全感','放心','正常','美滋滋','喜滋滋','舒坦','嗨',
     '正能量','鼓舞','笑', '乐', '美', '满意',  '好', '挺好','放松','兴致','乐趣','雅兴','舒畅','过瘾',
     '不错','爽','上头','同情','共情','共鸣','心动','理解','懂得','幸福','高兴','静好','舒服','痛快',
-    '还不错','挺好的',
+    '还不错','挺好的','真好','太好了','特别好','神清气爽', '精神十足', 
     '得意','兴奋','喜悦','欣慰','宁静','期待','欢','浪漫','幸','喜','欣','安慰','平和','舒心','畅快',
     '解脱','享受','松弛','稳定','云淡风轻','成就','正面'] },
 
@@ -940,10 +939,10 @@ const MOOD_GROUPS = [
     '坏','生气','糟糕','怒','害怕', '担心','不放心','放心不下','不安','惭愧','羞愧','不是滋味','没成功',
     '不省心','恶心','心疼','揪心','下头','怜悯','痛心','纠结','抓狂','被气到','被刺激','受刺激','警惕',
     '反感','讨厌','急','郁闷','紧张', '抑郁', '担忧','低落','疯狂','沦陷','堕落','后悔','懊悔','懊恼',
-    '不开心', '不好', '内疚','后悔','不高兴', '不满意', '没兴致', '没心情', '疲倦', '懒', 
-    '懈怠', '不顺心', '不好意思', '不太好意思', '不太好', '不怎么样', '愧疚', 
+    '不开心', '不好', '不太好', '内疚','后悔','不高兴', '不满意', '没兴致', '没心情', '疲倦', '懒',  '差', 
+    '懈怠', '不顺心', '不好意思', '不太好意思', '很差', '不怎么样', '愧疚', '遗憾', '埋怨', '怨气', 
     '不行', '不甘', '委屈', '烦', '恼', '不咋地', '不得劲', '沉重',  '炫耀',  '虚荣',  '空虚', '不顺利',
-    '寂寞', '没劲', '无聊', '痛苦','孤独', '悲哀', '压抑', '负面'] },
+    '寂寞', '没劲', '无聊', '痛苦','孤独', '悲哀', '困惑','疑惑','压抑', '负面'] },
 ]
 
 const MOOD_OPTIONS = MOOD_GROUPS.flatMap(group => group.options)
@@ -954,11 +953,12 @@ const DAILY_EDIT_REASONS = ['未能自动获取数据', '手机数据错误（�
 
 
 const APP_CATEGORY_MAP = {
-  utility: { label: '功能型', color: 'gold', apps: ['支付宝', '地图', '百度', '微信读书','豆瓣阅读','网易云阅读','邮件','电话','短信','照片','相机',
+  utility: { label: '功能型', color: 'gold', apps: ['支付宝', '地图', '百度', '微信读书','豆瓣阅读','网易云阅读',
+    '邮件','电话','短信','照片','相机','Uber','DiDi Rider','DiDi Rider','滴滴出行','滴滴',
     '美团','雪粒','拼多多', '京东', '天猫','浏览器', '淘宝' ]},
-  social: { label: '社交', color: 'red', apps: ['微信', '抖音', '微博', '小红书', '知乎', '虎扑', '陌陌','探探','X','QQ', 'Instagram', 'Discord', 'WhatsApp','FaceBook', 'Soul'] },
-  ai: { label: 'AI', color: 'blue', apps: ['DeepSeek','豆包', 'GPT', 'Gemini', 'Claude', 'kimi','飞书','钉钉', '千问', '元宝'] },
-  entertainment: { label: '娱乐', color: 'silver', apps: ['哔哩哔哩', '腾讯视频', '西瓜视频','央视频','咪咕视频','爱奇艺', '优酷', '今日头条','红果','番茄小说','晋江小说阅读','七猫小说',
+  social: { label: '社交', color: 'red', apps: ['微信', '抖音', '微博', '小红书', '知乎', '虎扑', '陌陌','探探','X','QQ', 'Instagram', 'Discord', 'WhatsApp','FaceBook', 'Reddit','Tinder','Soul'] },
+  ai: { label: 'AI', color: 'blue', apps: ['DeepSeek','豆包', 'GPT', 'Gemini', 'Claude', 'kimi','飞书','其它AI', '千问', '元宝'] },
+  entertainment: { label: '娱乐', color: 'silver', apps: ['哔哩哔哩', '腾讯视频', '西瓜视频','央视频','华为视频','咪咕视频','爱奇艺', '优酷', '今日头条','红果','番茄小说','晋江小说阅读','七猫小说',
     '起点小说','王者荣耀','和平精英','开心消消乐','欢乐斗地主','蛋仔派对','洛克王国','金铲铲之战','YouTube', '快手'] },
   other: { label: '其它', color: 'green', apps: [] },
 }
@@ -1250,19 +1250,21 @@ function daysFromYesterdayBackTo(records = [], today = new Date()) {
 const FOOD_ALIAS = {
   米饭: ['米饭', '白米饭', '大米', '香米','八宝饭','白米饭', '米豆腐','炒饭', '红米','蛋炒饭', '八宝粥','腊八粥','血糯米','崇明糕','盖交饭', '糯米饭','糯米饼','糯米粥','糯米','米饼','寿司', '饭团', '粥',  '小米粥', '粽子', '年糕', '松糕','米糕','糍粑',  '皮蛋瘦肉粥',  '菜饭', '稀饭'],
   面食: ['面食', '面条', '拉面', '牛肉拉面', '螺蛳粉', '肠粉','河粉','炒河粉','炒面','馒头', '包子', '肉包', '菜包', '馍馍', '小笼包','生煎','生煎包','煎包','米线','饺子', '馄饨', '云吞','抄手','云吞面','小馄饨','意大利面','葱油饼','煎饼','意面', '披萨', '汉堡'],
-  面包: ['面包', '吐司', '汉堡包', '切片', '菠萝包','肉松包', '白切面包', '蒜蓉面包','肉松面包','三明治', '烤面包'],
+  面包: ['面包', '吐司', '汉堡包', '切片', '菠萝包','肉松包', '甜甜圈','白切面包', '蒜蓉面包','肉松面包','三明治', '烤面包'],
   土豆: ['土豆', '马铃薯', '土豆泥','土豆丝','土豆片'],
-  薯类: ['红薯', '烤地瓜','山药','凉薯','芋艿','芋头','烤地瓜','地瓜'],
-  其它主食: ['其它主食', '鸡蛋饼', '饼干',  '蛋糕', '水果蛋糕', '香蕉蛋糕', '蛋挞', '馅饼', '水晶饺', '烧卖', '燕饺','韭菜盒子', '发糕','面筋','油面筋','小蛋糕','布丁','纸杯蛋糕',
+  薯类: ['红薯', '烤地瓜','山药','凉薯','芋艿','芋头','菱角','地梨','藕粉','藕','糖藕','芝麻糊','烤地瓜','地瓜'],
+  其它主食: ['其它主食', '鸡蛋饼', '饼干',  '蛋糕', '水果蛋糕', '香蕉蛋糕', '蛋挞', '馅饼', 
+    '水晶饺', '烧卖', '燕饺','韭菜盒子', '发糕','面筋','油面筋','小蛋糕','布丁','纸杯蛋糕',
     '窝窝头',  '饼', '鸡蛋灌饼','汤饭','菜饭','皮带面','粉丝','宽粉','鸭血粉丝','肉夹馍','手擀面','手撕饼'],
-  蛋: ['鸡蛋', '蛋', '鸭蛋', '鹌鹑蛋', '蒸鸡蛋','炖蛋','鹌鹑蛋','煮鸡蛋', '水煮蛋', '煎蛋', '炒蛋', '番茄炒蛋', '番茄炒鸡蛋','辣椒炒鸡蛋','煎鸡蛋', '荷包蛋'],
+  蛋: ['鸡蛋', '蛋','皮蛋','卤蛋', '卤鸡蛋', '茶叶蛋','酱油蛋','鸭蛋', '鹌鹑蛋', '蒸鸡蛋','炖蛋','鹌鹑蛋','煮鸡蛋', '水煮蛋', 
+    '煎蛋', '炒蛋', '蛋花','跑蛋','番茄炒蛋', '番茄炒鸡蛋','辣椒炒鸡蛋','煎鸡蛋', '荷包蛋'],
   奶制品: ['牛奶', '奶', '鲜奶', '酸奶', '起司', '椰奶','豆奶','奶酪', '椰奶', '芝士', '乳酪', '奶昔'],
   豆制品: ['豆浆', '豆奶', '豆腐', '老豆腐', '冻豆腐', '豆腐皮', '豆腐脑', '嫩豆腐', '麻婆豆腐', '家常豆腐', '烤麸', '四喜烤麸', 
     '油豆腐', '豆腐丝','兰花豆腐干','豆腐干','兰花香干','素鸡','素鸭','香干','豆皮' ],
   鸡鸭鹅: ['鸡鸭鹅', '鸡', '鸡肉', '炸鸡', '鸡汤','鸡胗','母鸡汤','鸡丝','鸡丁','宫保鸡丁','童子鸡',
     '鸡公煲','鸡腿', '鸡翅', '鸡块', '鸡排', '鸡爪', '鸡胸脯', '油鸡', '鸡柳','熏鸡',  '烤鸡', '鸭', 
     '烧鸭','烧鹅','鸭肉', '脆皮鸡', '脆皮鸭','烤鸭'],
-  牛羊肉: ['牛肉', '煎牛排', '牛排','牛里脊','牛腩','牛肉干','红烧牛肉','牛肉汤','羊肉汤','罗宋汤','牛骨汤','牛腿肉','牛柳',
+  牛羊肉: ['牛肉','卤牛肉', '酱肘子', '煎牛排', '牛排','牛里脊','牛腩','牛肉干','红烧牛肉','牛肉汤','羊肉汤','罗宋汤','牛骨汤','牛腿肉','牛柳',
     '牛腱子','牛肉丝','牛肉丸','烤牛排','和牛','牛肚','百叶','巴西烤肉','烤肉','羊排','烤羊排','羊','羊肉','涮羊肉','孜然牛肉','孜然羊肉',
     '牛蹄筋','羊蝎子','烤全羊'],
   猪肉: ['猪肉','蛋饺', '炒肉', '肉', '烧肉', '烧腊','咕咾肉','红烧大排','肉米','炖肉','里脊','里脊肉','肋条',
@@ -1271,7 +1273,11 @@ const FOOD_ALIAS = {
     '红烧排骨', '肉汤',  '排骨汤',  '骨头汤',  '蹄膀汤', '猪脚', '猪耳朵', '夫妻肺片', '猪肚', '大排', '小排', '唐排',
      '回锅肉', '肉丝','肉糜','炒肉','五花肉', '肉丸'],
   香肠: ['香肠', '火腿肠', '午餐肉', '腊肠'],
-  鱼虾蟹贝: ['虾蟹', '虾', '虾饺',  '鱼','小鱼','小虾','虾米','老虎虾', '基围虾', '香蕉虾', '蛤蜊', '田螺', '淡菜', '鱿鱼', '墨鱼', '小河虾','明虾', '斑节虾',  '琵琶虾', '桂鱼', '鲈鱼', '生蚝', '扇贝', '泥蟹', '青蟹', '蟹', '鱼', '草鱼', '黑鱼', '鳊鱼', '多宝鱼', '鸦片鱼', '大闸蟹', '海鲜', '鲫鱼', '三文鱼','黄鱼', '带鱼', '鳕鱼', '海鱼', '鲍鱼', '胖头鱼', '河鱼',  '活鱼','鱼片', '鱼丸', '水煮鱼', '烤鱼', '小龙虾',  '金枪鱼', '螃蟹', '龙虾'],
+  鱼虾蟹贝: ['虾蟹', '虾', '虾饺',  '鱼','小鱼','小虾','虾米','老虎虾', '基围虾', '香蕉虾', '蛤蜊', '田螺', 
+    '淡菜', '鱿鱼', '墨鱼', '小河虾','明虾', '斑节虾',  '琵琶虾', '桂鱼', '鲈鱼', '生蚝', '扇贝', '泥蟹',
+     '青蟹','蓝蟹', '梭子蟹',  '蟹', '鱼', '草鱼', '黑鱼', '鳊鱼', '多宝鱼', '鸦片鱼', '大闸蟹', '海鲜', '鲫鱼', '三文鱼',
+     '黄鱼', '带鱼', '鳕鱼', '海鱼', '鲍鱼', '胖头鱼', '河鱼',  '活鱼','鱼片', '鱼丸', '水煮鱼', '烤鱼', 
+     '小龙虾',  '金枪鱼', '螃蟹', '龙虾'],
   其它蛋白: ['其它蛋白'],
   白菜: ['白菜', '黄牙菜','卷心菜','包心白菜','娃娃菜','大白菜'],
   绿叶菜: ['青菜', '小青菜', '油菜', '上海青', '芥蓝', '鸡毛菜', '羽衣甘蓝', '奶油小白菜', '青梗菜', '荠菜', '萝卜缨子','塌棵菜','塔菜','菊花菜','菜心','油麦菜', '菠菜', '米苋', '空心菜', '茼蒿', '芥兰', '芥菜', '西洋菜', '香菜', '生菜', '木耳菜', '秋葵', '蒜苔'],
@@ -2505,6 +2511,7 @@ function App() {
   })
 
   const [customYearsBgImage, setCustomYearsBgImage] = useState(() => String(data.customYearsSceneImage || ''))
+  const [customHomeBgImage, setCustomHomeBgImage] = useState('')
   const [showDataPanel, setShowDataPanel] = useState(false)
   const [installDateUnlocked, setInstallDateUnlocked] = useState(false)
 
@@ -2552,6 +2559,7 @@ function App() {
   const [dailyModal, setDailyModal] = useState(null)
   const [dailyDateModal, setDailyDateModal] = useState(null)
   const [usageModal, setUsageModal] = useState(false)
+  const [homeBackgroundPanelOpen, setHomeBackgroundPanelOpen] = useState(false)
   const [usageDocument, setUsageDocument] = useState('')
   const [dataAuthorizationOpen, setDataAuthorizationOpen] = useState(false)
   const [dataAuthorizationStatus, setDataAuthorizationStatus] = useState(null)
@@ -2982,6 +2990,16 @@ function App() {
   }, [])
 
   useEffect(() => {
+    let alive = true
+    loadSnowballMedia(CUSTOM_HOME_BG_IDB_KEY)
+      .then(image => {
+        if (alive && image) setCustomHomeBgImage(image)
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
     setData(prev => {
       const records = ensureDailyDateSkeleton(prev.records || [])
       const before = (prev.records || []).map(record => dateKey(record.date)).join('|')
@@ -3034,11 +3052,15 @@ function App() {
   const furKey = sleepOk ? 'fluffy' : 'ragged'
   const eyeKey = mood.good ? 'color' : 'grey'
   const catImg = `/${gen.stage}_${body.key}_${furKey}_${eyeKey}.png`
-  const bgImg = backgroundImage(stepsOk, sleepOk, mood.good)
+  const systemBgImg = backgroundImage(stepsOk, sleepOk, mood.good)
+  const bgImg =
+    data.homeBackgroundMode === 'custom' && customHomeBgImage
+      ? customHomeBgImage
+      : systemBgImg
 
   const imageFilter = food.good
     ? 'brightness(1.0) contrast(1.0)'
-    : 'grayscale(0.5) brightness(0.85) contrast(0.9) saturate(0.8)'
+    : 'grayscale(0.15) brightness(0.9) contrast(0.9) saturate(0.8)'
 
   const healthyToday = stepsOk && sleepOk && food.good && mood.good
   const canPlayMotionVideo = call.callActive && brain.active && motionBodyOk && sleepOk && food.good && mood.good
@@ -3355,10 +3377,11 @@ function App() {
       iosAverageMinutes >= 0
         ? `${(iosAverageMinutes / 60).toFixed(1)}小时`
         : screenValues.length
-          ? formatDurationFromMinutes(
+          ? `${(
               screenValues.reduce((sum, n) => sum + n, 0)
               / screenValues.length
-            )
+              / 60
+            ).toFixed(1)}小时`
           : '待记录'
 
     return {
@@ -4177,8 +4200,8 @@ function App() {
     setShowDataPanel(true)
   }
 
-  function openTrainPage(range = 'yesterday') {
-    setDailyStatRange(range || 'yesterday')
+  function openTrainPage(range = 'today') {
+    setDailyStatRange(range || 'today')
     setDailyMode('train')
     setShowDataPanel(true)
   }
@@ -4754,6 +4777,41 @@ function App() {
     })
   }
 
+  async function handleCustomHomeBackground(files) {
+    const file = Array.from(files || [])[0]
+    if (!file) return
+
+    const image = await compressFootprintImage(file, 1600, 0.82)
+    if (!image) {
+      window.alert('这张照片没有读成功，请换一张再试。')
+      return
+    }
+
+    setCustomHomeBgImage(image)
+
+    try {
+      await saveSnowballMedia(CUSTOM_HOME_BG_IDB_KEY, image)
+    } catch (error) {
+      console.warn('主页自选背景没有成功保存到 IndexedDB。', error)
+    }
+
+    // 上传成功即自动切换为“自选照片”；系统图同步取消勾选。
+    setData(prev => ({
+      ...prev,
+      homeBackgroundMode: 'custom',
+      lastSavedAt: Date.now(),
+    }))
+  }
+
+  function useSystemHomeBackground() {
+    // 系统图与自选图严格二选一；切回系统图时保留已上传照片，方便以后再次更换。
+    setData(prev => ({
+      ...prev,
+      homeBackgroundMode: 'system',
+      lastSavedAt: Date.now(),
+    }))
+  }
+
   async function handleFootprintPhotos(files = null) {
     if (isPhotoIndexAvailable()) {
       try {
@@ -5233,7 +5291,7 @@ const homeFloatingFootprintMemory = ''
                 type="button"
                 className="usageInfoBack"
                 aria-label="返回主页"
-                onClick={() => { setUsageDocument(''); setUsageModal(false) }}
+                onClick={() => { setUsageDocument(''); setHomeBackgroundPanelOpen(false); setUsageModal(false) }}
               >‹</button>
               <h2>说明</h2>
               <span className="usageInfoHeaderSpacer" aria-hidden="true" />
@@ -5241,6 +5299,9 @@ const homeFloatingFootprintMemory = ''
             <div className="usageInfoText">{USAGE_TEXT}</div>
             <div className="usageAuthorizationLink">
               <button type="button" onClick={openDataAuthorization}>数据授权</button>
+            </div>
+            <div className="usageHomeBackgroundLink">
+              <button type="button" onClick={() => setHomeBackgroundPanelOpen(true)}>换背景图</button>
             </div>
             <div className="usageVersionBlock">
               <p>雪粒 Snowlet</p>
@@ -5264,6 +5325,60 @@ const homeFloatingFootprintMemory = ''
           </div>
         </div>
       )}
+      {usageModal && homeBackgroundPanelOpen && (
+        <div className="homeBackgroundOverlay" role="dialog" aria-modal="true" aria-label="换背景图">
+          <div className="homeBackgroundPanel">
+            <div className="homeBackgroundHeader">
+              <button
+                type="button"
+                className="homeBackgroundBack"
+                aria-label="返回说明"
+                onClick={() => setHomeBackgroundPanelOpen(false)}
+              >‹</button>
+              <h2>换背景图</h2>
+              <span aria-hidden="true" />
+            </div>
+
+            <label className="homeBackgroundChoice homeBackgroundUploadChoice">
+              <input
+                className="homeBackgroundFileInput"
+                type="file"
+                accept="image/*"
+                onChange={event => {
+                  handleCustomHomeBackground(event.target.files)
+                  event.target.value = ''
+                }}
+              />
+              <span className="homeBackgroundPhotoIcon" aria-hidden="true">▣</span>
+              <span className="homeBackgroundChoiceText">
+                <strong>上传自选照片</strong>
+                <small>可随时改回系统图</small>
+              </span>
+              <span
+                className={`homeBackgroundCheck ${data.homeBackgroundMode === 'custom' ? 'checked' : ''}`}
+                aria-hidden="true"
+              >{data.homeBackgroundMode === 'custom' ? '✓' : ''}</span>
+            </label>
+
+            <button
+              type="button"
+              className="homeBackgroundChoice homeBackgroundSystemChoice"
+              onClick={useSystemHomeBackground}
+            >
+              <span className="homeBackgroundSystemIcon" aria-hidden="true">✦</span>
+              <span className="homeBackgroundChoiceText">
+                <strong>选择系统默认图片</strong>
+                <small>根据状态和日期变化</small>
+              </span>
+              <span
+                className={`homeBackgroundCheck ${data.homeBackgroundMode !== 'custom' ? 'checked' : ''}`}
+                aria-hidden="true"
+              >{data.homeBackgroundMode !== 'custom' ? '✓' : ''}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {usageModal && dataAuthorizationOpen && (
         <div className="usageAuthorizationOverlay" role="dialog" aria-modal="true" aria-label="数据授权">
           <div className="usageAuthorizationPanel">
@@ -5492,7 +5607,7 @@ max-width:78px !important;
                 Capacitor.getPlatform() !== 'ios'
               }
               onBackHome={() => setShowDataPanel(false)}
-              onOpenTrain={() => openTrainPage('yesterday')}
+              onOpenTrain={() => openTrainPage('today')}
               onOpenDetailDate={openScreenDetailFromSummary}
             />
           ) : dailyMode === 'screen-detail' ? (

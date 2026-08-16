@@ -1521,7 +1521,7 @@ struct IOSScreenTimeDashboardContainer: View {
         case dayDetail
     }
 
-    @State private var range: IOSDashboardRange = .yesterday
+    @State private var range: IOSDashboardRange = .today
     @State private var page: Page = .dashboard
     @State private var selectedDetailDate: Date = {
         let calendar = Calendar.autoupdatingCurrent

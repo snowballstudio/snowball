@@ -862,7 +862,7 @@ export default function Home({
                   onClick={openScreenTimeSummary}
                   aria-label="打开每日屏幕时间表"
                 >
-                  <span className="homeDeviceMetricLabel">日均</span>
+                  <span className="homeDeviceMetricLabel">日均小时</span>
                   <strong className="homeDeviceMetricValue">
                     {avgScreenPending ? '—' : avgScreenNumber}
                   </strong>
@@ -874,7 +874,7 @@ export default function Home({
                   onClick={openOffscreenTable}
                   aria-label="打开离机时间表"
                 >
-                  <span className="homeDeviceMetricLabel">末次</span>
+                  <span className="homeDeviceMetricLabel">末次活动</span>
                   <strong className="homeDeviceMetricValue">
                     {formatHomeRawActivityTime(homeAndroidLastActivity)}
                   </strong>
@@ -1060,7 +1060,7 @@ export default function Home({
           <span className="homeNutritionNavIcon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
           <em>营养</em>
         </button>
-        <button type="button" onClick={() => openTrainPage('yesterday')}>
+        <button type="button" onClick={() => openTrainPage('today')}>
           <span>🚆</span>
           <em>信息</em>
         </button>
