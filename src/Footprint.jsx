@@ -384,6 +384,7 @@ export default function Footprint({
 
   function openFootprintRecord(item) {
     setFootprintView(item.type || 'local')
+    setPopupVisitIndex(popupIndexForRecord(item))
     setSelectedFootprintId(item.id)
     setYearsMode('browseFull')
   }
@@ -433,6 +434,25 @@ export default function Footprint({
     return Math.sqrt(dx * dx + dy * dy)
   }
 
+  function popupIndexForRecord(item) {
+    if (!item) return 0
+
+    const itemPosition = footprintPosition(item)
+    const matchingGroup = (footprintMarkerGroups || []).find(group => {
+      if (group.item?.id === item.id) return true
+      return popupDistance(group.pos, itemPosition) <= 5
+    })
+    const groupPosition = matchingGroup?.pos || itemPosition
+
+    const visits = (footprints || [])
+      .filter(visit => visit.type === (item.type || 'local'))
+      .filter(visit => popupDistance(footprintPosition(visit), groupPosition) <= 5)
+      .sort(popupRecordSort)
+
+    const index = visits.findIndex(visit => visit.id === item.id)
+    return index >= 0 ? index : 0
+  }
+
   const selectedMarkerGroup = useMemo(() => {
     if (!selectedFootprintId) return null
 
@@ -454,6 +474,17 @@ export default function Footprint({
       .filter(item => popupDistance(footprintPosition(item), selectedMarkerGroup.pos) <= 5)
       .sort(popupRecordSort)
   }, [selectedMarkerGroup, selectedFootprint, footprints, footprintView])
+
+  useEffect(() => {
+    if (!selectedFootprintId || selectedMarkerVisits.length === 0) return
+
+    const selectedIndex = selectedMarkerVisits.findIndex(
+      item => item.id === selectedFootprintId,
+    )
+    if (selectedIndex >= 0) {
+      setPopupVisitIndex(selectedIndex)
+    }
+  }, [selectedFootprintId, selectedMarkerVisits])
 
   const popupVisitSafeIndex = selectedMarkerVisits.length
     ? Math.min(popupVisitIndex, selectedMarkerVisits.length - 1)
@@ -526,6 +557,36 @@ export default function Footprint({
     })
   }, [footprints, footprintView, browseSort])
 
+  const displayFootprintCatRoute = useMemo(() => {
+    if (!activeHomePosition) return []
+
+    const home = {
+      x: Number(activeHomePosition.x),
+      y: Number(activeHomePosition.y),
+    }
+    const route = [home]
+
+    ;[...(footprintMarkerGroups || [])]
+      .sort((a, b) => Number(b.count || 0) - Number(a.count || 0))
+      .forEach(group => {
+        // route[0] 是家；最多再加入 TOP3，共 4 个点。
+        if (route.length >= 4) return
+
+        const pos = group?.pos || footprintPosition(group.item)
+        if (!pos) return
+
+        const duplicate = route.some(
+          old => Math.abs(Number(old.x) - Number(pos.x)) < 2
+            && Math.abs(Number(old.y) - Number(pos.y)) < 2,
+        )
+        if (!duplicate) {
+          route.push({ x: Number(pos.x), y: Number(pos.y) })
+        }
+      })
+
+    return route
+  }, [activeHomePosition, footprintMarkerGroups, footprintPosition])
+
   return (
     <>
       <div className="yearsOverlay">
@@ -575,10 +636,10 @@ export default function Footprint({
                     aria-label="新的家"
                   ></span>
                 )}
-                {yearsMode === 'browseFull' && activeHomePosition && footprintCatRoute.length >= 2 && (
+                {yearsMode === 'browseFull' && activeHomePosition && displayFootprintCatRoute.length >= 2 && (
                   <svg className="footprintFlightPath" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    {footprintCatRoute.slice(1, 3).map((point, index) => {
-                      const home = footprintCatRoute[0]
+                    {displayFootprintCatRoute.slice(1, 4).map((point, index) => {
+                      const home = displayFootprintCatRoute[0]
                       return (
                         <path
                           key={index}
@@ -629,17 +690,17 @@ export default function Footprint({
                     />
                   )
                 })}
-                {yearsMode === 'browseFull' && activeHomePosition && footprintCatRoute.length > 0 && (
+                {yearsMode === 'browseFull' && activeHomePosition && displayFootprintCatRoute.length > 0 && (
                   <img
-                    key={`${footprintView}-${footprintCatRoute[0]?.x}-${footprintCatRoute[0]?.y}`}
+                    key={`${footprintView}-${displayFootprintCatRoute[0]?.x}-${displayFootprintCatRoute[0]?.y}`}
                     className="footprintMapStaticCat"
                     src="/refine/footprint_background_cat.png"
                     alt="雪粒停在家里"
                     style={{
-                      '--fp-cat-route-x1': `${footprintCatRoute[0]?.x || 28}%`,
-                      '--fp-cat-route-y1': `${footprintCatRoute[0]?.y || 62}%`,
-                      '--fp-cat-route-x2': `${footprintCatRoute[1]?.x || 74}%`,
-                      '--fp-cat-route-y2': `${footprintCatRoute[1]?.y || 58}%`,
+                      '--fp-cat-route-x1': `${displayFootprintCatRoute[0]?.x || 28}%`,
+                      '--fp-cat-route-y1': `${displayFootprintCatRoute[0]?.y || 62}%`,
+                      '--fp-cat-route-x2': `${displayFootprintCatRoute[1]?.x || 74}%`,
+                      '--fp-cat-route-y2': `${displayFootprintCatRoute[1]?.y || 58}%`,
                     }}
                     onError={e => { e.currentTarget.src = '/snowball2.png' }}
                   />
@@ -670,7 +731,7 @@ export default function Footprint({
                       </button>
 
                       <div className="mapFootprintPopupHeader">
-                        <strong><span>{popupFootprint.year || '待记录'}年{formatFootprintMonth(popupFootprint.month)}月 · {popupFootprint.place || '待记录'}</span></strong>
+                        <strong><span>{popupFootprint.place || '待记录'}</span></strong>
 
                         {hasMultipleVisits && (
                           <div className="mapFootprintPager" aria-label="切换同一图钉的足迹记录">
@@ -695,8 +756,11 @@ export default function Footprint({
                         )}
                       </div>
 
-                      <p>具体地点：{popupFootprint.detail || '待记录'}</p>
-                      <p>最难忘的：{popupFootprint.note || '待记录'}</p>
+                      <div className="mapFootprintDetailRows">
+                        <p>出行年月：{popupFootprint.year || '待记录'}年{formatFootprintMonth(popupFootprint.month)}月</p>
+                        <p>具体地点：{popupFootprint.detail || '待记录'}</p>
+                        <p>最难忘的：{popupFootprint.note || '待记录'}</p>
+                      </div>
                       {Array.isArray(popupFootprint.photos) && popupFootprint.photos.length > 0 ? (
                         <div className="mapFootprintPhotos">
                           {popupFootprint.photos.map((photo, index) => {
@@ -882,13 +946,13 @@ export default function Footprint({
                           tabIndex={0}
                           aria-pressed={active}
                           onClick={() => {
-                            setPopupVisitIndex(0)
+                            setPopupVisitIndex(popupIndexForRecord(item))
                             setSelectedFootprintId(item.id)
                           }}
                           onKeyDown={event => {
                             if (event.key === 'Enter' || event.key === ' ') {
                               event.preventDefault()
-                              setPopupVisitIndex(0)
+                              setPopupVisitIndex(popupIndexForRecord(item))
                               setSelectedFootprintId(item.id)
                             }
                           }}

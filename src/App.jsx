@@ -100,7 +100,7 @@ const USAGE_TEXT = `雪粒是一款生活管理APP，旨在梳理与自律，其
 饮食均衡 → 毛色雪白
 心情正面 → 眼睛圆亮
 
-步数和屏幕时间经首次授权后可自动更新。注：华为手机请在设置中开启“手动管理”以获得步数。
+步数和屏幕时间经首次授权后可自动更新。注：部分手机请可能需要在设置中开启“手动管理”。
 
 饮食和心情数据来自每天与雪粒通话，点录音图标后开始语音录入，可空格发送切断或快进。
 
@@ -363,7 +363,7 @@ function brainInfo(messages) {
   const messageScore = userMessages.length
   const wordScore = THINKING_WORDS.reduce((sum, word) => sum + (text.includes(word) ? 1 : 0), 0)
   const score = Math.min(100, messageScore + wordScore)
-  return { score, active: score >= 10, label: `${score}%` }
+  return { score, active: score >= 100, label: `${score}%` }
 }
 
 function normalizeTime(t) {
@@ -1378,7 +1378,7 @@ function classifyDailyTaste(text) {
   // 口味只读取 TASTE_GROUPS 中的实际词语，不再经过任何别名映射。
   // findWordsNoOverlap 会优先识别较长词语，例如“清炒”不会再重复识别为“炒”。
   const tasteTags = findWordsNoOverlap(text, TASTE_OPTIONS)
-  return uniqueJoin(tasteTags) || '正常'
+  return uniqueJoin(tasteTags) || '默认常规'
 }
 
 function classifyDailyMood(text) {
@@ -1404,19 +1404,39 @@ function deriveConversationFields(record = {}) {
   }
 }
 
+function foodTasteRatioInfo(foodText = '', tasteText = '') {
+  // 口味偏重统一定义：偏重口味词数量 ÷ 日常表中的食物真名数量。
+  // 这里直接读取日常表 food 字段，不做别名映射，也不按主名去重。
+  const foodCount = splitTags(foodText).length
+  const tasteTags = splitTags(tasteText)
+  const normalTaste = tasteTags.filter(tag => HEALTHY_TASTE_OPTIONS.includes(tag)).length
+  const heavyTaste = tasteTags.filter(tag => HEAVY_TASTE_OPTIONS.includes(tag)).length
+  const heavyRatio = foodCount ? Math.min(1, heavyTaste / foodCount) : 0
+
+  return {
+    foodCount,
+    normalTaste,
+    heavyTaste,
+    heavyRatio,
+  }
+}
+
 function dailyFoodInfo(foodText, tasteText = '') {
+  // 食物本身是否足够丰富仍沿用原来的主名营养逻辑；
+  // 本次只把“口味是否偏重”的分母统一改为食物真名数量。
   const foodTags = foodPrimaryTagsFromText(foodText)
-  const normalTaste = splitTags(tasteText).filter(tag => HEALTHY_TASTE_OPTIONS.includes(tag)).length
-  const heavyTaste = splitTags(tasteText).filter(tag => HEAVY_TASTE_OPTIONS.includes(tag)).length
   const hasFood = String(foodText || '').trim()
-  const good = foodTags.length >= 3 && normalTaste >= heavyTaste
+  const tasteInfo = foodTasteRatioInfo(foodText, tasteText)
+  const good = foodTags.length >= 3 && tasteInfo.heavyRatio <= 0.5
+
   return {
     good,
     label: good ? '雪白' : '暗淡',
     healthLabel: hasFood ? (good ? '合理' : '待改进') : '未记录',
     foodCount: foodTags.length,
-    normalTaste,
-    heavyTaste,
+    normalTaste: tasteInfo.normalTaste,
+    heavyTaste: tasteInfo.heavyTaste,
+    heavyRatio: tasteInfo.heavyRatio,
   }
 }
 
@@ -1607,27 +1627,32 @@ function tasteStatsFromRecords(records = [], range = 'today') {
   const scoped = filterDailyRange(records, range)
   let healthy = 0
   let heavy = 0
+  let foodTotal = 0
 
   scoped.forEach(record => {
-    splitTags(record?.taste || record?.foodTaste).forEach(tag => {
-      if (HEALTHY_TASTE_OPTIONS.includes(tag)) healthy += 1
-      if (HEAVY_TASTE_OPTIONS.includes(tag)) heavy += 1
-    })
+    const tasteInfo = foodTasteRatioInfo(
+      record?.food || record?.foodKeyword || record?.foodText || '',
+      record?.taste || record?.foodTaste || '',
+    )
+
+    foodTotal += tasteInfo.foodCount
+    healthy += tasteInfo.normalTaste
+    heavy += tasteInfo.heavyTaste
   })
 
-  const total = healthy + heavy
-  const healthyRatio = total ? healthy / total : 0
-  const heavyRatio = total ? heavy / total : 0
+  const heavyRatio = foodTotal ? Math.min(1, heavy / foodTotal) : 0
+  const healthyRatio = foodTotal ? 1 - heavyRatio : 0
 
   return {
     healthy,
     heavy,
-    total,
+    total: foodTotal,
+    foodTotal,
     healthyRatio,
     heavyRatio,
-    rainbowVisible: total > 0 && healthy > 0,
+    rainbowVisible: foodTotal > 0,
     rainbowPercent: Math.round(healthyRatio * 100),
-    display: total ? `${Math.round(heavyRatio * 100)}%口味偏重` : '口味未记录',
+    display: foodTotal ? `${Math.round(heavyRatio * 100)}%口味偏重` : '食物未记录',
   }
 }
 
@@ -3044,7 +3069,7 @@ function App() {
   const food = dailyFoodInfo(todayDailyRecord.food || '', todayDailyRecord.taste || '')
   const mood = dailyMoodInfo(todayDailyRecord.mood || '')
   const currentBrainScore = recordBrainPercent(todayDailyRecord)
-  const brain = { score: currentBrainScore, active: currentBrainScore >= 10, label: `${currentBrainScore}%` }
+  const brain = { score: currentBrainScore, active: currentBrainScore >= 100, label: `${currentBrainScore}%` }
 
   const stepsOk = homeYesterdaySteps >= 5000
   const motionBodyOk = homeYesterdaySteps >= 5000 && homeYesterdaySteps <= 10000
@@ -3171,7 +3196,7 @@ function App() {
     const goodCount = [stepGood, sleepGoodFlag, foodGoodFlag, moodGoodFlag].filter(Boolean).length
     const allGood = goodCount === 4
     const hasTalked = currentBrainScore > 0 || (Array.isArray(data.messages) && data.messages.length > 0)
-    const brainReady = currentBrainScore >= 10
+    const brainReady = currentBrainScore >= 100
 
     const stepText = stepMissing
       ? <>昨天的步数还没更新，雪粒默认偏瘦。</>
@@ -5075,12 +5100,12 @@ const homeFloatingFootprintMemory = ''
   ]
 
   const dailyViewHeaders = {
-    all: ['日期', '步数', '离机', '食物', '口味', '心情', '互动'],
+    all: ['日期', '步数', '离机', '食物', '口味', '心情', '脑动'],
     steps: ['日期', '步数'],
     offscreen: ['日期', '离机'],
     food: ['日期', '食物', '口味'],
     mood: ['日期', '心情'],
-  }[dailyViewTab] || ['日期', '步数', '离机', '食物', '口味', '心情', '互动']
+  }[dailyViewTab] || ['日期', '步数', '离机', '食物', '口味', '心情', '脑动']
 
   const dailyTableGrid = {
     all: '1.15fr 0.8fr 0.8fr 1.2fr 0.9fr 1fr 0.7fr 42px 48px',
@@ -5305,7 +5330,7 @@ const homeFloatingFootprintMemory = ''
             </div>
             <div className="usageVersionBlock">
               <p>雪粒 Snowlet</p>
-              <button type="button" className="usageVersionTap" onClick={handleVersionTap}>Version 1.3</button>
+              <button type="button" className="usageVersionTap" onClick={handleVersionTap}>Version 1.4</button>
               <p>Copyright © dflystudio.com</p>
               <p>联系电话：(0086)18146431516</p>
               {data.developerMode && (

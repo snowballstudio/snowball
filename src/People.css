@@ -21,7 +21,7 @@
     linear-gradient(135deg, rgba(246, 241, 231, 0.98), rgba(231, 239, 238, 0.96));
   border: 1px solid rgba(74, 82, 90, 0.14);
   box-shadow: 0 28px 80px rgba(35, 42, 50, 0.24);
-  color: #243047;
+  color: #48535C;
   padding: 22px;
   display: grid;
   grid-template-rows: auto minmax(300px, 1fr) minmax(235px, 0.82fr);
@@ -55,7 +55,7 @@
 .peopleTopBar h2 {
   margin: 0;
   font-size: 30px;
-  color: #2e3d4f;
+  color: #48535C;
 }
 
 .peopleTopBar p {
@@ -2828,4 +2828,18 @@
   width: 100% !important;
   border-radius: 13px !important;
   clip-path: inset(0.5px round 13px) !important;
+}
+
+/* ======================================================
+   2026-08-16｜人物照片页姓名标题恢复
+   人物编辑页仍隐藏 h3；仅照片页恢复人物姓名。
+   ====================================================== */
+.peopleEditor.peoplePhotoPanel h3 {
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 48px 12px 0 !important;
+  min-height: 34px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  color: #3c6185 !important;
 }

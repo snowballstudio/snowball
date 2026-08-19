@@ -559,7 +559,7 @@ struct SnowballHomeMiniView: View {
     private let clockFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "HH：mm"
+        formatter.dateFormat = "H : mm"
         return formatter
     }()
 

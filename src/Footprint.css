@@ -2990,3 +2990,27 @@ body.futureFootprintPlanOpen .compactFootprintList {
   }
 }
 
+/* ======================================================
+   2026-08-16｜足迹详情框三行信息
+   标题只显示地名；年月下移，与具体地点/最难忘的等距排列。
+   行距约比原来缩小 1/3。
+   ====================================================== */
+.mapFootprintPopupHeader > strong {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.mapFootprintDetailRows {
+  display: grid !important;
+  gap: 0 !important;
+  margin-top: 7px !important;
+}
+
+.mapFootprintDetailRows p {
+  margin: 0 !important;
+  padding: 3px 0 !important;
+  color: #34475a !important;
+  font-size: 12px !important;
+  line-height: 1.40 !important;
+}

@@ -83,7 +83,7 @@ function formatHomeRawActivityTime(value) {
   const rawHour = Number(match[1])
   const minute = match[2]
   const displayHour = rawHour >= 24 ? rawHour % 24 : rawHour
-  return `${String(displayHour).padStart(2, '0')}：${minute}`
+  return `${displayHour} : ${minute}`
 }
 
 function homeRestTimeReachedGoal(value) {
