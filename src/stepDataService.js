@@ -16,6 +16,63 @@ function finiteStep(value) {
   return Math.max(0, Math.round(number))
 }
 
+function finiteKm(value) {
+  if (value === null || value === undefined || value === '') return null
+  const number = Number(value)
+  if (!Number.isFinite(number)) return null
+  return Math.max(0, Math.round(number * 1000) / 1000)
+}
+
+function metersToKm(value) {
+  if (value === null || value === undefined || value === '') return null
+  const number = Number(value)
+  if (!Number.isFinite(number)) return null
+  return finiteKm(number / 1000)
+}
+
+function distanceFieldsForDay(day = {}) {
+  return {
+    healthConnectKm: finiteKm(
+      day.healthConnectKm
+      ?? day.healthConnectDistanceKm
+      ?? metersToKm(day.healthConnectDistanceMeters)
+    ),
+    huaweiHealthKitKm: finiteKm(
+      day.huaweiHealthKitKm
+      ?? day.huaweiHealthKm
+      ?? day.huaweiDistanceKm
+      ?? metersToKm(day.huaweiHealthKitDistanceMeters ?? day.huaweiDistanceMeters)
+    ),
+    appleHealthKitKm: finiteKm(
+      day.appleHealthKitKm
+      ?? day.appleHealthKm
+      ?? day.appleDistanceKm
+      ?? metersToKm(day.appleHealthKitDistanceMeters ?? day.appleDistanceMeters)
+    ),
+  }
+}
+
+function calculatedKmForSteps(steps) {
+  const value = finiteStep(steps)
+  if (value === null) return null
+  // 固定按 69 厘米/步估算，只基于已经计算完成的 calculatedSteps。
+  return finiteKm(value * 0.69 / 1000)
+}
+
+function withDistanceFields(record = {}) {
+  const calculatedKm = calculatedKmForSteps(record.calculatedSteps)
+  const systemKm =
+    finiteKm(record.healthConnectKm)
+    ?? finiteKm(record.huaweiHealthKitKm)
+    ?? finiteKm(record.appleHealthKitKm)
+
+  return {
+    ...record,
+    calculatedKm,
+    dailyKm: systemKm ?? calculatedKm,
+  }
+}
+
 function localDateKey(value) {
   const raw = String(value || '').trim()
   const match = raw.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/)
@@ -207,15 +264,15 @@ function recalculateCumulative(records = [], currentDate = '') {
 export function calculateStepAutoRecord(record = {}) {
   const exact = chooseExactSource(record)
   if (exact) {
-    return {
+    return withDistanceFields({
       ...record,
       calculatedSteps: exact.value,
       calculatedSource: exact.source,
       calculationStatus: 'exact',
       calculationNote: `${STEP_SOURCE_LABELS[exact.source]}每日步数`,
-    }
+    })
   }
-  return { ...record }
+  return withDistanceFields({ ...record })
 }
 
 export function ingestStepPayload(existingRecords = [], payload = {}, {
@@ -231,6 +288,7 @@ export function ingestStepPayload(existingRecords = [], payload = {}, {
     if (!key) return
     const previous = map.get(key) || { date: displayDate(key), loginCount: 0 }
     const sources = sourceFieldsForDay(day, platform)
+    const distances = distanceFieldsForDay(day)
     const cumulative = cumulativeFieldsForDay(day, payload)
     const hasLiveCumulative = cumulative.firstCumulativeSteps !== null || cumulative.lastCumulativeSteps !== null
     const isLiveDay = liveToday && key === localDateKey(days[0]?.date)
@@ -246,6 +304,7 @@ export function ingestStepPayload(existingRecords = [], payload = {}, {
       ...previous,
       date: displayDate(key),
       ...Object.fromEntries(Object.entries(sources).map(([field, value]) => [field, value ?? previous[field] ?? null])),
+      ...Object.fromEntries(Object.entries(distances).map(([field, value]) => [field, value ?? previous[field] ?? null])),
       firstCumulativeSteps: firstCumulative,
       lastCumulativeSteps: lastCumulative,
       backgroundCumulativeSteps: cumulative.backgroundCumulativeSteps ?? previous.backgroundCumulativeSteps ?? null,
@@ -264,6 +323,7 @@ export function ingestStepPayload(existingRecords = [], payload = {}, {
 
   const currentDate = days[0]?.date || new Date()
   return recalculateCumulative([...map.values()], currentDate)
+    .map(withDistanceFields)
     .sort((a, b) => localDateKey(b.date).localeCompare(localDateKey(a.date)))
 }
 

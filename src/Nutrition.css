@@ -99,11 +99,6 @@
     --nutrition-row-value-color: #e0c369;
     --nutrition-row-food-color: rgba(255,255,255,.84);
 
-    /* 猫和动图 */
-    --nutrition-cat-width: 102px;
-    --nutrition-cat-left: 62px;
-    --nutrition-cat-bottom: 5px;
-    --nutrition-motion-width: 102px;
   }
 }
 
@@ -630,33 +625,6 @@
   }
 }
 
-/* ======================================================
-   8. 猫与营养动图
-   ====================================================== */
-@media (max-width: 900px) {
-  .dailyNutritionPage .nutritionInsightCat {
-    position: absolute !important;
-    left: var(--nutrition-cat-left) !important;
-    bottom: var(--nutrition-cat-bottom) !important;
-    width: var(--nutrition-cat-width) !important;
-    max-width: var(--nutrition-cat-width) !important;
-    height: auto !important;
-    z-index: 6 !important;
-    object-fit: contain !important;
-    filter: drop-shadow(0 10px 18px rgba(0,0,0,.34)) !important;
-  }
-
-  .dailyNutritionPage .nutritionInsightCatMotion {
-    width: var(--nutrition-motion-width) !important;
-    max-width: var(--nutrition-motion-width) !important;
-    animation: nutritionCatBreathe 1.9s ease-in-out infinite;
-  }
-}
-
-@keyframes nutritionCatBreathe {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-3px) scale(1.018); }
-}
 
 
 /* ======================================================
@@ -1278,7 +1246,7 @@
    ------------------------------------------------------
    营养主页：
    - nutritionSpectrumCard / nutritionBg 继续全屏，不移动背景；
-   - nutritionSubTop、nutritionInsightContent、猫进入 Safe Area；
+   - nutritionSubTop、nutritionInsightContent 进入 Safe Area；
    - 彩虹、云朵、表格等内部坐标和比例不改。
 
    营养说明页：
@@ -1332,13 +1300,6 @@
     height: auto !important;
   }
 
-  /* 猫是 content 的兄弟层，因此单独避开底部系统区域。 */
-  .dailyNutritionPage.nutritionPage .nutritionInsightCat {
-    bottom: calc(
-      var(--nutrition-cat-bottom)
-      + env(safe-area-inset-bottom, 0px)
-    ) !important;
-  }
 
   /* Android 原生顶部使用 MainActivity 注入的真实状态栏高度。 */
   html.snowball-native-edge
@@ -1589,7 +1550,7 @@
 
 /* ======================================================
    V1.3｜营养页发布版简化
-   仅隐藏视觉，保留原云朵、猫、猫动图逻辑。
+   仅隐藏视觉，保留原云朵逻辑。
    ====================================================== */
 
 /* 云朵在任何情况下都不显示；原 JSX 逻辑保留。 */
@@ -1597,12 +1558,6 @@
   display: none !important;
 }
 
-/* 静态猫与猫动图在任何情况下都不显示；原切换逻辑保留。 */
-.dailyNutritionPage .nutritionInsightCat,
-.dailyNutritionPage .nutritionInsightCatMotion,
-.dailyNutritionPage .dailyInsightCat.nutritionInsightCat {
-  display: none !important;
-}
 
 /* 原云朵文字独立显示在数据表上方，左对齐。 */
 @media (max-width: 900px) {

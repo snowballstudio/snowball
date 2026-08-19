@@ -185,15 +185,12 @@ function trainImageForRow(item, dailyTrainRows, trainImageForCategory) {
 }
 
 export default function Train({
-  PngSequence,
   dailyTrainRows,
   trainIsRunning,
   dailyStatRange,
   trainRunKey,
   dailyTrainMaxPickups,
   dailyTrainMaxDuration,
-  trainTopApps,
-  appIconMap,
   trainImageForCategory,
   trainWidthForStats,
   trainSpeedForStats,
@@ -303,7 +300,6 @@ export default function Train({
         <div className="dailyInsightContent trainInsightContent">
           <div className={`informationTrainStage ${trainIsRunning ? 'isRunning' : 'isWaiting'}`} key={`train-${dailyStatRange}-${trainRunKey}`} aria-hidden="true">
             {dailyTrainRows.map((item, index) => {
-              const topApps = trainTopApps(item)
               return (
                 <div
                   className={`informationTrainLane informationTrainLane${index + 1}`}
@@ -320,15 +316,6 @@ export default function Train({
                 >
                   <div className="informationTrainRunner">
                     <img className="informationTrainImage" src={trainImageForRow(item, dailyTrainRows, trainImageForCategory)} alt="" />
-                    <div className="informationTrainIcons">
-                      {topApps.map(app => (
-                        appIconMap[app] ? (
-                          <img key={app} src={appIconMap[app]} alt={app} title={app} />
-                        ) : (
-                          <span key={app} title={app}>{app.slice(0, 2)}</span>
-                        )
-                      ))}
-                    </div>
                     <div className="informationTrainMeta">
                       <strong>{item.label}</strong>
                       <span>{item.timeText} · {item.pickupText}</span>

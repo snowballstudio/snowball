@@ -8,9 +8,13 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.DistanceRecord
 
 class HealthPermissionActivity : ComponentActivity() {
-    private val permissions = setOf(HealthPermission.getReadPermission(StepsRecord::class))
+    private val permissions = setOf(
+        HealthPermission.getReadPermission(StepsRecord::class),
+        HealthPermission.getReadPermission(DistanceRecord::class),
+    )
     private val launcher = registerForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->
         setResult(if (granted.containsAll(permissions)) Activity.RESULT_OK else Activity.RESULT_CANCELED)
         finish()

@@ -93,18 +93,7 @@ body {
   transition: filter 0.35s ease;
 }
 
-.catMotionVideo {
-  border-radius: 18px;
-  background: transparent;
-  object-fit: contain;
-  filter:
-    drop-shadow(0 22px 28px rgba(0,0,0,0.35))
-    drop-shadow(0 5px 8px rgba(0,0,0,0.28));
-}
 
-.catVisual.videoMode {
-  animation: none;
-}
 
 .catVisual.blink {
   animation: blinkCat 1.1s ease;
@@ -294,64 +283,6 @@ body {
   color: #dfe7f4;
   font-size: 13px;
 }
-
-.rewardOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(2, 8, 15, 0.78);
-  backdrop-filter: blur(8px);
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-}
-
-.rewardBox {
-  width: min(460px, 92vw);
-  background: #0d1828;
-  border: 1px solid rgba(230, 235, 240, 0.16);
-  border-radius: 28px;
-  padding: 24px;
-  text-align: center;
-  color: #f4f0e6;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.55);
-}
-
-.rewardCat {
-  width: 100%;
-  border-radius: 22px;
-  animation: rewardRoll 1.8s ease-in-out infinite;
-}
-
-.rewardVideo {
-  display: block;
-  width: 100%;
-  border-radius: 22px;
-  background: transparent;
-}
-
-.rewardBox button {
-  width: 100%;
-  margin-top: 14px;
-  border: none;
-  border-radius: 999px;
-  background: #f1dfb1;
-  color: #162033;
-  padding: 14px;
-  font-size: 16px;
-}
-
-@keyframes rewardRoll {
-  0%, 100% {
-    transform: rotate(-2deg) scale(1);
-  }
-  50% {
-    transform: rotate(2deg) scale(1.03);
-  }
-}
-
-
 
 .statusPair {
   min-height: 58px;
@@ -647,15 +578,12 @@ body {
 /* 使用6个清楚的动作帧：跳过第4、第8格，避免右侧被裁切的猫脸闪出来 */
 
 
-.rewardOverlay {
-  z-index: 12000 !important;
-}
 
 
 /* 2026-06-28 物馆：愿单/在手/舍离与雪球盖章 */
 
 
-/* 2026-06-29 PNG序列动图：足迹与通话统一读取 /motion/xxx01-N.png，最大36帧 */
+/* 2026-06-29 PNG序列动图：足迹等页面读取 /motion/xxx01-N.png，最大36帧 */
 .catVisual {
   width: var(--hero-cat-width, 40.6%) !important;
   max-width: var(--hero-cat-max-width, 273px) !important;
@@ -678,9 +606,6 @@ body {
     drop-shadow(0 5px 8px rgba(0,0,0,0.28));
 }
 
-.catVisual.videoMode {
-  animation: none !important;
-}
 
 
 /* 表格行分组：每件物品一行，四列对齐 */

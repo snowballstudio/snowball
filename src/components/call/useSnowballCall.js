@@ -415,7 +415,6 @@ export default function useSnowballCall({
   dailyRecordForDate,
   todayText,
   emptyDailyRecord,
-  maybeRewardAfterRecord,
 }) {
   const [callActive, setCallActive] = useState(false)
   const [isListening, setIsListening] = useState(false)
@@ -836,12 +835,7 @@ export default function useSnowballCall({
             ],
           }
 
-          if (!clean) return nextData
-
-          return {
-            ...nextData,
-            rewardSeenKey: maybeRewardAfterRecord(nextData, nextData.records),
-          }
+          return nextData
         })
 
         await playVoice(voiceName, sessionId)

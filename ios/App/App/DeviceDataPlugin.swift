@@ -14,14 +14,19 @@ public class DeviceDataPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
 
     private let healthStore = HKHealthStore()
-    private let permissionRequestedKey = "snowball.healthkit.steps.permission.requested"
+    // 版本化授权标记：新增 walking/running distance 后，旧安装会再次弹出 HealthKit 授权。
+    private let permissionRequestedKey = "snowball.healthkit.steps-distance.permission.requested"
 
     private var stepType: HKQuantityType? {
         HKObjectType.quantityType(forIdentifier: .stepCount)
     }
 
+    private var distanceType: HKQuantityType? {
+        HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)
+    }
+
     @objc public func getStatus(_ call: CAPPluginCall) {
-        let available = HKHealthStore.isHealthDataAvailable() && stepType != nil
+        let available = HKHealthStore.isHealthDataAvailable() && stepType != nil && distanceType != nil
         let permissionRequested = UserDefaults.standard.bool(forKey: permissionRequestedKey)
 
         call.resolve([
@@ -37,12 +42,13 @@ public class DeviceDataPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc public func requestHealthPermissions(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable(),
-              let stepType = stepType else {
+              let stepType = stepType,
+              let distanceType = distanceType else {
             call.reject("HealthKit is unavailable on this device")
             return
         }
 
-        healthStore.requestAuthorization(toShare: [], read: [stepType]) { [weak self] success, error in
+        healthStore.requestAuthorization(toShare: [], read: [stepType, distanceType]) { [weak self] success, error in
             DispatchQueue.main.async {
                 if let error = error {
                     call.reject("HealthKit authorization failed", nil, error)
@@ -66,7 +72,8 @@ public class DeviceDataPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc public func readDailyData(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable(),
-              let stepType = stepType else {
+              let stepType = stepType,
+              let distanceType = distanceType else {
             call.reject("HealthKit is unavailable on this device")
             return
         }
@@ -103,10 +110,16 @@ public class DeviceDataPlugin: CAPPlugin, CAPBridgedPlugin {
                         startDate: date,
                         endDate: endDate
                     )
+                    let distanceKm = try await readDistanceKm(
+                        distanceType: distanceType,
+                        startDate: date,
+                        endDate: endDate
+                    )
 
                     outputDays.append([
                         "date": formatSnowballDate(date, calendar: calendar),
                         "appleHealthKitSteps": steps,
+                        "appleHealthKitKm": distanceKm,
                         "steps": steps,
                         "apps": []
                     ])
@@ -176,6 +189,47 @@ public class DeviceDataPlugin: CAPPlugin, CAPBridgedPlugin {
 
                 continuation.resume(
                     returning: max(0, Int(total.rounded()))
+                )
+            }
+
+            healthStore.execute(query)
+        }
+    }
+
+    private func readDistanceKm(
+        distanceType: HKQuantityType,
+        startDate: Date,
+        endDate: Date
+    ) async throws -> Double {
+        try await withCheckedThrowingContinuation { continuation in
+            let predicate = HKQuery.predicateForSamples(
+                withStart: startDate,
+                end: endDate,
+                options: [.strictStartDate]
+            )
+
+            let query = HKStatisticsQuery(
+                quantityType: distanceType,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum
+            ) { _, result, error in
+                if let nsError = error as NSError? {
+                    // 与步数一致：当天没有里程样本属于正常状态，按 0 km 返回。
+                    if nsError.domain == "com.apple.healthkit" && nsError.code == 11 {
+                        continuation.resume(returning: 0)
+                        return
+                    }
+
+                    continuation.resume(throwing: nsError)
+                    return
+                }
+
+                let meters = result?
+                    .sumQuantity()?
+                    .doubleValue(for: HKUnit.meter()) ?? 0
+
+                continuation.resume(
+                    returning: max(0, (meters / 1000.0 * 1000).rounded() / 1000)
                 )
             }
 

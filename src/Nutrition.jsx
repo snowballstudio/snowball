@@ -344,132 +344,6 @@ function nutritionStatsWithDailySummary(originalStats = [], dailySummaries = [],
   ].filter(Boolean)
 }
 
-const NUTRITION_REWARD_STORAGE_KEY = 'snowball-nutrition-7day-reward-v1'
-const NUTRITION_REWARD_POPUP_VISIBLE = false
-
-function splitTasteNames(value) {
-  return String(value || '')
-    .split(/[、,，\s/]+/)
-    .map(item => item.trim())
-    .filter(Boolean)
-}
-
-function nextNutritionDateKey(value) {
-  const date = parseNutritionDate(value)
-  if (!date) return ''
-  date.setDate(date.getDate() + 1)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-function readNutritionRewardDate() {
-  try {
-    const stored = String(localStorage.getItem(NUTRITION_REWARD_STORAGE_KEY) || '').trim()
-    return /^\d{4}-\d{2}-\d{2}$/.test(stored) ? stored : ''
-  } catch {
-    return ''
-  }
-}
-
-function saveNutritionRewardDate(dateKey) {
-  try {
-    localStorage.setItem(NUTRITION_REWARD_STORAGE_KEY, dateKey)
-  } catch (error) {
-    console.warn('营养七天奖励没有成功保存。', error)
-  }
-}
-
-function buildNutritionRewardDays(detailRows = [], records = [], dailySummaries = [], heavyTasteOptions = []) {
-  const byDate = new Map()
-  const summaryByDate = new Map((dailySummaries || []).map(item => [item.dateKey, item]))
-  const heavyTasteSet = new Set((heavyTasteOptions || []).map(item => String(item || '').trim()).filter(Boolean))
-
-  ;(records || []).forEach(record => {
-    const dateKey = nutritionDateKey(record?.date)
-    if (!dateKey) return
-    const tasteNames = splitTasteNames(record?.taste || record?.foodTaste)
-    byDate.set(dateKey, {
-      dateKey,
-      proteinNames: new Set(),
-      carbNames: new Set(),
-      fiberNames: new Set(),
-      tasteRecorded: tasteNames.length > 0,
-      tasteHeavy: tasteNames.some(item => heavyTasteSet.has(item)),
-    })
-  })
-
-  ;(detailRows || []).forEach(row => {
-    const dateKey = row.dateKey || nutritionDateKey(row.date)
-    if (!byDate.has(dateKey)) {
-      byDate.set(dateKey, {
-        dateKey,
-        proteinNames: new Set(),
-        carbNames: new Set(),
-        fiberNames: new Set(),
-        tasteRecorded: false,
-        tasteHeavy: false,
-      })
-    }
-
-    const day = byDate.get(dateKey)
-    const identity = row.primaryName && row.primaryName !== '未归类' ? row.primaryName : row.realName
-    if (row.foodType === 'protein') day.proteinNames.add(identity)
-    if (row.foodType === 'carbs') day.carbNames.add(identity)
-    if (row.foodType === 'fiber') day.fiberNames.add(identity)
-  })
-
-  return [...byDate.values()]
-    .map(day => {
-      const summary = summaryByDate.get(day.dateKey) || {}
-      const protein = day.proteinNames.size
-      const carbs = day.carbNames.size
-      const fiber = day.fiberNames.size
-      const vitamins = Number(summary.vitaminTypeCount || 0)
-      const microNutrition = Number(summary.microTypeCount || 0)
-      const qualified =
-        protein >= 3 &&
-        carbs >= 1 && carbs <= 2 &&
-        fiber >= 3 &&
-        vitamins >= 3 &&
-        microNutrition >= 3 &&
-        day.tasteRecorded &&
-        !day.tasteHeavy
-
-      return {
-        dateKey: day.dateKey,
-        protein,
-        carbs,
-        fiber,
-        vitamins,
-        microNutrition,
-        tasteRecorded: day.tasteRecorded,
-        tasteHeavy: day.tasteHeavy,
-        qualified,
-      }
-    })
-    .sort((a, b) => a.dateKey.localeCompare(b.dateKey))
-}
-
-function latestSevenDayNutritionReward(days = [], previousRewardDate = '') {
-  const eligibleDays = (days || []).filter(day => !previousRewardDate || day.dateKey > previousRewardDate)
-  let streak = []
-  let latestRewardDate = ''
-
-  eligibleDays.forEach(day => {
-    const followsPrevious = !streak.length || day.dateKey === nextNutritionDateKey(streak[streak.length - 1].dateKey)
-    if (day.qualified && followsPrevious) {
-      streak.push(day)
-    } else if (day.qualified) {
-      streak = [day]
-    } else {
-      streak = []
-    }
-
-    if (streak.length >= 7) latestRewardDate = day.dateKey
-  })
-
-  return latestRewardDate
-}
-
 const FOOD_TYPE_LABEL = {
   protein: '蛋白',
   carbs: '碳水',
@@ -585,7 +459,6 @@ const NUTRITION_INFO_GROUPS = [
 ]
 
 export default function Nutrition({
-  PngSequence,
   dailyTasteStats,
   dailyNutritionStats,
   nutritionTasteLine,
@@ -601,8 +474,6 @@ export default function Nutrition({
 }) {
   const [showNutritionDetail, setShowNutritionDetail] = useState(false)
   const [showNutritionInfo, setShowNutritionInfo] = useState(false)
-  const [nutritionMotionOn, setNutritionMotionOn] = useState(false)
-  const [showNutritionReward, setShowNutritionReward] = useState(false)
   const nutritionDetailScrollRef = useRef(null)
   const nutritionDetailTouchRef = useRef({
     startX: 0,
@@ -620,20 +491,6 @@ export default function Nutrition({
     () => buildDailyNutritionSummary(nutritionDetailRows),
     [nutritionDetailRows],
   )
-  const nutritionRewardDays = useMemo(
-    () => buildNutritionRewardDays(nutritionDetailRows, records, dailyNutritionSummaries, heavyTasteOptions),
-    [nutritionDetailRows, records, dailyNutritionSummaries, heavyTasteOptions],
-  )
-
-  useEffect(() => {
-    const previousRewardDate = readNutritionRewardDate()
-    const rewardDate = latestSevenDayNutritionReward(nutritionRewardDays, previousRewardDate)
-    if (!rewardDate || rewardDate === previousRewardDate) return
-
-    saveNutritionRewardDate(rewardDate)
-    setNutritionMotionOn(true)
-    setShowNutritionReward(true)
-  }, [nutritionRewardDays])
   const displayedNutritionStats = useMemo(
     () => nutritionStatsWithDailySummary(dailyNutritionStats, dailyNutritionSummaries, dailyStatRange),
     [dailyNutritionStats, dailyNutritionSummaries, dailyStatRange],
@@ -753,19 +610,6 @@ export default function Nutrition({
       <div className="dailyInsightCard nutritionSpectrumCard">
         <img className="dailyInsightBg nutritionBg" src="/refine/nutrition_default_background.png" alt="营养光谱背景" />
 
-        {nutritionMotionOn ? (
-          <PngSequence
-            className="dailyInsightCat nutritionInsightCat nutritionInsightCatMotion"
-            prefix="/refine/things"
-            maxFrames={13}
-            frameMs={260}
-            fallback="/refine/things01.png"
-            ariaLabel="营养光谱动起来的雪粒"
-          />
-        ) : (
-          <img className="dailyInsightCat nutritionInsightCat" src="/refine/nutrition_default_cat.png" alt="营养光谱雪粒" />
-        )}
-
         <div className="dailyInsightContent nutritionInsightContent">
           {dailyTasteStats?.rainbowVisible ? (
             <>
@@ -791,12 +635,10 @@ export default function Nutrition({
             </>
           ) : null}
 
-          {!nutritionMotionOn && (
-            <div className="nutritionCloudNote" aria-live="polite">
-              <img src="/refine/cloud_note.png" alt="" aria-hidden="true" />
-              <span>{nutritionTasteLine}</span>
-            </div>
-          )}
+          <div className="nutritionCloudNote" aria-live="polite">
+            <img src="/refine/cloud_note.png" alt="" aria-hidden="true" />
+            <span>{nutritionTasteLine}</span>
+          </div>
 
           <div className="nutritionDataGroup">
             <div className="nutritionTasteSummary" aria-live="polite">
@@ -920,23 +762,6 @@ export default function Nutrition({
       </section>
     )}
 
-    {NUTRITION_REWARD_POPUP_VISIBLE && showNutritionReward && (
-      <div className="noticeOverlay nutritionRewardOverlay">
-        <div className="noticeBox nutritionRewardBox">
-          <h2>连续七天达标</h2>
-          <p>蛋白、纤维、维生素和微营养每天都达到3种，</p>
-          <p>碳水保持1至2种，口味也没有偏重。</p>
-          <p>雪粒高兴得动起来了。</p>
-          <button
-            type="button"
-            onClick={() => {
-              setShowNutritionReward(false)
-              setNutritionMotionOn(false)
-            }}
-          >知道了</button>
-        </div>
-      </div>
-    )}
     </>
   )
 }

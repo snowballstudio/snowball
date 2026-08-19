@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.getcapacitor.JSArray
@@ -61,6 +62,7 @@ import kotlin.math.max
 class DeviceDataPlugin : Plugin() {
     private val scope = CoroutineScope(Dispatchers.IO)
     private val stepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
+    private val distancePermission = HealthPermission.getReadPermission(DistanceRecord::class)
 
     override fun load() {
         super.load()
@@ -92,13 +94,17 @@ class DeviceDataPlugin : Plugin() {
                 }
             )
             var granted = false
+            var distanceGranted = false
             if (sdkStatus == HealthConnectClient.SDK_AVAILABLE) {
                 try {
                     val client = HealthConnectClient.getOrCreate(context)
-                    granted = client.permissionController.getGrantedPermissions().contains(stepsPermission)
+                    val permissions = client.permissionController.getGrantedPermissions()
+                    granted = permissions.contains(stepsPermission)
+                    distanceGranted = permissions.contains(distancePermission)
                 } catch (_: Exception) { }
             }
             result.put("healthPermissionGranted", granted)
+            result.put("distancePermissionGranted", distanceGranted)
             withContext(Dispatchers.Main) { call.resolve(result) }
         }
     }
@@ -170,9 +176,11 @@ class DeviceDataPlugin : Plugin() {
                 val healthClient = if (HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) {
                     HealthConnectClient.getOrCreate(context)
                 } else null
-                val canReadSteps = try {
-                    healthClient?.permissionController?.getGrantedPermissions()?.contains(stepsPermission) == true
-                } catch (_: Exception) { false }
+                val grantedHealthPermissions = try {
+                    healthClient?.permissionController?.getGrantedPermissions().orEmpty()
+                } catch (_: Exception) { emptySet() }
+                val canReadSteps = grantedHealthPermissions.contains(stepsPermission)
+                val canReadDistance = grantedHealthPermissions.contains(distancePermission)
 
                 val today = LocalDate.now(zone)
                 val cumulativeSteps = readCurrentCumulativeSteps()
@@ -189,17 +197,29 @@ class DeviceDataPlugin : Plugin() {
                     val snowballEnd = date.plusDays(1).atTime(cutoffHour, 0).atZone(zone).toInstant()
 
                     var healthConnectSteps: Long? = null
-                    if (canReadSteps && healthClient != null) {
+                    var healthConnectKm: Double? = null
+                    if (healthClient != null && (canReadSteps || canReadDistance)) {
                         try {
+                            val metrics = buildSet {
+                                if (canReadSteps) add(StepsRecord.COUNT_TOTAL)
+                                if (canReadDistance) add(DistanceRecord.DISTANCE_TOTAL)
+                            }
                             val aggregate = healthClient.aggregate(
                                 AggregateRequest(
-                                    metrics = setOf(StepsRecord.COUNT_TOTAL),
+                                    metrics = metrics,
                                     timeRangeFilter = TimeRangeFilter.between(calendarStart, calendarEnd)
                                 )
                             )
-                            healthConnectSteps = aggregate[StepsRecord.COUNT_TOTAL] ?: 0L
+                            if (canReadSteps) {
+                                healthConnectSteps = aggregate[StepsRecord.COUNT_TOTAL] ?: 0L
+                            }
+                            if (canReadDistance) {
+                                val distance = aggregate[DistanceRecord.DISTANCE_TOTAL]
+                                healthConnectKm = distance?.inKilometers?.coerceAtLeast(0.0)
+                            }
                         } catch (_: Exception) {
                             healthConnectSteps = null
+                            healthConnectKm = null
                         }
                     }
 
@@ -218,6 +238,9 @@ class DeviceDataPlugin : Plugin() {
                     if (healthConnectSteps != null) {
                         day.put("healthConnectSteps", healthConnectSteps)
                         day.put("steps", healthConnectSteps)
+                    }
+                    if (healthConnectKm != null) {
+                        day.put("healthConnectKm", healthConnectKm)
                     }
                     if (date == today && cumulativeSteps != null) {
                         day.put("cumulativeSteps", cumulativeSteps)

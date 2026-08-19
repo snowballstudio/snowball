@@ -82,13 +82,6 @@ function loadSnowballMedia(key) {
 
 const todayText = () => new Date().toLocaleDateString('zh-CN')
 
-const VIDEO_MAP = {
-  baby: '/baby_move.mp4',
-  kitten: '/kitten_move.mp4',
-  adult: '/adult_move.mp4',
-}
-
-const REWARD_VIDEO = '/three_days_bonus.mp4'
 
 const USAGE_TEXT = `雪粒是一款生活管理APP，旨在梳理与自律，其中数据分析仅供参考，不构成诊断与建议。
 
@@ -119,12 +112,6 @@ const MOTION = {
   maxFrames: 36,
   frameMs: {
     footprint: 340,
-    call: 340,
-  },
-  stageScale: {
-    baby: 1.65,
-    kitten: 0.87,
-    adult: 0.87,
   },
 
   // 手动拍猫互动比例（独立于通话）
@@ -289,7 +276,6 @@ const DEFAULT = {
   chatInput: '',
   chatStep: 'idle',
   chatCount: 0,
-  rewardSeenKey: '',
   hasSeenWelcome: false,
   lastGreetingDate: '',
   upgradeSeenKeys: [],
@@ -1494,89 +1480,6 @@ function renderDailyFoodText(text, emptyText = '—') {
   )
 }
 
-function rewardDateFromSeenKey(value) {
-  const source = String(value || '').trim()
-
-  // 新版直接保存奖励日：2026-07-23。
-  if (/^\d{4}-\d{2}-\d{2}$/.test(source)) return source
-
-  // 兼容旧版由7条记录拼成的 rewardSeenKey：
-  // 第一段就是当时最近一天，也就是上次奖励日。
-  const firstPart = source.split('|')[0] || ''
-  const storedDate = firstPart.split('~')[0] || ''
-  return /^\d{4}-\d{2}-\d{2}$/.test(storedDate) ? storedDate : ''
-}
-
-function nextDateKey(value) {
-  if (!value) return ''
-  const date = parseLocalDate(value)
-  date.setDate(date.getDate() + 1)
-  return dateKey(date)
-}
-
-function dailyRewardWindow(records = [], {
-  rewardSeenKey = '',
-  installDate = '',
-} = {}) {
-  const todayKey = dateKey(todayText())
-  const installedKey = dateKey(installDate || todayText())
-  const previousRewardKey = rewardDateFromSeenKey(rewardSeenKey)
-
-  // 初次奖励从安装日起检查；
-  // 后续奖励只使用上次奖励日之后的新日期，避免连续优秀时每天弹窗。
-  const searchStartKey = previousRewardKey
-    ? nextDateKey(previousRewardKey)
-    : installedKey
-
-  const recordsByDate = new Map(
-    (records || [])
-      .map(normalizeDailyRecord)
-      .filter(record => {
-        const key = dateKey(record?.date)
-        return key && key >= searchStartKey && key <= todayKey
-      })
-      .map(record => [dateKey(record.date), record])
-  )
-
-  let streak = []
-  let latestRewardRecords = []
-
-  // 按日历逐日检查。缺失一天或任一指标不达标，连续天数立即归零。
-  const cursor = parseLocalDate(searchStartKey)
-  const today = parseLocalDate(todayKey)
-
-  while (cursor <= today) {
-    const key = dateKey(cursor)
-    const record = recordsByDate.get(key)
-
-    if (record && dailyRecordHealthy(record)) {
-      streak.push(record)
-
-      if (streak.length >= 7) {
-        // 如果上次奖励后已有超过7天连续优秀，只弹一次，
-        // 并把奖励日推进到距离现在最近的一段7天的最后一天。
-        latestRewardRecords = streak.slice(-7)
-      }
-    } else {
-      streak = []
-    }
-
-    cursor.setDate(cursor.getDate() + 1)
-  }
-
-  const healthy = latestRewardRecords.length === 7
-  const rewardDate = healthy
-    ? dateKey(latestRewardRecords[latestRewardRecords.length - 1]?.date)
-    : ''
-
-  return {
-    healthy,
-    key: rewardDate,
-    rewardDate,
-    records: latestRewardRecords,
-  }
-}
-
 function appendOrUpdateTodayRecord(prev, patch) {
   const today = formatDateForDaily(todayText())
   const current = dailyRecordForDate(prev.records || [], today) || emptyDailyRecord(today)
@@ -2110,7 +2013,7 @@ function loadMotionFrames(prefix, maxFrames = MAX_MOTION_FRAMES) {
 function PngSequence({
   prefix,
   maxFrames = MAX_MOTION_FRAMES,
-  frameMs = MOTION.frameMs.call,
+  frameMs = MOTION.frameMs.footprint,
   className = '',
   style = {},
   fallback = '',
@@ -2575,12 +2478,10 @@ function App() {
   const [footprintImagePreview, setFootprintImagePreview] = useState(null)
   const [footprintHomePrompt, setFootprintHomePrompt] = useState(null)
   const [pendingHomePosition, setPendingHomePosition] = useState(null)
-  const [showReward, setShowReward] = useState(false)
   const [homeInteractionFrame, setHomeInteractionFrame] = useState('')
   const [homeInteractionPlaying, setHomeInteractionPlaying] = useState(false)
   const homeInteractionAudioRef = useRef(null)
   const homeInteractionRunRef = useRef(0)
-  const [rewardFrame, setRewardFrame] = useState(1)
   const [dailyModal, setDailyModal] = useState(null)
   const [dailyDateModal, setDailyDateModal] = useState(null)
   const [usageModal, setUsageModal] = useState(false)
@@ -2603,7 +2504,6 @@ function App() {
   const [offscreenReturnMode, setOffscreenReturnMode] = useState('home')
   const [upgradeModal, setUpgradeModal] = useState(null)
   const lastUpgradePromptKeyRef = useRef('')
-  const rewardTimerRef = useRef(null)
   const call = useSnowballCall({
     data,
     setData,
@@ -2615,7 +2515,6 @@ function App() {
     dailyRecordForDate,
     todayText,
     emptyDailyRecord,
-    maybeRewardAfterRecord,
   })
 
 
@@ -3045,14 +2944,6 @@ function App() {
     })
   }, [showDataPanel])
 
-  useEffect(() => {
-    if (!showReward) return
-    const timer = setInterval(() => {
-      setRewardFrame(f => (f >= 6 ? 1 : f + 1))
-    }, 450)
-    return () => clearInterval(timer)
-  }, [showReward])
-
   const adoptDays = calcDays(data.installDate)
   const elapsed = elapsedDays(data.installDate)
   const gen = generationInfo(adoptDays)
@@ -3069,10 +2960,13 @@ function App() {
   const food = dailyFoodInfo(todayDailyRecord.food || '', todayDailyRecord.taste || '')
   const mood = dailyMoodInfo(todayDailyRecord.mood || '')
   const currentBrainScore = recordBrainPercent(todayDailyRecord)
-  const brain = { score: currentBrainScore, active: currentBrainScore >= 100, label: `${currentBrainScore}%` }
-
+  // 脑动百分比继续作为日常数据字段和通话数据显示；
+  // 不再提供 active/达标状态，也不参与任何猫动画触发。
+  const brain = {
+    score: currentBrainScore,
+    label: `${currentBrainScore}%`,
+  }
   const stepsOk = homeYesterdaySteps >= 5000
-  const motionBodyOk = homeYesterdaySteps >= 5000 && homeYesterdaySteps <= 10000
   const furDisplay = sleepOk ? '浓密' : '稀疏'
   const furKey = sleepOk ? 'fluffy' : 'ragged'
   const eyeKey = mood.good ? 'color' : 'grey'
@@ -3088,9 +2982,6 @@ function App() {
     : 'grayscale(0.15) brightness(0.9) contrast(0.9) saturate(0.8)'
 
   const healthyToday = stepsOk && sleepOk && food.good && mood.good
-  const canPlayMotionVideo = call.callActive && brain.active && motionBodyOk && sleepOk && food.good && mood.good
-  const motionVideo = VIDEO_MAP[gen.stage]
-
   const homeInteractionScore = [
     homeYesterdaySteps >= 5000,
     !!homeYesterdaySleep && sleepOk,
@@ -3196,7 +3087,6 @@ function App() {
     const goodCount = [stepGood, sleepGoodFlag, foodGoodFlag, moodGoodFlag].filter(Boolean).length
     const allGood = goodCount === 4
     const hasTalked = currentBrainScore > 0 || (Array.isArray(data.messages) && data.messages.length > 0)
-    const brainReady = currentBrainScore >= 100
 
     const stepText = stepMissing
       ? <>昨天的步数还没更新，雪粒默认偏瘦。</>
@@ -3233,18 +3123,9 @@ function App() {
       summaryLine = <>今天比较普通，继续努力，恢复<StatusWord type="good">状态</StatusWord>。</>
     }
 
-    let companionLine
-    if (allGood && brainReady) {
-      companionLine = <>拍拍雪粒，看它会不会<StatusWord type="blue">动起来</StatusWord>。</>
-    } else if (allGood && hasTalked) {
-      companionLine = <>再多与雪粒聊几句，它可能会<StatusWord type="blue">动起来</StatusWord>。</>
-    } else if (allGood) {
-      companionLine = <>今天还没有和雪粒通话。</>
-    } else if (hasTalked) {
-      companionLine = <>雪粒已经记录了你的饮食和心情。</>
-    } else {
-      companionLine = <>今天还没有和雪粒通话。</>
-    }
+    const companionLine = hasTalked
+      ? <>雪粒已经记录了你的饮食和心情。</>
+      : <>今天还没有和雪粒通话。</>
 
     return {
       sections: [
@@ -3428,14 +3309,6 @@ function App() {
     data.screenRecords,
   ])
 
-  const last3Healthy = useMemo(
-    () => dailyRewardWindow(latestRecords, {
-      rewardSeenKey: data.rewardSeenKey,
-      installDate: data.installDate,
-    }).healthy,
-    [latestRecords, data.rewardSeenKey, data.installDate],
-  )
-
   useEffect(() => {
     const today = todayText()
     if (data.lastResetDate === today) return
@@ -3513,12 +3386,6 @@ function App() {
           ? '雪粒已经与你共处30天了，成了高手猫，它将对你的生活提供更好的观察、反馈与分析。'
           : '雪粒已经与你共处100天了。它有了继承者，新的世代开始了。'
 
-    // 升级是成长提示，不修改三天奖励记录；只清掉正在残留或排队显示的奖励层，避免两个弹窗串台。
-    if (rewardTimerRef.current) {
-      window.clearTimeout(rewardTimerRef.current)
-      rewardTimerRef.current = null
-    }
-    setShowReward(false)
     setUpgradeModal({ title: `陪伴满${reached}天`, text, key: upgradeKey })
   }, [elapsed, data.installDate, data.hasSeenWelcome, data.upgradeSeenKeys])
 
@@ -3529,17 +3396,12 @@ function App() {
   function closeUpgrade() {
     const seenKey = upgradeModal?.key
     setUpgradeModal(null)
-    setShowReward(false)
     if (seenKey) {
       setData(prev => {
         const seenKeys = Array.isArray(prev.upgradeSeenKeys) ? prev.upgradeSeenKeys : []
         if (seenKeys.includes(seenKey)) return prev
         return { ...prev, upgradeSeenKeys: [...seenKeys, seenKey] }
       })
-    }
-    if (rewardTimerRef.current) {
-      window.clearTimeout(rewardTimerRef.current)
-      rewardTimerRef.current = null
     }
   }
 
@@ -3553,32 +3415,6 @@ function App() {
 
   setUpgradeModal({ title: `陪伴第${day}天`, text, key: String(day) })
 }
-
-  function scheduleReward(delay = 120) {
-    if (rewardTimerRef.current) window.clearTimeout(rewardTimerRef.current)
-    rewardTimerRef.current = window.setTimeout(() => {
-      setRewardFrame(1)
-      setShowReward(true)
-      rewardTimerRef.current = null
-    }, delay)
-  }
-
-  function maybeRewardAfterRecord(nextData, newRecords) {
-    const reward = dailyRewardWindow(
-      newRecords || nextData.records || [],
-      {
-        rewardSeenKey: nextData.rewardSeenKey,
-        installDate: nextData.installDate,
-      },
-    )
-
-    if (reward.healthy) {
-      scheduleReward(350)
-      return reward.key
-    }
-
-    return nextData.rewardSeenKey
-  }
 
   function toggleDailyMonth(key) {
     setExpandedDailyMonths(prev => ({
@@ -4371,7 +4207,7 @@ function App() {
       food: foodKeyword || '',
       taste: baseData.foodTaste || '',
       mood: moodKeyword || '',
-      brainPercent: recordBrainPercent({ brainPercent: baseData.brainPercent ?? brain.score }),
+      brainPercent: recordBrainPercent({ brainPercent: baseData.brainPercent ?? currentBrainScore }),
       editReason: baseData.dailyEditReason || '',
       healthy: nextHealthy,
       stepsManual: dateKey(baseData.date) !== dateKey(todayText()),
@@ -4392,11 +4228,6 @@ function App() {
     const newRecords = [...oldRecords, record]
       .map(item => ({ ...item, healthy: dailyRecordHealthy(item) }))
       .sort((a, b) => dateKey(b.date).localeCompare(dateKey(a.date)))
-    const reward = dailyRewardWindow(newRecords, {
-      rewardSeenKey: baseData.rewardSeenKey,
-      installDate: baseData.installDate,
-    })
-    const shouldShowReward = reward.healthy
     const isEditingToday = dateKey(record.date) === dateKey(todayText())
     const nextData = {
       ...baseData,
@@ -4414,7 +4245,6 @@ function App() {
         brainPercent: record.brainPercent || 0,
       } : {}),
       records: newRecords,
-      rewardSeenKey: reward.healthy ? reward.key : baseData.rewardSeenKey,
       editingDailyRecordId: '',
       editingDailyRecordDateKey: '',
       lastSavedAt: Date.now(),
@@ -4438,9 +4268,6 @@ function App() {
       setShowDataPanel(true)
     }
 
-    if (shouldShowReward) {
-      scheduleReward(100)
-    }
   }
 
   function openThings(type = 'overview') {
@@ -5256,7 +5083,6 @@ const homeFloatingFootprintMemory = ''
         setUsageModal={setUsageModal}
         usageModal={usageModal}
         todayStatusModal={todayStatusModal}
-        canPlayMotionVideo={canPlayMotionVideo}
         interactionFrameSrc={homeInteractionFrame}
         interactionPlaying={homeInteractionPlaying}
         playHomeCatInteraction={playHomeCatInteraction}
@@ -5569,7 +5395,6 @@ max-width:78px !important;
 
           {dailyMode === 'nutrition' ? (
             <Nutrition
-              PngSequence={PngSequence}
               dailyTasteStats={dailyTasteStats}
               dailyNutritionStats={dailyNutritionStats}
               nutritionTasteLine={nutritionTasteLine}
@@ -5589,7 +5414,6 @@ max-width:78px !important;
             />
           ) : dailyMode === 'train' ? (
             <Train
-              PngSequence={PngSequence}
               dailyTrainRows={dailyTrainRows}
               trainIsRunning={trainIsRunning}
               dailyStatRange={dailyStatRange}
@@ -6008,26 +5832,6 @@ max-width:78px !important;
         </div>
       )}
 
-      {showReward && !upgradeModal && (
-  <div className="rewardOverlay">
-          <div className="rewardBox">
-            <video
-              src={REWARD_VIDEO}
-              className="rewardVideo"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              aria-label="七天健康奖励视频"
-            />
-            <h2>太好了！</h2>
-            <p>你连续7天保持了良好的作息与饮食，</p>
-            <p>雪粒的状态刚刚好，它很开心。</p>
-            <button onClick={() => setShowReward(false)}>知道了</button>
-          </div>
-        </div>
-      )}
     </main>
   )
 }

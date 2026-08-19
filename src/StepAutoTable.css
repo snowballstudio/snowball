@@ -54,7 +54,7 @@
 }
 
 .stepAutoTable {
-  min-width: 1710px;
+  min-width: 2290px;
 }
 
 .stepAutoRow {
@@ -74,7 +74,12 @@
     96px
     82px
     180px
-    140px;
+    140px
+    126px
+    146px
+    132px
+    92px
+    92px;
   align-items: stretch;
   min-height: 46px;
   border-bottom: 1px solid rgba(50, 70, 78, 0.12);
