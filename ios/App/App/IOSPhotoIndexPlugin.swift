@@ -563,8 +563,8 @@ private final class SnowballIndexedPhotoViewController:
         closeButton.setTitle("×", for: .normal)
         closeButton.setTitleColor(.white, for: .normal)
         closeButton.titleLabel?.font = .systemFont(
-            ofSize: 34,
-            weight: .regular
+            ofSize: 27,
+            weight: .light
         )
         closeButton.backgroundColor =
             UIColor.black.withAlphaComponent(0.35)
