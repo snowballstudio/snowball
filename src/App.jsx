@@ -82,6 +82,102 @@ function loadSnowballMedia(key) {
 
 const todayText = () => new Date().toLocaleDateString('zh-CN')
 
+function photoIndexIdentityKeys(photo) {
+  if (!photo || typeof photo !== 'object') return []
+
+  const keys = []
+  const assetIdentifier = String(
+    photo.assetIdentifier || '',
+  ).trim()
+  const assetKey = String(photo.assetKey || '').trim()
+  const mediaStoreId = String(
+    photo.mediaStoreId || '',
+  ).trim()
+  const uri = String(photo.uri || '').trim()
+
+  if (assetIdentifier) {
+    keys.push(`asset:${assetIdentifier}`)
+  }
+
+  if (assetKey) {
+    keys.push(`stable:${assetKey}`)
+  }
+
+  if (mediaStoreId) {
+    keys.push(`android-media:${mediaStoreId}`)
+  }
+
+  if (uri) {
+    const normalizedUri = uri
+      .replace(/[?#].*$/, '')
+      .replace(/\/+$/, '')
+
+    keys.push(`uri:${normalizedUri}`)
+
+    let decoded = normalizedUri
+    try {
+      decoded = decodeURIComponent(normalizedUri)
+    } catch {}
+
+    const mediaMatch =
+      decoded.match(/\/images\/media\/(\d+)$/i)
+      || decoded.match(/(?:image|images\/media)[:/](\d+)/i)
+
+    if (mediaMatch) {
+      keys.push(`android-media:${mediaMatch[1]}`)
+    }
+  }
+
+  // 兼容已经写入旧版本数据库、但还没有 assetKey 的照片。
+  const filename = String(
+    photo.filename || '',
+  ).trim().toLowerCase()
+  const creationDate = String(
+    photo.creationDate || '',
+  ).trim()
+  const width = Number(photo.width || 0)
+  const height = Number(photo.height || 0)
+
+  if (filename && creationDate) {
+    keys.push(
+      `legacy-meta:${filename}|${creationDate}|${width}|${height}`,
+    )
+  }
+
+  return [...new Set(keys)]
+}
+
+function photoIndexIdentity(photo) {
+  return photoIndexIdentityKeys(photo)[0] || ''
+}
+
+function filterNewPhotoIndexes(picked, existing) {
+  const seen = new Set()
+
+  ;(Array.isArray(existing) ? existing : []).forEach(
+    photo => {
+      photoIndexIdentityKeys(photo).forEach(
+        key => seen.add(key),
+      )
+    },
+  )
+
+  return (Array.isArray(picked) ? picked : []).filter(
+    photo => {
+      const keys = photoIndexIdentityKeys(photo)
+
+      if (!keys.length) return true
+
+      if (keys.some(key => seen.has(key))) {
+        return false
+      }
+
+      keys.forEach(key => seen.add(key))
+      return true
+    },
+  )
+}
+
 
 const USAGE_TEXT = `雪粒是一款生活管理APP，旨在梳理与自律，其中数据分析仅供参考，不构成诊断与建议。
 
@@ -803,6 +899,23 @@ function topTags(records, field, count = 3) {
     .join('、') || '—'
 }
 
+function finiteDistanceKm(value) {
+  if (value === null || value === undefined || value === '') return null
+  const number = Number(value)
+  return Number.isFinite(number) && number >= 0 ? number : null
+}
+
+function formatDistanceKm(value) {
+  const number = finiteDistanceKm(value)
+  return number === null ? '—' : `${number.toFixed(1)} km`
+}
+
+function stepAutoDistanceForDate(records = [], date = '') {
+  const target = dateKey(date)
+  const row = (records || []).find(item => dateKey(item?.date) === target)
+  return row ? finiteDistanceKm(row.dailyKm) : null
+}
+
 function buildDailyMonthGroups(records = []) {
   const buckets = new Map()
   ;[...records]
@@ -825,6 +938,10 @@ function buildDailyMonthGroups(records = []) {
         .map(Number)
         .filter(n => Number.isFinite(n) && n >= 0)
 
+      const distances = items
+        .map(item => finiteDistanceKm(item?.distanceKm))
+        .filter(n => n !== null)
+
       const offscreens = items
         .map(recordOffscreenMinutes)
         .filter(n => n !== null)
@@ -842,7 +959,8 @@ function buildDailyMonthGroups(records = []) {
         label: monthLabelFromKey(key),
         records: items,
         avgSteps: steps.length ? Math.round(steps.reduce((sum, n) => sum + n, 0) / steps.length) : '—',
-        avgOffscreen: offscreens.length ? formatClockFromMinutes(offscreens.reduce((sum, n) => sum + n, 0) / offscreens.length) : '—',
+        avgDistanceKm: distances.length ? distances.reduce((sum, n) => sum + n, 0) / distances.length : null,
+        avgOffscreen: offscreens.length ? formatClockFromMinutesForDailyTable(offscreens.reduce((sum, n) => sum + n, 0) / offscreens.length) : '—',
         avgScreen: screens.length ? formatDurationFromMinutes(screens.reduce((sum, n) => sum + n, 0) / screens.length) : '—',
         topFood: topTags(items, 'food', 8),
         topTaste: topTags(items, 'taste'),
@@ -1065,6 +1183,24 @@ function formatClockForDaily(value) {
   return `${hour}：${minute}`
 }
 
+function formatClockForDailyTable(value) {
+  const text = normalizeTime(value)
+  if (!text) return ''
+  const match = text.match(/^(\d{1,2}):([0-5]\d)$/)
+  if (!match) return text.replace(/\s*[:：]\s*/, ' : ')
+  const hour = String(Number(match[1])).padStart(2, '0')
+  const minute = match[2].padStart(2, '0')
+  return `${hour} : ${minute}`
+}
+
+function formatClockFromMinutesForDailyTable(minutes) {
+  if (minutes === null || minutes === undefined || Number.isNaN(minutes)) return '—'
+  const n = Math.round(minutes) % (24 * 60)
+  const h = Math.floor(n / 60)
+  const m = n % 60
+  return `${String(h).padStart(2, '0')} : ${String(m).padStart(2, '0')}`
+}
+
 function parseStrictDailyDate(value) {
   const text = String(value || '').trim()
   const match = text.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/)
@@ -1094,6 +1230,7 @@ function emptyDailyRecord(date = todayText()) {
     id: dailyRecordIdFor(formattedDate),
     date: formattedDate,
     steps: 0,
+    distanceKm: null,
     yesterdaySleep: '',
     offscreenTime: '',
     screenMinutes: 0,
@@ -1111,6 +1248,7 @@ function normalizeDailyRecord(record = {}, index = 0) {
     ...record,
     id: record.id || dailyRecordIdFor(date) || `daily-fallback-${index}`,
     date,
+    distanceKm: finiteDistanceKm(record.distanceKm ?? record.dailyKm ?? record.km),
     offscreenTime: record.offscreenTime || record.yesterdaySleep || '',
     yesterdaySleep: record.yesterdaySleep || record.offscreenTime || '',
     screenMinutes: recordScreenMinutes(record),
@@ -1234,8 +1372,12 @@ function daysFromYesterdayBackTo(records = [], today = new Date()) {
 }
 
 const FOOD_ALIAS = {
-  米饭: ['米饭', '白米饭', '大米', '香米','八宝饭','白米饭', '米豆腐','炒饭', '红米','蛋炒饭', '八宝粥','腊八粥','血糯米','崇明糕','盖交饭', '糯米饭','糯米饼','糯米粥','糯米','米饼','寿司', '饭团', '粥',  '小米粥', '粽子', '年糕', '松糕','米糕','糍粑',  '皮蛋瘦肉粥',  '菜饭', '稀饭'],
-  面食: ['面食', '面条', '拉面', '牛肉拉面', '螺蛳粉', '肠粉','河粉','炒河粉','炒面','馒头', '包子', '肉包', '菜包', '馍馍', '小笼包','生煎','生煎包','煎包','米线','饺子', '馄饨', '云吞','抄手','云吞面','小馄饨','意大利面','葱油饼','煎饼','意面', '披萨', '汉堡'],
+  米饭: ['米饭', '白米饭', '大米', '香米','八宝饭','白米饭', '米豆腐','炒饭', '红米','蛋炒饭', '八宝粥','腊八粥',
+    '血糯米','崇明糕','盖交饭', '糯米饭','糯米饼','糯米粥','糯米','米饼','寿司', '饭团', '粥',  '小米粥', '粽子', 
+    '年糕', '松糕','米糕','糍粑',  '皮蛋瘦肉粥',  '菜饭', '稀饭'],
+  面食: ['面食', '面条', '拉面', '牛肉拉面', '螺蛳粉', '肠粉','河粉','米粉','炒河粉','炒面','馒头', '包子',
+     '肉包', '菜包', '馍馍', '小笼包','生煎','生煎包','煎包','米线','饺子', '馄饨', '云吞','抄手','云吞面',
+     '小馄饨','意大利面','葱油饼','煎饼','意面', '鸡蛋面','长寿面','龙须面','担担面','热干面','披萨', '汉堡'],
   面包: ['面包', '吐司', '汉堡包', '切片', '菠萝包','肉松包', '甜甜圈','白切面包', '蒜蓉面包','肉松面包','三明治', '烤面包'],
   土豆: ['土豆', '马铃薯', '土豆泥','土豆丝','土豆片'],
   薯类: ['红薯', '烤地瓜','山药','凉薯','芋艿','芋头','菱角','地梨','藕粉','藕','糖藕','芝麻糊','烤地瓜','地瓜'],
@@ -2191,11 +2333,20 @@ function mergeNativeDailyDays(prev, payload = {}, { force = false, liveToday = f
       (isToday || shouldRefreshDate || !existing.offscreenAutoFetchedAt)
     )
     const resolvedSteps = stepValueForDate(stepAutoRecords, dayDate)
+    const resolvedDistanceKm = stepAutoDistanceForDate(stepAutoRecords, dayDate)
+    const mayWriteDistance = !existing.stepsManual && (
+      mayWriteSteps || finiteDistanceKm(existing.distanceKm) === null
+    )
 
     if (mayWriteSteps && resolvedSteps !== null) {
       patch.steps = resolvedSteps
       patch.stepsAutoFetchedAt = Date.now()
       patch.stepsAutoImportedAt = Date.now()
+    }
+    if (mayWriteDistance && resolvedDistanceKm !== null) {
+      patch.distanceKm = resolvedDistanceKm
+      patch.distanceAutoFetchedAt = Date.now()
+      patch.distanceAutoImportedAt = Date.now()
     }
     /*
       日常表原有字段与更新节奏完全保留：
@@ -2244,9 +2395,15 @@ function mergeNativeDailyDays(prev, payload = {}, { force = false, liveToday = f
     if (!force && existing.stepsManual) return
     if (!force && !isToday && !shouldRefreshDate && existing.stepsAutoImportedAt) return
     const resolvedSteps = stepValueForDate(stepAutoRecords, dayDate)
+    const resolvedDistanceKm = stepAutoDistanceForDate(stepAutoRecords, dayDate)
     if (resolvedSteps === null) return
     records = mergeDailyRecord(records, dayDate, {
       steps: resolvedSteps,
+      ...(resolvedDistanceKm !== null ? {
+        distanceKm: resolvedDistanceKm,
+        distanceAutoFetchedAt: Date.now(),
+        distanceAutoImportedAt: Date.now(),
+      } : {}),
       stepsAutoFetchedAt: Date.now(),
       stepsAutoImportedAt: Date.now(),
       stepAutoSource: stepRow.calculatedSource || '',
@@ -3505,6 +3662,8 @@ function App() {
       dailyEditReason,
       editingDailyRecordId: record._id || record.id || dailyRecordIdFor(record.date || todayText()),
       editingDailyRecordDateKey: dateKey(record.date || todayText()),
+      editingDailyOriginalSteps: Number(record.steps || record.yesterdaySteps || 0),
+      editingDailyOriginalDistanceKm: finiteDistanceKm(record.distanceKm),
     }))
     setPendingDailyEdit(null)
     setDailyMode('edit')
@@ -3563,6 +3722,10 @@ function App() {
             prev.stepAutoRecords || [],
             targetDate,
           )
+          const distanceKm = stepAutoDistanceForDate(
+            prev.stepAutoRecords || [],
+            targetDate,
+          )
 
           patch = {
             ...(stepValue !== null
@@ -3570,6 +3733,13 @@ function App() {
                   steps: stepValue,
                   stepsAutoFetchedAt: Date.now(),
                   stepsAutoImportedAt: Date.now(),
+                }
+              : {}),
+            ...(distanceKm !== null
+              ? {
+                  distanceKm,
+                  distanceAutoFetchedAt: Date.now(),
+                  distanceAutoImportedAt: Date.now(),
                 }
               : {}),
           }
@@ -3613,7 +3783,7 @@ function App() {
         title: '重新获取完成',
         text:
           refreshType === 'steps'
-            ? `${targetDate} 的步数已从步数自动获取表重新写入日常数据表，离机时间没有改变。`
+            ? `${targetDate} 的步数和里程已从步数自动获取表重新写入日常数据表，离机时间没有改变。`
             : `${targetDate} 的离机时间已从离机时间表重新写入日常数据表，步数没有改变。`,
       })
     } catch (error) {
@@ -4195,10 +4365,31 @@ function App() {
     const editingDateKey = baseData.editingDailyRecordDateKey || dateKey(baseData.date)
     const existingForDate = dailyRecordForDate(baseData.records || [], baseData.date)
 
+    const nextSteps = Number(baseData.yesterdaySteps || 0)
+    const originalSteps = Number(baseData.editingDailyOriginalSteps ?? existingForDate?.steps ?? 0)
+    const originalDistanceKm =
+      finiteDistanceKm(baseData.editingDailyOriginalDistanceKm)
+      ?? finiteDistanceKm(existingForDate?.distanceKm)
+      ?? stepAutoDistanceForDate(baseData.stepAutoRecords || [], baseData.date)
+    const stepsWereChanged = Number.isFinite(originalSteps) && nextSteps !== originalSteps
+    const hasUsableOriginalRatio =
+      originalSteps > 0 &&
+      originalDistanceKm !== null &&
+      originalDistanceKm > 0
+    const nextDistanceKm = stepsWereChanged
+      ? Math.max(
+          0,
+          hasUsableOriginalRatio
+            ? originalDistanceKm * nextSteps / originalSteps
+            : nextSteps * 0.65 / 1000,
+        )
+      : originalDistanceKm
+
     const record = {
       id: editingId || existingForDate?.id || dailyRecordIdFor(baseData.date),
       date: formatDateForDaily(baseData.date),
-      steps: Number(baseData.yesterdaySteps || 0),
+      steps: nextSteps,
+      distanceKm: nextDistanceKm,
       yesterdaySleep: formatClockForDaily(baseData.yesterdaySleepTime) || '',
       offscreenTime: formatClockForDaily(baseData.yesterdaySleepTime) || '',
       todaySleep: baseData.todaySleepTime || '',
@@ -4247,6 +4438,8 @@ function App() {
       records: newRecords,
       editingDailyRecordId: '',
       editingDailyRecordDateKey: '',
+      editingDailyOriginalSteps: null,
+      editingDailyOriginalDistanceKm: null,
       lastSavedAt: Date.now(),
     }
 
@@ -4672,11 +4865,20 @@ function App() {
 
         setData(prev => {
           const current = prev.footprintDraft || DEFAULT.footprintDraft
+          const existingPhotos = Array.isArray(current.photos)
+            ? current.photos
+            : []
+          const uniqueIndexedPhotos = filterNewPhotoIndexes(
+            indexedPhotos,
+            existingPhotos,
+          )
+          if (!uniqueIndexedPhotos.length) return prev
+
           return {
             ...prev,
             footprintDraft: {
               ...current,
-              photos: [...(current.photos || []), ...indexedPhotos],
+              photos: [...existingPhotos, ...uniqueIndexedPhotos],
             },
           }
         })
@@ -4920,27 +5122,27 @@ const homeFloatingFootprintMemory = ''
 
   const DAILY_VIEW_TABS = [
     { key: 'all', label: '全部' },
-    { key: 'steps', label: '步数' },
-    { key: 'offscreen', label: '离机' },
+    { key: 'steps', label: '运动' },
+    { key: 'offscreen', label: '休息' },
     { key: 'food', label: '饮食' },
     { key: 'mood', label: '心情' },
   ]
 
   const dailyViewHeaders = {
-    all: ['日期', '步数', '离机', '食物', '口味', '心情', '脑动'],
-    steps: ['日期', '步数'],
-    offscreen: ['日期', '离机'],
+    all: ['日期', '步数', '里程', '离机', '食物', '口味', '心情', '脑动'],
+    steps: ['日期', '手机步数', '步行里程'],
+    offscreen: ['日期', '离机时间'],
     food: ['日期', '食物', '口味'],
-    mood: ['日期', '心情'],
-  }[dailyViewTab] || ['日期', '步数', '离机', '食物', '口味', '心情', '脑动']
+    mood: ['日期', '记录词语'],
+  }[dailyViewTab] || ['日期', '步数', '里程', '离机', '食物', '口味', '心情', '脑动']
 
   const dailyTableGrid = {
-    all: '1.15fr 0.8fr 0.8fr 1.2fr 0.9fr 1fr 0.7fr 42px 48px',
-    steps: '0.9fr 0.9fr 42px 42px 48px',
+    all: '1.15fr 0.8fr 0.8fr 0.8fr 1.2fr 0.9fr 1fr 0.7fr 42px 48px',
+    steps: '0.9fr 0.9fr 0.9fr 42px 42px 48px',
     offscreen: '1.15fr 0.9fr 42px 42px 48px',
     food: '0.85fr 1.7fr 0.85fr 42px 48px',
     mood: '0.85fr 1.7fr 42px 48px',
-  }[dailyViewTab] || '1.15fr 0.8fr 0.8fr 1.2fr 0.9fr 1fr 0.7fr 42px 48px'
+  }[dailyViewTab] || '1.15fr 0.8fr 0.8fr 0.8fr 1.2fr 0.9fr 1fr 0.7fr 42px 48px'
 
   const dailyHasRefreshAction =
     dailyViewTab === 'steps' || dailyViewTab === 'offscreen'
@@ -4956,7 +5158,22 @@ const homeFloatingFootprintMemory = ''
     const openMark = !!expandedDailyMonths[group.key] ? '−' : '+'
     if (dailyViewTab === 'steps') return [
       <span className="dailyMonthName" key="month">{openMark} {group.label}</span>,
-      <span key="steps">{group.avgSteps}</span>,
+      <span
+        key="steps"
+        className={data.developerMode ? 'dailyStepAutoValueLink' : ''}
+        role={data.developerMode ? 'button' : undefined}
+        tabIndex={data.developerMode ? 0 : undefined}
+        onClick={data.developerMode ? event => { event.preventDefault(); event.stopPropagation(); openStepAutoTable() } : undefined}
+        onKeyDown={data.developerMode ? event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); openStepAutoTable() } } : undefined}
+      >{group.avgSteps}</span>,
+      <span
+        key="distance"
+        className={`${dailyValueClass(Number(group.avgSteps) >= 5000)}${data.developerMode ? ' dailyStepAutoValueLink' : ''}`}
+        role={data.developerMode ? 'button' : undefined}
+        tabIndex={data.developerMode ? 0 : undefined}
+        onClick={data.developerMode ? event => { event.preventDefault(); event.stopPropagation(); openStepAutoTable() } : undefined}
+        onKeyDown={data.developerMode ? event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); openStepAutoTable() } } : undefined}
+      >{formatDistanceKm(group.avgDistanceKm)}</span>,
     ]
     if (dailyViewTab === 'offscreen') return [
       <span className="dailyMonthName" key="month">{openMark} {group.label}</span>,
@@ -4974,6 +5191,7 @@ const homeFloatingFootprintMemory = ''
     return [
       <span className="dailyMonthName" key="month">{openMark} {group.label}</span>,
       <span key="steps">{group.avgSteps}</span>,
+      <span key="distance" className={dailyValueClass(Number(group.avgSteps) >= 5000)}>{formatDistanceKm(group.avgDistanceKm)}</span>,
       <span key="offscreen">{group.avgOffscreen}</span>,
       <span className="dailyWrapCell dailyMonthFoodTop" key="food" title={group.topFood}>{group.topFood}</span>,
       <span className="dailyWrapCell" key="taste" title={group.topTaste}>{group.topTaste}</span>,
@@ -4985,7 +5203,7 @@ const homeFloatingFootprintMemory = ''
   function dailyRecordCellsForView(r) {
     const stepsValue = Number(r.steps || r.yesterdaySteps || 0)
     const offscreenValue = r.yesterdaySleep || r.offscreenTime || ''
-    const offscreenText = formatClockForDaily(offscreenValue) || '—'
+    const offscreenText = formatClockForDailyTable(offscreenValue) || '—'
     const offscreenButton = data.developerMode ? (
       <button
         className={`dailyScreenLink dailyScreenValuePlain ${dailyValueClass(sleepGood(offscreenValue))}`}
@@ -5032,9 +5250,25 @@ const homeFloatingFootprintMemory = ''
     const foodCell = renderDailyFoodText(r.food || '')
     const tasteCell = renderDailyTagList(r.taste || '', tag => HEALTHY_TASTE_OPTIONS.includes(tag))
     const moodCell = renderDailyTagList(r.mood || '', tag => POSITIVE_MOOD_OPTIONS.includes(tag))
+    const distanceText = formatDistanceKm(r.distanceKm)
     if (dailyViewTab === 'steps') return [
       <span key="date">{formatDailyDateWithWeek(r.date)}</span>,
-      <span key="steps" className={dailyValueClass(stepsValue >= 5000)}>{stepsValue}</span>,
+      <span
+        key="steps"
+        className={`${dailyValueClass(stepsValue >= 5000)}${data.developerMode ? ' dailyStepAutoValueLink' : ''}`}
+        role={data.developerMode ? 'button' : undefined}
+        tabIndex={data.developerMode ? 0 : undefined}
+        onClick={data.developerMode ? openStepAutoTable : undefined}
+        onKeyDown={data.developerMode ? event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openStepAutoTable() } } : undefined}
+      >{stepsValue}</span>,
+      <span
+        key="distance"
+        className={`${dailyValueClass(stepsValue >= 5000)}${data.developerMode ? ' dailyStepAutoValueLink' : ''}`}
+        role={data.developerMode ? 'button' : undefined}
+        tabIndex={data.developerMode ? 0 : undefined}
+        onClick={data.developerMode ? openStepAutoTable : undefined}
+        onKeyDown={data.developerMode ? event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openStepAutoTable() } } : undefined}
+      >{distanceText}</span>,
     ]
     if (dailyViewTab === 'offscreen') return [
       <span key="date">{formatDailyDateWithWeek(r.date)}</span>,
@@ -5052,6 +5286,7 @@ const homeFloatingFootprintMemory = ''
     return [
       <span key="date">{formatDailyDateWithWeek(r.date)}</span>,
       <span key="steps" className={dailyValueClass(stepsValue >= 5000)}>{stepsValue}</span>,
+      <span key="distance" className={dailyValueClass(stepsValue >= 5000)}>{distanceText}</span>,
       offscreenButton,
       foodCell,
       tasteCell,
@@ -5520,10 +5755,8 @@ max-width:78px !important;
                 <div className={`dailyTableHeader dailyTableHeaderV2 dailyUnifiedHeader dailyTab-${dailyViewTab}`} style={{ gridTemplateColumns: dailyTableGrid }}>
                   {dailyViewHeaders.map(item => (
                     item === '食物' && dailyViewTab === 'food'
-                        ? <span className="dailyLinkedHeader" key={item}>食物<button type="button" className="dailyHeaderNavLink dailyNutritionHeaderLink" onClick={() => openNutritionPage('today')} aria-label="查看营养光谱"><span className="dailyHeaderNavText">查看营养光谱</span><span className="dailyHeaderNavIcon" aria-hidden="true">🌈</span></button></span>
-                        : item === '步数' && dailyViewTab === 'steps' && data.developerMode
-                          ? <span className="dailyLinkedHeader" key={item}>步数<button type="button" className="dailyHeaderNavLink" onClick={openStepAutoTable} aria-label="查看步数自动获取表"><span className="dailyHeaderNavText">详情</span></button></span>
-                          : <span key={item}>{item}</span>
+                        ? <span className="dailyLinkedHeader" key={item}>食物<button type="button" className="dailyHeaderNavLink dailyNutritionHeaderLink" onClick={() => openNutritionPage('today')} aria-label="营养"><span className="dailyHeaderNavText">营养光谱</span><span className="dailyHeaderNavIcon" aria-hidden="true">🌈</span></button></span>
+                        : <span key={item}>{item}</span>
                   ))}
                   {dailyActionHeaderCells()}
                 </div>
@@ -5641,7 +5874,7 @@ max-width:78px !important;
                     <strong>{formatDailyDateWithWeek(data.date)}</strong>
                   </div>
                   <button type="button" className="dailyEditSaveButton" onClick={saveToday}>保存</button>
-                  <button type="button" className="dailyEditCancelButton" onClick={cancelDailyEditAndReturn}>放弃</button>
+                  <button type="button" className="dailyEditCancelButton" onClick={cancelDailyEditAndReturn}>取消</button>
                 </div>
 
                 <div className="dailyEditTwoCol dailyEditTopGrid dailyEditStatusGrid">

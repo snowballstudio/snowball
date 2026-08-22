@@ -127,8 +127,8 @@ export async function presentIndexedPhoto(
     }
 
     return presentAndroidIndexedPhoto(
-      currentUri,
-      indexedPhotos.map(item => item.uri),
+      photo,
+      indexedPhotos,
       androidIndex,
     )
   }

@@ -6,6 +6,125 @@ import {
   presentIndexedPhoto,
 } from './components/photo-index/photoIndexService.js'
 
+
+function photoIndexIdentityKeys(photo) {
+  if (!photo || typeof photo !== 'object') return []
+
+  const keys = []
+  const assetIdentifier = String(
+    photo.assetIdentifier || '',
+  ).trim()
+  const assetKey = String(photo.assetKey || '').trim()
+  const mediaStoreId = String(
+    photo.mediaStoreId || '',
+  ).trim()
+  const uri = String(photo.uri || '').trim()
+
+  if (assetIdentifier) {
+    keys.push(`asset:${assetIdentifier}`)
+  }
+
+  if (assetKey) {
+    keys.push(`stable:${assetKey}`)
+  }
+
+  if (mediaStoreId) {
+    keys.push(`android-media:${mediaStoreId}`)
+  }
+
+  if (uri) {
+    const normalizedUri = uri
+      .replace(/[?#].*$/, '')
+      .replace(/\/+$/, '')
+
+    keys.push(`uri:${normalizedUri}`)
+
+    let decoded = normalizedUri
+    try {
+      decoded = decodeURIComponent(normalizedUri)
+    } catch {}
+
+    const mediaMatch =
+      decoded.match(/\/images\/media\/(\d+)$/i)
+      || decoded.match(/(?:image|images\/media)[:/](\d+)/i)
+
+    if (mediaMatch) {
+      keys.push(`android-media:${mediaMatch[1]}`)
+    }
+  }
+
+  // 兼容已经写入旧版本数据库、但还没有 assetKey 的照片。
+  const filename = String(
+    photo.filename || '',
+  ).trim().toLowerCase()
+  const creationDate = String(
+    photo.creationDate || '',
+  ).trim()
+  const width = Number(photo.width || 0)
+  const height = Number(photo.height || 0)
+
+  if (filename && creationDate) {
+    keys.push(
+      `legacy-meta:${filename}|${creationDate}|${width}|${height}`,
+    )
+  }
+
+  return [...new Set(keys)]
+}
+
+function photoIndexIdentity(photo) {
+  return photoIndexIdentityKeys(photo)[0] || ''
+}
+
+function filterNewPhotoIndexes(picked, existing) {
+  const seen = new Set()
+
+  ;(Array.isArray(existing) ? existing : []).forEach(
+    photo => {
+      photoIndexIdentityKeys(photo).forEach(
+        key => seen.add(key),
+      )
+    },
+  )
+
+  return (Array.isArray(picked) ? picked : []).filter(
+    photo => {
+      const keys = photoIndexIdentityKeys(photo)
+
+      if (!keys.length) return true
+
+      if (keys.some(key => seen.has(key))) {
+        return false
+      }
+
+      keys.forEach(key => seen.add(key))
+      return true
+    },
+  )
+}
+
+function formatPhotoIndexDate(value) {
+  const date = new Date(value || '')
+  if (Number.isNaN(date.getTime())) return ''
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}.${m}.${d}`
+}
+
+function compactPhotoDeviceName(value) {
+  const text = String(value || '').trim().replace(/\s+/g, ' ')
+  if (!text) return ''
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
+}
+
+function photoIndexMeta(photo) {
+  return {
+    device: compactPhotoDeviceName(photo?.sourceDevice),
+    date: formatPhotoIndexDate(photo?.creationDate),
+  }
+}
+
 const THING_TYPES = { wish: '愿单', treasure: '在手', memory: '舍离' }
 const THING_COPY = {
   wish: { title: '我的愿单', placeholder: '性能、意义等，添加后点储物箱看展示。' },
@@ -167,6 +286,210 @@ function ThingPaws({ item, className = '', compact = false }) {
   return <span className={`thingPaws ${className}`} aria-label={`雪粒爪印${layers.length}枚`}>{layers.map((layer, index) => <span className={`catPawStack pawTone-${layer.tone}`} key={index}><img src="/refine/cat_paw.png" alt="" aria-hidden="true" /></span>)}</span>
 }
 
+
+function movePhotoItem(list, fromIndex, toIndex) {
+  const next = [...(Array.isArray(list) ? list : [])]
+  if (
+    fromIndex < 0 || toIndex < 0
+    || fromIndex >= next.length || toIndex >= next.length
+    || fromIndex === toIndex
+  ) return next
+  const [moved] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, moved)
+  return next
+}
+
+function collectPhotoScrollLocks(element) {
+  const locks = []
+  const seen = new Set()
+
+  let current = element?.parentElement || null
+
+  while (current) {
+    if (!seen.has(current)) {
+      const style = window.getComputedStyle(current)
+      const overflowY = style.overflowY
+      const canScroll =
+        (overflowY === 'auto' || overflowY === 'scroll')
+        && current.scrollHeight > current.clientHeight + 2
+
+      if (canScroll) {
+        locks.push({
+          element: current,
+          top: current.scrollTop,
+          left: current.scrollLeft,
+          isWindow: false,
+        })
+        seen.add(current)
+      }
+    }
+
+    if (
+      current === document.body
+      || current === document.documentElement
+    ) {
+      break
+    }
+
+    current = current.parentElement
+  }
+
+  locks.push({
+    element: window,
+    top:
+      window.scrollY
+      || document.documentElement.scrollTop
+      || document.body.scrollTop
+      || 0,
+    left:
+      window.scrollX
+      || document.documentElement.scrollLeft
+      || document.body.scrollLeft
+      || 0,
+    isWindow: true,
+  })
+
+  return locks
+}
+
+function restorePhotoDragScroll(drag) {
+  const state = drag?.scrollState
+  if (!state?.locks?.length || state.restoring) return
+
+  state.restoring = true
+
+  try {
+    state.locks.forEach(lock => {
+      if (lock.isWindow) {
+        window.scrollTo(lock.left, lock.top)
+      } else if (lock.element) {
+        if (lock.element.scrollTop !== lock.top) {
+          lock.element.scrollTop = lock.top
+        }
+        if (lock.element.scrollLeft !== lock.left) {
+          lock.element.scrollLeft = lock.left
+        }
+      }
+    })
+  } finally {
+    state.restoring = false
+  }
+}
+
+function lockPhotoDragScroll(drag) {
+  if (!drag || drag.scrollState) return
+
+  const scrollState = {
+    locks: collectPhotoScrollLocks(drag.sourceEl),
+    restoring: false,
+    onScroll: null,
+    raf1: 0,
+    raf2: 0,
+  }
+
+  drag.scrollState = scrollState
+
+  scrollState.onScroll = () => {
+    if (drag.scrollState === scrollState) {
+      restorePhotoDragScroll(drag)
+    }
+  }
+
+  // scroll 不冒泡，但 capture 可以捕获元素滚动。
+  // 同时监听 window，确保 WebView 视口滚动也被锁住。
+  document.addEventListener(
+    'scroll',
+    scrollState.onScroll,
+    true,
+  )
+  window.addEventListener(
+    'scroll',
+    scrollState.onScroll,
+    true,
+  )
+
+  restorePhotoDragScroll(drag)
+
+  // Android WebView 可能在长按成立前已经积累了少量滚动惯性。
+  // 两帧内再次恢复固定位置，直接截断这段惯性。
+  scrollState.raf1 = window.requestAnimationFrame(() => {
+    restorePhotoDragScroll(drag)
+    scrollState.raf2 = window.requestAnimationFrame(() => {
+      restorePhotoDragScroll(drag)
+    })
+  })
+}
+
+function unlockPhotoDragScroll(drag) {
+  const state = drag?.scrollState
+  if (!state) return
+
+  drag.scrollState = null
+
+  if (state.onScroll) {
+    document.removeEventListener(
+      'scroll',
+      state.onScroll,
+      true,
+    )
+    window.removeEventListener(
+      'scroll',
+      state.onScroll,
+      true,
+    )
+  }
+
+  if (state.raf1) {
+    window.cancelAnimationFrame(state.raf1)
+  }
+  if (state.raf2) {
+    window.cancelAnimationFrame(state.raf2)
+  }
+}
+
+function holdPhotoDragScroll(drag) {
+  // 拖动期间只做一件事：把所有可滚动层恢复到拖动开始时的位置。
+  // 不做边缘自动滚动，不改变 overflow / touch-action。
+  restorePhotoDragScroll(drag)
+}
+
+function createPhotoDragGhost(
+  thumbnail,
+  rect,
+  x,
+  y,
+) {
+  const ghost = document.createElement('div')
+  ghost.className = 'snowballPhotoDragGhost'
+  ghost.style.width =
+    `${Math.max(56, rect?.width || 72)}px`
+  ghost.style.height =
+    `${Math.max(56, rect?.height || 72)}px`
+
+  const image = document.createElement('img')
+  image.src = thumbnail || ''
+  image.alt = ''
+  ghost.appendChild(image)
+
+  document.body.appendChild(ghost)
+  movePhotoDragGhost(ghost, x, y)
+  return ghost
+}
+
+function movePhotoDragGhost(ghost, x, y) {
+  if (!ghost) return
+
+  ghost.style.transform =
+    `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) `
+    + 'translate(-50%, -50%)'
+}
+
+function removePhotoDragGhost(ghost) {
+  try {
+    ghost?.remove?.()
+  } catch {}
+}
+
 export default function Things({ data, setData, onClose, initialMode = 'overview' }) {
   const [thingsMode, setThingsMode] = useState(initialMode || 'overview')
   const [selectedThingId, setSelectedThingId] = useState(null)
@@ -188,6 +511,8 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
   const [isGemArrangeMode, setIsGemArrangeMode] = useState(false)
   const [gemDetailId, setGemDetailId] = useState(null)
   const gemDragRef = useRef(null)
+  const thingPhotoDragRef = useRef(null)
+  const thingPhotoDragTimerRef = useRef(null)
 
   // 当前物馆数据必须在依赖它的 effect 之前初始化。
   // 否则依赖数组读取 things.length 时会触发 const 的暂时性死区（TDZ），导致物馆渲染直接黑屏。
@@ -596,13 +921,22 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
 
       setData(prev => {
         const current = prev.thingDraft || EMPTY_THING_DRAFT
+        const existingPhotos = Array.isArray(current.photos)
+          ? current.photos
+          : []
+        const uniquePicked = filterNewPhotoIndexes(
+          pickedPhotos,
+          existingPhotos,
+        )
+        if (!uniquePicked.length) return prev
+
         return {
           ...prev,
           thingDraft: {
             ...current,
             photos: [
-              ...(Array.isArray(current.photos) ? current.photos : []),
-              ...pickedPhotos,
+              ...existingPhotos,
+              ...uniquePicked,
             ],
           },
           lastSavedAt: Date.now(),
@@ -616,16 +950,290 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
     }
   }
 
-  function removeThingDraftPhoto(index) {
+    function clearThingPhotoDragTimer() {
+    if (thingPhotoDragTimerRef.current) {
+      window.clearTimeout(
+        thingPhotoDragTimerRef.current,
+      )
+      thingPhotoDragTimerRef.current = null
+    }
+  }
+
+  function detachThingPhotoDragListeners() {
+    const drag = thingPhotoDragRef.current
+    if (!drag?.listeners) return
+
+    window.removeEventListener(
+      'touchmove',
+      drag.listeners.move,
+      true,
+    )
+    window.removeEventListener(
+      'touchend',
+      drag.listeners.end,
+      true,
+    )
+    window.removeEventListener(
+      'touchcancel',
+      drag.listeners.cancel,
+      true,
+    )
+    drag.listeners = null
+  }
+
+  function cleanupThingPhotoDrag() {
+    clearThingPhotoDragTimer()
+
+    const drag = thingPhotoDragRef.current
+    thingPhotoDragRef.current = null
+
+    try {
+      unlockPhotoDragScroll(drag)
+      drag?.sourceEl?.classList?.remove(
+        'photoDragSource',
+      )
+      removePhotoDragGhost(drag?.ghost)
+
+      if (drag?.listeners) {
+        window.removeEventListener('touchmove', drag.listeners.move, true)
+        window.removeEventListener('touchend', drag.listeners.end, true)
+        window.removeEventListener('touchcancel', drag.listeners.cancel, true)
+      }
+    } catch {}
+  }
+
+  function beginThingPhotoTouch(
+    event,
+    index,
+  ) {
+    if (event.touches.length !== 1) return
+
+    if (
+      event.target?.closest?.(
+        'button, input, textarea, select, a',
+      )
+    ) {
+      return
+    }
+
+    cleanupThingPhotoDrag()
+
+    const touch = event.touches[0]
+    const photo = (thingDraft.photos || [])[index]
+    if (!photo) return
+
+    const drag = {
+      active: false,
+      touchId: touch.identifier,
+      index,
+      photo,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      lastX: touch.clientX,
+      lastY: touch.clientY,
+      sourceEl: event.currentTarget,
+      ghost: null,
+      listeners: null,
+    }
+
+    const onMove = nativeEvent => {
+      const current =
+        thingPhotoDragRef.current
+
+      if (!current) return
+
+      const movingTouch = Array.from(
+        nativeEvent.touches || [],
+      ).find(
+        item => item.identifier === current.touchId,
+      )
+
+      if (!movingTouch) return
+
+      current.lastX = movingTouch.clientX
+      current.lastY = movingTouch.clientY
+
+      if (!current.active) {
+        const dx =
+          movingTouch.clientX - current.startX
+        const dy =
+          movingTouch.clientY - current.startY
+
+        if (Math.hypot(dx, dy) > 9) {
+          cleanupThingPhotoDrag()
+        }
+        return
+      }
+
+      nativeEvent.preventDefault()
+      nativeEvent.stopPropagation()
+
+      movePhotoDragGhost(
+        current.ghost,
+        movingTouch.clientX,
+        movingTouch.clientY,
+      )
+
+      holdPhotoDragScroll(current)
+
+      const pointTarget = document.elementFromPoint(
+        movingTouch.clientX,
+        movingTouch.clientY,
+      )
+
+      const target =
+        pointTarget?.closest?.('.thingPhotoDraftItem')
+
+      let to = Number(
+        target?.dataset?.photoIndex,
+      )
+
+      if (
+        !Number.isInteger(to)
+        && pointTarget?.closest?.(
+          '.thingPhotoDraftGrid',
+        )
+      ) {
+        to = Math.max(
+          0,
+          (thingDraft.photos || []).length - 1,
+        )
+      }
+
+      if (
+        !Number.isInteger(to)
+        || to < 0
+        || to === current.index
+      ) {
+        return
+      }
+
+      setData(prev => {
+        const currentDraft =
+          prev.thingDraft || EMPTY_THING_DRAFT
+
+        return {
+          ...prev,
+          thingDraft: {
+            ...currentDraft,
+            photos: movePhotoItem(
+              currentDraft.photos || [],
+              current.index,
+              to,
+            ),
+          },
+        }
+      })
+
+      current.index = to
+    }
+
+    const finish = nativeEvent => {
+      const current =
+        thingPhotoDragRef.current
+
+      if (current?.active) {
+        nativeEvent.preventDefault()
+        nativeEvent.stopPropagation()
+      }
+
+      cleanupThingPhotoDrag()
+    }
+
+    drag.listeners = {
+      move: onMove,
+      end: finish,
+      cancel: finish,
+    }
+
+    thingPhotoDragRef.current = drag
+
+    window.addEventListener(
+      'touchmove',
+      drag.listeners.move,
+      {
+        capture: true,
+        passive: false,
+      },
+    )
+    window.addEventListener(
+      'touchend',
+      drag.listeners.end,
+      {
+        capture: true,
+        passive: false,
+      },
+    )
+    window.addEventListener(
+      'touchcancel',
+      drag.listeners.cancel,
+      {
+        capture: true,
+        passive: false,
+      },
+    )
+
+    thingPhotoDragTimerRef.current =
+      window.setTimeout(() => {
+        const current =
+          thingPhotoDragRef.current
+
+        if (
+          !current
+          || current.touchId !== touch.identifier
+        ) {
+          return
+        }
+
+        current.active = true
+        lockPhotoDragScroll(current)
+        current.sourceEl?.classList?.add(
+          'photoDragSource',
+        )
+
+        current.ghost = createPhotoDragGhost(
+          current.photo?.thumbnail,
+          current.sourceEl
+            ?.getBoundingClientRect?.(),
+          current.lastX,
+          current.lastY,
+        )
+      }, 320)
+  }
+
+function removeThingDraftPhoto(photoToRemove) {
     setData(prev => {
       const current = prev.thingDraft || EMPTY_THING_DRAFT
+      const targetKeys =
+        photoIndexIdentityKeys(photoToRemove)
+
+      let removed = false
+      const nextPhotos = (current.photos || []).filter(
+        photo => {
+          if (removed) return true
+
+          const sameObject = photo === photoToRemove
+          const photoKeys = photoIndexIdentityKeys(photo)
+          const sameIdentity =
+            targetKeys.length > 0
+            && photoKeys.some(key =>
+              targetKeys.includes(key),
+            )
+
+          if (sameObject || sameIdentity) {
+            removed = true
+            return false
+          }
+
+          return true
+        },
+      )
+
       return {
         ...prev,
         thingDraft: {
           ...current,
-          photos: (current.photos || []).filter(
-            (_, photoIndex) => photoIndex !== index,
-          ),
+          photos: nextPhotos,
         },
         lastSavedAt: Date.now(),
       }
@@ -696,7 +1304,7 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
               )}
             </div>
             <div className="thingsGemToolbar">
-              <span className="thingsGemShowcaseCount">共 {things.length} 件，点宝石看详情，可手动排版。</span>
+              <span className="thingsGemShowcaseCount">共 {things.length} 件，点宝石看详情，可移动。</span>
               <div className="thingsGemToolbarActions">
                 <button type="button" className="thingsGemArrangeLink" onClick={toggleGemArrangeMode}>{isGemArrangeMode ? '保存' : '排版'}</button>
                 <button
@@ -863,16 +1471,26 @@ export default function Things({ data, setData, onClose, initialMode = 'overview
                     {thingDraft.photos.map((photo, index) => (
                       <div
                         className="thingPhotoDraftItem"
+                        data-photo-index={index}
                         key={photo.id || photo.assetIdentifier || photo.uri || index}
+                        onTouchStart={event => beginThingPhotoTouch(event, index)}
+                        onContextMenu={event => event.preventDefault()}
                       >
                         <img src={photo.thumbnail} alt={`物品照片${index + 1}`} />
+                        <span className="thingPhotoDragHint">按住拖动</span>
+                        {(photoIndexMeta(photo).device || photoIndexMeta(photo).date) && (
+                          <span className="thingPhotoIndexMeta">
+                            {photoIndexMeta(photo).device && <span>{photoIndexMeta(photo).device}</span>}
+                            {photoIndexMeta(photo).date && <span>{photoIndexMeta(photo).date}</span>}
+                          </span>
+                        )}
                         <button
                           type="button"
                           className="thingPhotoDeleteButton"
                           onClick={event => {
                             event.preventDefault()
                             event.stopPropagation()
-                            removeThingDraftPhoto(index)
+                            removeThingDraftPhoto(photo)
                           }}
                           aria-label={`删除物品照片${index + 1}`}
                           title="删除照片"

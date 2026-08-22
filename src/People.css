@@ -1991,7 +1991,7 @@
 }
 
 .peoplePhotoToolbar {
-  min-height: 44px;
+  min-height: 30px;
   display: flex;
   align-items: center;
   gap: 13px;
@@ -2000,19 +2000,19 @@
 
 .peoplePhotoToolButton {
   position: relative;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  min-height: 36px;
+  width: 29px;
+  height: 29px;
+  min-width: 29px;
+  min-height: 29px;
   display: grid;
   place-items: center;
   padding: 0;
   margin: 0;
   border: none;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.58);
+  border-radius: 0;
+  background: transparent;
   color: #425264;
-  font-size: 24px;
+  font-size: 19px;
   line-height: 1;
   box-shadow: none;
   cursor: pointer;
@@ -2020,7 +2020,23 @@
 
 .peoplePhotoEditButton {
   transform: translateY(0);
-   margin-left: 8px;
+  margin-left: 8px;
+}
+
+.peoplePhotoEditButton.active {
+  color: #303c49;
+}
+
+
+.peoplePhotoSaveButton {
+  color: #425264;
+}
+
+.peoplePhotoSaveIcon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
 }
 
 .peoplePhotoUploadButton input {
@@ -2032,33 +2048,187 @@
 
 .peoplePhotoUploadButton img {
   display: block;
-  width: 26px;
-  height: 26px;
+  width: 21px;
+  height: 21px;
   object-fit: contain;
   object-position: center;
   transform: translateY(0);
   pointer-events: none;
 }
 
-.peoplePhotoEditActions {
-  display: flex;
+.peoplePhotoAddAlbum {
+  display: inline-flex;
   align-items: center;
-  gap: 18px;
-  margin-left: 18px;
-}
-
-.peoplePhotoEditActions button {
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0 0 0 14px;
+  padding: 4px 2px;
   border: none;
   background: transparent;
-  color: #425264;
-  padding: 6px 4px;
-  font-size: 14px;
-  font-weight: 400;
+  color: #596674;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-.peoplePhotoEditActions button:first-child {
-  color: #425264;
+.peoplePhotoAddAlbum span {
+  font-size: 15px;
+  line-height: 1;
+}
+
+
+
+
+
+.peoplePhotoPanel.hasAlbums {
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+
+.peoplePhotoAlbumLine {
+  min-height: 28px;
+  display: grid;
+  grid-template-columns: 8% minmax(0, 84%) 8%;
+  align-items: center;
+  column-gap: 0;
+  margin: -4px 0 9px;
+}
+
+.peoplePhotoAlbumViewport {
+  grid-column: 2;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.peoplePhotoAlbumGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 60px));
+  justify-content: space-between;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+}
+
+.peoplePhotoAlbumCapsule {
+  position: relative;
+  width: 60px;
+  height: 22px;
+  min-width: 60px;
+  max-width: 60px;
+  border: 1px solid rgba(161, 177, 188, 0.28);
+  border-radius: 999px;
+  background: rgba(229, 232, 232, 0.48);
+  color: #a2a6aa;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.peoplePhotoAlbumCapsule.active {
+  border-color: rgba(150, 167, 181, 0.52);
+  background: rgba(200, 197, 191, 0.5);
+  color: #687682;
+}
+
+.peoplePhotoAlbumSelect {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0 6px;
+  border: none;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.peoplePhotoAlbumCapsule input {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 6px !important;
+  border: none !important;
+  border-radius: inherit !important;
+  outline: none !important;
+  background: transparent !important;
+  color: #666c70 !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 20px !important;
+  text-align: center !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+  -webkit-text-size-adjust: none !important;
+  text-size-adjust: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+.peoplePhotoAlbumCapsule input::placeholder {
+  color: rgba(108, 116, 122, 0.62) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  opacity: 1 !important;
+}
+
+.peoplePhotoAlbumDelete {
+  position: absolute;
+  right: -10px;
+  top: -10px;
+  z-index: 8;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #959ca0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+  box-shadow: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.peoplePhotoAlbumArrow {
+  width: 18px;
+  height: 22px;
+  min-width: 18px;
+  min-height: 22px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(95, 103, 109, 0.64);
+  font-size: 18px;
   font-weight: 400;
+  line-height: 1;
+}
+
+.peoplePhotoAlbumArrow:disabled {
+  opacity: 0.18;
 }
 
 .peoplePhotoScroll {
@@ -2076,6 +2246,9 @@
 
 .peoplePhotoItem {
   position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   min-width: 0;
   aspect-ratio: 1 / 1;
   overflow: visible;
@@ -2102,11 +2275,13 @@
   border-radius: 4px;
 }
 
+
+
 .peoplePhotoDelete {
   position: absolute;
   right: 2px;
   top: 2px;
-  z-index: 4;
+  z-index: 8;
   width: 24px;
   height: 24px;
   min-width: 24px;
@@ -2123,6 +2298,7 @@
   line-height: 1;
   box-shadow: 0 1px 4px rgba(0,0,0,0.16);
   touch-action: manipulation;
+  pointer-events: auto;
 }
 
 .peoplePhotoEmpty {
@@ -2220,12 +2396,6 @@
 }
 
 .peoplePhotoEditButton,
-.peoplePhotoEditActions,
-.peoplePhotoEditActions button {
-  position: relative !important;
-  z-index: 6 !important;
-  pointer-events: auto !important;
-}
 
 .peoplePhotoDelete {
   z-index: 8 !important;
@@ -2424,8 +2594,8 @@
 /* 人物圆圈：颜色直接来自用户选色；性别头像始终清晰黑色。 */
 .personDot img {
   opacity: 1 !important;
-  filter: brightness(0) !important;
-  mix-blend-mode: normal !important;
+  filter: none !important;
+  mix-blend-mode: multiply !important;
 }
 
 .peopleTableColorCell {
@@ -2843,3 +3013,99 @@
   font-weight: 500 !important;
   color: #3c6185 !important;
 }
+
+
+@media (max-width: 900px) {
+  .peoplePhotoAlbumGrid {
+    grid-template-columns: repeat(4, minmax(0, 60px));
+  }
+
+  .peoplePhotoAlbumCapsule {
+    width: 100%;
+    min-width: 0;
+    max-width: 60px;
+  }
+
+  .peoplePhotoToolbar {
+    gap: 10px;
+  }
+
+  .peoplePhotoEditActions {
+    gap: 7px;
+  }
+
+  .peoplePhotoEditActions button {
+    padding-left: 2px;
+    padding-right: 2px;
+    font-size: 12px;
+  }
+}
+
+
+/* 编辑模式：照片索引来源设备 + 生成日期 */
+.peoplePhotoIndexMeta {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  z-index: 7;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.15;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.78);
+  pointer-events: none;
+}
+
+/* V1.4 照片编辑：拖动提示 + 两行来源信息 */
+.peoplePhotoDragHint {
+  position: absolute; left: 4px; top: 4px; z-index: 7;
+  color: #fff; font-size: 11px; line-height: 1;
+  text-shadow: 0 1px 3px rgba(0,0,0,.78); pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;}
+.peoplePhotoIndexMeta {
+  left: 4px !important; bottom: 4px !important; max-width: calc(100% - 8px) !important;
+  display: flex !important; flex-direction: column !important; gap: 1px !important;
+  color: #fff !important; font-size: 10px !important; line-height: 1.05 !important;
+  white-space: normal !important; pointer-events: none !important;
+}
+.peoplePhotoIndexMeta > span {
+  display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.peoplePhotoAlbumCapsule.photoDragActive { outline: 1px dashed rgba(75,90,102,.5); }
+.peoplePhotoItem.photoDragging { cursor: grabbing; }
+
+
+.snowballPhotoDragGhost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 99999;
+  overflow: hidden;
+  border-radius: 6px;
+  pointer-events: none;
+  opacity: 0.92;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.28);
+  will-change: transform;
+}
+
+.snowballPhotoDragGhost img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoDragSource {
+  opacity: 0.42 !important;
+}
+
+
+.peoplePhotoGrid {
+  padding-bottom: 28px;
+}
+

@@ -2892,15 +2892,15 @@ button,
 .dailyUnifiedHeader.dailyTab-all,
 .dailyUnifiedMonthRow.dailyTab-all,
 .dailyUnifiedRow.dailyTab-all {
-  grid-template-columns: 104px 66px 74px 78px 152px 100px 108px 52px 38px 38px !important;
-  min-width: 850px !important;
+  grid-template-columns: 104px 66px 66px 74px 78px 152px 100px 108px 52px 38px 38px !important;
+  min-width: 916px !important;
 }
 
 .dailyUnifiedHeader.dailyTab-steps,
 .dailyUnifiedMonthRow.dailyTab-steps,
 .dailyUnifiedRow.dailyTab-steps {
-  grid-template-columns: 128px 96px 38px 38px !important;
-  min-width: 330px !important;
+  grid-template-columns: 128px 96px 96px 38px 38px !important;
+  min-width: 426px !important;
 }
 
 .dailyUnifiedHeader.dailyTab-offscreen,
@@ -3185,7 +3185,7 @@ button,
 .dailyTagPositive,
 .dailyScreenLink.dailyValuePositive {
   color: #7fbe7a !important;
-  font-weight: 760 !important;
+  font-weight: inherit !important;
   text-shadow: 0 0 8px rgba(127, 190, 122, 0.18) !important;
 }
 
@@ -3826,14 +3826,14 @@ button.dailyScreenValuePlain { cursor: pointer; }
 .dailyUnifiedHeader.dailyTab-all,
 .dailyUnifiedMonthRow.dailyTab-all,
 .dailyUnifiedRow.dailyTab-all {
-  grid-template-columns: 104px 66px 74px 78px 152px 100px 108px 52px 32px 44px 46px !important;
-  min-width: 900px !important;
+  grid-template-columns: 104px 60px 60px 74px 78px 152px 100px 108px 52px 32px 44px 46px !important;
+  min-width: 954px !important;
 }
 .dailyUnifiedHeader.dailyTab-steps,
 .dailyUnifiedMonthRow.dailyTab-steps,
 .dailyUnifiedRow.dailyTab-steps {
-  grid-template-columns: 110px 75px 32px 32px 32px !important;
-  min-width: 376px !important;
+  grid-template-columns: 110px 60px 60px 32px 32px 32px !important;
+  min-width: 451px !important;
 }
 .dailyUnifiedHeader.dailyTab-offscreen,
 .dailyUnifiedMonthRow.dailyTab-offscreen,
@@ -4013,8 +4013,7 @@ button.dailyScreenValuePlain { cursor: pointer; }
   }
 
   /* 表头同步隐藏“重新获取”占位列。 */
-  .dailyUnifiedHeader.dailyTab-food > span:nth-last-child(3),
-  .dailyUnifiedHeader.dailyTab-mood > span:nth-last-child(3) {
+  .dailyUnifiedHeader.dailyTab-food > span:nth-last-child(3) {
     display: none !important;
   }
 
@@ -5131,3 +5130,28 @@ button.dailyScreenValuePlain { cursor: pointer; }
   color: #ffffff !important;
 }
 
+/* V1.4 日常表：步数 / 里程数值居中；只调整数值，不改其它列。 */
+.dailyUnifiedMonthRow.dailyTab-all > span:nth-child(2),
+.dailyUnifiedMonthRow.dailyTab-all > span:nth-child(3),
+.dailyUnifiedRow.dailyTab-all > span:nth-child(2),
+.dailyUnifiedRow.dailyTab-all > span:nth-child(3),
+.dailyUnifiedMonthRow.dailyTab-steps > span:nth-child(2),
+.dailyUnifiedMonthRow.dailyTab-steps > span:nth-child(3),
+.dailyUnifiedRow.dailyTab-steps > span:nth-child(2),
+.dailyUnifiedRow.dailyTab-steps > span:nth-child(3) {
+  text-align: center !important;
+  justify-self: stretch !important;
+}
+
+
+/* V1.4 日常表微调：仅计步 TAB 的步数/里程 HEADER 与数据列居中。 */
+.dailyUnifiedHeader.dailyTab-steps > span:nth-child(2),
+.dailyUnifiedHeader.dailyTab-steps > span:nth-child(3) {
+  text-align: center !important;
+  justify-self: stretch !important;
+}
+
+/* 开发者模式：计步 TAB 的步数/里程数值可进入步数自动获取表。 */
+.dailyTab-steps .dailyStepAutoValueLink {
+  cursor: pointer !important;
+}

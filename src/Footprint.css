@@ -1073,7 +1073,7 @@
   margin: 6px 0 10px 80px !important;
 }
 
-.footprintPhotoPreview { border-radius: 0 !important; overflow: hidden !important; background: #eee !important; }
+.footprintPhotoPreview { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; border-radius: 0 !important; overflow: hidden !important; background: #eee !important; }
 .footprintPhotoPreview img { width: 100% !important; height: 72px !important; object-fit: cover !important; display: block !important; }
 .footprintPhotoPreview button { width: 100% !important; border: none !important; background: #eee !important; color: #555 !important; font-size: 11px !important; padding: 3px !important; }
 
@@ -3013,4 +3013,75 @@ body.futureFootprintPlanOpen .compactFootprintList {
   color: #34475a !important;
   font-size: 12px !important;
   line-height: 1.40 !important;
+}
+
+
+/* 编辑模式：照片索引来源设备 + 生成日期 */
+.footprintPhotoPreview {
+  position: relative !important;
+}
+
+.footprintPhotoIndexMeta {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  z-index: 4;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.15;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.78);
+  pointer-events: none;
+}
+
+/* V1.4 照片编辑：长按拖动 + 两行来源信息 */
+.footprintPhotoPreview { position: relative !important; }
+.footprintPhotoDragHint {
+  position: absolute; left: 4px; top: 4px; z-index: 5;
+  color: #fff; font-size: 11px; line-height: 1;
+  text-shadow: 0 1px 3px rgba(0,0,0,.78); pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;}
+.footprintPhotoIndexMeta {
+  left: 4px !important; bottom: 4px !important; max-width: calc(100% - 8px) !important;
+  display: flex !important; flex-direction: column !important; gap: 1px !important;
+  color: #fff !important; font-size: 10px !important; line-height: 1.05 !important;
+  white-space: normal !important; pointer-events: none !important;
+}
+.footprintPhotoIndexMeta > span {
+  display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+
+
+.snowballPhotoDragGhost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 99999;
+  overflow: hidden;
+  border-radius: 6px;
+  pointer-events: none;
+  opacity: 0.92;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.28);
+  will-change: transform;
+}
+
+.snowballPhotoDragGhost img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoDragSource {
+  opacity: 0.42 !important;
+}
+
+
+.footprintPhotoPreviewGrid {
+  padding-bottom: 28px !important;
 }

@@ -384,6 +384,35 @@ public final class IOSPhotoIndexPlugin: CAPPlugin,
         }
     }
 
+    private func currentSourceDevice() -> String {
+        /*
+         * 这里记录的是“这张照片第一次被雪球建立索引时所在的设备”，
+         * 不是照片 EXIF 里的拍摄设备。
+         *
+         * UIDevice.current.model 在 iPhone 上通常只会返回 "iPhone"，
+         * 因此使用 uname 的硬件标识（例如 iPhone10,4）。
+         * 不做营销型号猜测，避免错误映射；前端可以直接显示这个稳定名称。
+         */
+        var systemInfo = utsname()
+        uname(&systemInfo)
+
+        let identifier = withUnsafePointer(to: &systemInfo.machine) {
+            $0.withMemoryRebound(to: CChar.self, capacity: 1) {
+                String(cString: $0)
+            }
+        }
+
+        let trimmed = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return trimmed
+        }
+
+        let model = UIDevice.current.model.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        return model.isEmpty ? "iPhone" : model
+    }
+
     private func makePhotoPayloads(
         identifiers: [String],
         completion: @escaping ([[String: Any]]) -> Void
@@ -436,6 +465,11 @@ public final class IOSPhotoIndexPlugin: CAPPlugin,
                     return
                 }
 
+                let formatter = ISO8601DateFormatter()
+                let creationDate = asset.creationDate.map {
+                    formatter.string(from: $0)
+                } ?? ""
+
                 payloads[index] = [
                     "id": UUID().uuidString,
                     "assetIdentifier": identifier,
@@ -444,8 +478,8 @@ public final class IOSPhotoIndexPlugin: CAPPlugin,
                         + jpeg.base64EncodedString(),
                     "width": asset.pixelWidth,
                     "height": asset.pixelHeight,
-                    "createdAt":
-                        ISO8601DateFormatter().string(from: Date()),
+                    "creationDate": creationDate,
+                    "sourceDevice": self.currentSourceDevice(),
                     "source": "ios-photo-library-index"
                 ]
             }

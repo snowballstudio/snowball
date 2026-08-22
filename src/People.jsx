@@ -248,10 +248,12 @@ function dotColorStyle(person) {
 }
 
 function iconFadeStyle() {
-  // 性别头像固定为清晰黑色，不再由“印象值”控制透明度。
+  // 性别头像保留原图本身；使用 multiply 让浅色底融入人物圆圈，
+  // 避免 brightness(0) 把整张 PNG 的矩形底一起变成黑框。
   return {
     opacity: 1,
-    filter: 'brightness(0)',
+    filter: 'none',
+    mixBlendMode: 'multiply',
   }
 }
 
@@ -587,14 +589,14 @@ function loadPeopleMedia() {
     const tx = db.transaction(PEOPLE_MEDIA_STORE, 'readonly')
     const request = tx.objectStore(PEOPLE_MEDIA_STORE).get(PEOPLE_MEDIA_KEY)
     request.onsuccess = () =>
-      resolve(request.result || { selfPhotos: [], peoplePhotos: {} })
+      resolve(request.result || { selfPhotos: [], peoplePhotos: {}, photoAlbums: {} })
     request.onerror = () =>
       reject(request.error || new Error('People media read failed'))
     tx.oncomplete = () => db.close()
   }))
 }
 
-function savePeopleMedia(selfPhotos, people) {
+function savePeopleMedia(selfPhotos, people, photoAlbums = {}) {
   const peoplePhotos = {}
   ;(Array.isArray(people) ? people : []).forEach(person => {
     if (Array.isArray(person?.photos) && person.photos.length) {
@@ -605,6 +607,7 @@ function savePeopleMedia(selfPhotos, people) {
   const payload = {
     selfPhotos: Array.isArray(selfPhotos) ? selfPhotos : [],
     peoplePhotos,
+    photoAlbums: photoAlbums && typeof photoAlbums === 'object' ? photoAlbums : {},
     savedAt: Date.now(),
   }
 
@@ -676,6 +679,329 @@ function compressPeoplePhoto(file, index = 0) {
   })
 }
 
+
+function photoIndexIdentityKeys(photo) {
+  if (!photo || typeof photo !== 'object') return []
+
+  const keys = []
+  const assetIdentifier = String(
+    photo.assetIdentifier || '',
+  ).trim()
+  const assetKey = String(photo.assetKey || '').trim()
+  const mediaStoreId = String(
+    photo.mediaStoreId || '',
+  ).trim()
+  const uri = String(photo.uri || '').trim()
+
+  if (assetIdentifier) {
+    keys.push(`asset:${assetIdentifier}`)
+  }
+
+  if (assetKey) {
+    keys.push(`stable:${assetKey}`)
+  }
+
+  if (mediaStoreId) {
+    keys.push(`android-media:${mediaStoreId}`)
+  }
+
+  if (uri) {
+    const normalizedUri = uri
+      .replace(/[?#].*$/, '')
+      .replace(/\/+$/, '')
+
+    keys.push(`uri:${normalizedUri}`)
+
+    let decoded = normalizedUri
+    try {
+      decoded = decodeURIComponent(normalizedUri)
+    } catch {}
+
+    const mediaMatch =
+      decoded.match(/\/images\/media\/(\d+)$/i)
+      || decoded.match(/(?:image|images\/media)[:/](\d+)/i)
+
+    if (mediaMatch) {
+      keys.push(`android-media:${mediaMatch[1]}`)
+    }
+  }
+
+  // 兼容已经写入旧版本数据库、但还没有 assetKey 的照片。
+  const filename = String(
+    photo.filename || '',
+  ).trim().toLowerCase()
+  const creationDate = String(
+    photo.creationDate || '',
+  ).trim()
+  const width = Number(photo.width || 0)
+  const height = Number(photo.height || 0)
+
+  if (filename && creationDate) {
+    keys.push(
+      `legacy-meta:${filename}|${creationDate}|${width}|${height}`,
+    )
+  }
+
+  return [...new Set(keys)]
+}
+
+function photoIndexIdentity(photo) {
+  return photoIndexIdentityKeys(photo)[0] || ''
+}
+
+function filterNewPhotoIndexes(picked, existing) {
+  const seen = new Set()
+
+  ;(Array.isArray(existing) ? existing : []).forEach(
+    photo => {
+      photoIndexIdentityKeys(photo).forEach(
+        key => seen.add(key),
+      )
+    },
+  )
+
+  return (Array.isArray(picked) ? picked : []).filter(
+    photo => {
+      const keys = photoIndexIdentityKeys(photo)
+
+      if (!keys.length) return true
+
+      if (keys.some(key => seen.has(key))) {
+        return false
+      }
+
+      keys.forEach(key => seen.add(key))
+      return true
+    },
+  )
+}
+
+function formatPhotoIndexDate(value) {
+  const date = new Date(value || '')
+  if (Number.isNaN(date.getTime())) return ''
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}.${m}.${d}`
+}
+
+function compactPhotoDeviceName(value) {
+  const text = String(value || '').trim().replace(/\s+/g, ' ')
+  if (!text) return ''
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
+}
+
+function photoIndexMeta(photo) {
+  return {
+    device: compactPhotoDeviceName(photo?.sourceDevice),
+    date: formatPhotoIndexDate(photo?.creationDate),
+  }
+}
+
+
+function movePhotoItem(list, fromIndex, toIndex) {
+  const next = [...(Array.isArray(list) ? list : [])]
+  if (
+    fromIndex < 0 || toIndex < 0
+    || fromIndex >= next.length || toIndex >= next.length
+    || fromIndex === toIndex
+  ) return next
+  const [moved] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, moved)
+  return next
+}
+
+function collectPhotoScrollLocks(element) {
+  const locks = []
+  const seen = new Set()
+
+  let current = element?.parentElement || null
+
+  while (current) {
+    if (!seen.has(current)) {
+      const style = window.getComputedStyle(current)
+      const overflowY = style.overflowY
+      const canScroll =
+        (overflowY === 'auto' || overflowY === 'scroll')
+        && current.scrollHeight > current.clientHeight + 2
+
+      if (canScroll) {
+        locks.push({
+          element: current,
+          top: current.scrollTop,
+          left: current.scrollLeft,
+          isWindow: false,
+        })
+        seen.add(current)
+      }
+    }
+
+    if (
+      current === document.body
+      || current === document.documentElement
+    ) {
+      break
+    }
+
+    current = current.parentElement
+  }
+
+  locks.push({
+    element: window,
+    top:
+      window.scrollY
+      || document.documentElement.scrollTop
+      || document.body.scrollTop
+      || 0,
+    left:
+      window.scrollX
+      || document.documentElement.scrollLeft
+      || document.body.scrollLeft
+      || 0,
+    isWindow: true,
+  })
+
+  return locks
+}
+
+function restorePhotoDragScroll(drag) {
+  const state = drag?.scrollState
+  if (!state?.locks?.length || state.restoring) return
+
+  state.restoring = true
+
+  try {
+    state.locks.forEach(lock => {
+      if (lock.isWindow) {
+        window.scrollTo(lock.left, lock.top)
+      } else if (lock.element) {
+        if (lock.element.scrollTop !== lock.top) {
+          lock.element.scrollTop = lock.top
+        }
+        if (lock.element.scrollLeft !== lock.left) {
+          lock.element.scrollLeft = lock.left
+        }
+      }
+    })
+  } finally {
+    state.restoring = false
+  }
+}
+
+function lockPhotoDragScroll(drag) {
+  if (!drag || drag.scrollState) return
+
+  const scrollState = {
+    locks: collectPhotoScrollLocks(drag.sourceEl),
+    restoring: false,
+    onScroll: null,
+    raf1: 0,
+    raf2: 0,
+  }
+
+  drag.scrollState = scrollState
+
+  scrollState.onScroll = () => {
+    if (drag.scrollState === scrollState) {
+      restorePhotoDragScroll(drag)
+    }
+  }
+
+  // scroll 不冒泡，但 capture 可以捕获元素滚动。
+  // 同时监听 window，确保 WebView 视口滚动也被锁住。
+  document.addEventListener(
+    'scroll',
+    scrollState.onScroll,
+    true,
+  )
+  window.addEventListener(
+    'scroll',
+    scrollState.onScroll,
+    true,
+  )
+
+  restorePhotoDragScroll(drag)
+
+  // Android WebView 可能在长按成立前已经积累了少量滚动惯性。
+  // 两帧内再次恢复固定位置，直接截断这段惯性。
+  scrollState.raf1 = window.requestAnimationFrame(() => {
+    restorePhotoDragScroll(drag)
+    scrollState.raf2 = window.requestAnimationFrame(() => {
+      restorePhotoDragScroll(drag)
+    })
+  })
+}
+
+function unlockPhotoDragScroll(drag) {
+  const state = drag?.scrollState
+  if (!state) return
+
+  drag.scrollState = null
+
+  if (state.onScroll) {
+    document.removeEventListener(
+      'scroll',
+      state.onScroll,
+      true,
+    )
+    window.removeEventListener(
+      'scroll',
+      state.onScroll,
+      true,
+    )
+  }
+
+  if (state.raf1) {
+    window.cancelAnimationFrame(state.raf1)
+  }
+  if (state.raf2) {
+    window.cancelAnimationFrame(state.raf2)
+  }
+}
+
+function holdPhotoDragScroll(drag) {
+  // 拖动期间只做一件事：把所有可滚动层恢复到拖动开始时的位置。
+  // 不做边缘自动滚动，不改变 overflow / touch-action。
+  restorePhotoDragScroll(drag)
+}
+
+function createPhotoDragGhost(
+  thumbnail,
+  rect,
+  x,
+  y,
+) {
+  const ghost = document.createElement('div')
+  ghost.className = 'snowballPhotoDragGhost'
+  ghost.style.width =
+    `${Math.max(56, rect?.width || 72)}px`
+  ghost.style.height =
+    `${Math.max(56, rect?.height || 72)}px`
+
+  const image = document.createElement('img')
+  image.src = thumbnail || ''
+  image.alt = ''
+  ghost.appendChild(image)
+
+  document.body.appendChild(ghost)
+  movePhotoDragGhost(ghost, x, y)
+  return ghost
+}
+
+function movePhotoDragGhost(ghost, x, y) {
+  if (!ghost) return
+
+  ghost.style.transform =
+    `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) `
+    + 'translate(-50%, -50%)'
+}
+
+function removePhotoDragGhost(ghost) {
+  try {
+    ghost?.remove?.()
+  } catch {}
+}
+
 export default function People({ people = [], setData, onClose, birthDate = '', selfPhotos = [] }) {
   const [groupFilter, setGroupFilter] = useState('全部')
   const [tableGroupFilter, setTableGroupFilter] = useState('全部')
@@ -716,11 +1042,19 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
   const [photoTarget, setPhotoTarget] = useState(null)
   const [photoEditing, setPhotoEditing] = useState(false)
   const [photoDraft, setPhotoDraft] = useState([])
+  const [photoAlbums, setPhotoAlbums] = useState({})
+  const [photoAlbumDraft, setPhotoAlbumDraft] = useState([])
+  const [selectedPhotoAlbumId, setSelectedPhotoAlbumId] = useState('')
+  const [photoAlbumWindowStart, setPhotoAlbumWindowStart] = useState(0)
+  const [newPhotoAlbumId, setNewPhotoAlbumId] = useState('')
   const [peopleMediaReady, setPeopleMediaReady] = useState(false)
   const [dragAngles, setDragAngles] = useState({})
   const mapCanvasRef = useRef(null)
   const dragRef = useRef(null)
   const suppressClickRef = useRef({ id: null, until: 0 })
+  const photoDragRef = useRef(null)
+  const photoDragTimerRef = useRef(null)
+  const [photoDragActive, setPhotoDragActive] = useState(false)
 
   const activeBirthDate = normalizeMonthOnly(
     birthDate || (
@@ -782,6 +1116,12 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
           media?.peoplePhotos && typeof media.peoplePhotos === 'object'
             ? media.peoplePhotos
             : {}
+        const restoredPhotoAlbums =
+          media?.photoAlbums && typeof media.photoAlbums === 'object'
+            ? media.photoAlbums
+            : {}
+
+        setPhotoAlbums(restoredPhotoAlbums)
 
         setData(prev => ({
           ...prev,
@@ -809,11 +1149,22 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
 
   useEffect(() => {
     if (!peopleMediaReady) return
-    savePeopleMedia(selfPhotos, people)
+    savePeopleMedia(selfPhotos, people, photoAlbums)
       .catch(error => {
         console.warn('人间照片索引保存失败。', error)
       })
-  }, [peopleMediaReady, people, selfPhotos])
+  }, [peopleMediaReady, people, photoAlbums, selfPhotos])
+
+  function photoTargetKey(target = photoTarget) {
+    if (!target) return ''
+    return target.kind === 'self' ? 'self' : String(target.id)
+  }
+
+  function albumsForTarget(target = photoTarget) {
+    const key = photoTargetKey(target)
+    const albums = key ? photoAlbums[key] : []
+    return Array.isArray(albums) ? albums : []
+  }
 
   function photosForTarget(target = photoTarget) {
     if (!target) return []
@@ -827,6 +1178,28 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
     return Array.isArray(person?.photos) ? person.photos : []
   }
 
+  function photosForSelectedAlbum(sourcePhotos = photosForTarget()) {
+    const photos = Array.isArray(sourcePhotos) ? sourcePhotos : []
+
+    // 默认主页就是“未分类”：已经归入分册的照片不再重复显示。
+    if (!selectedPhotoAlbumId) {
+      return photos.filter(photo => !String(photo?.albumId || '').trim())
+    }
+
+    return photos.filter(
+      photo => String(photo?.albumId || '') === String(selectedPhotoAlbumId),
+    )
+  }
+
+  function selectPhotoAlbum(albumId) {
+    const nextId = String(albumId || '')
+
+    setSelectedPhotoAlbumId(prev => {
+      const currentId = String(prev || '')
+      return currentId === nextId ? '' : nextId
+    })
+  }
+
   function openPhotoArea(target) {
     const photos = target.kind === 'self'
       ? (Array.isArray(selfPhotos) ? selfPhotos : [])
@@ -835,25 +1208,382 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
             item => String(item.id) === String(target.id),
           )?.photos || []
         )
+    const albums = albumsForTarget(target)
 
     setPhotoTarget(target)
     setPhotoDraft([...photos])
+    setPhotoAlbumDraft(albums.map(album => ({ ...album })))
+    setSelectedPhotoAlbumId('')
+    setPhotoAlbumWindowStart(0)
+    setNewPhotoAlbumId('')
     setPhotoEditing(false)
   }
 
   function closePhotoArea() {
     setPhotoTarget(null)
     setPhotoDraft([])
+    setPhotoAlbumDraft([])
+    setSelectedPhotoAlbumId('')
+    setPhotoAlbumWindowStart(0)
+    setNewPhotoAlbumId('')
     setPhotoEditing(false)
+  }
+
+  function peoplePhotoGlobalIndex(photo) {
+    return photoDraft.findIndex(
+      item =>
+        item === photo
+        || (
+          photoIndexIdentity(item)
+          && photoIndexIdentity(item)
+            === photoIndexIdentity(photo)
+        ),
+    )
+  }
+
+  function clearPeoplePhotoDragTimer() {
+    if (photoDragTimerRef.current) {
+      window.clearTimeout(photoDragTimerRef.current)
+      photoDragTimerRef.current = null
+    }
+  }
+
+  function detachPeoplePhotoDragListeners() {
+    const drag = photoDragRef.current
+    if (!drag?.listeners) return
+
+    window.removeEventListener(
+      'touchmove',
+      drag.listeners.move,
+      true,
+    )
+    window.removeEventListener(
+      'touchend',
+      drag.listeners.end,
+      true,
+    )
+    window.removeEventListener(
+      'touchcancel',
+      drag.listeners.cancel,
+      true,
+    )
+    drag.listeners = null
+  }
+
+  function cleanupPeoplePhotoDrag() {
+    clearPeoplePhotoDragTimer()
+
+    const drag = photoDragRef.current
+    photoDragRef.current = null
+
+    try {
+      unlockPhotoDragScroll(drag)
+      drag?.sourceEl?.classList?.remove(
+        'photoDragSource',
+      )
+      removePhotoDragGhost(drag?.ghost)
+
+      if (drag?.listeners) {
+        window.removeEventListener('touchmove', drag.listeners.move, true)
+        window.removeEventListener('touchend', drag.listeners.end, true)
+        window.removeEventListener('touchcancel', drag.listeners.cancel, true)
+      }
+    } finally {
+      setPhotoDragActive(false)
+    }
+  }
+
+  function beginPeoplePhotoTouch(event, photo) {
+    if (!photoEditing || event.touches.length !== 1) {
+      return
+    }
+
+    if (
+      event.target?.closest?.('.peoplePhotoDelete')
+    ) {
+      return
+    }
+
+    cleanupPeoplePhotoDrag()
+
+    const touch = event.touches[0]
+    const index = peoplePhotoGlobalIndex(photo)
+    if (index < 0) return
+
+    const drag = {
+      active: false,
+      touchId: touch.identifier,
+      photo,
+      index,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      lastX: touch.clientX,
+      lastY: touch.clientY,
+      sourceEl: event.currentTarget,
+      ghost: null,
+      listeners: null,
+    }
+
+    const onMove = nativeEvent => {
+      const current = photoDragRef.current
+      if (!current) return
+
+      const movingTouch = Array.from(
+        nativeEvent.touches || [],
+      ).find(
+        item => item.identifier === current.touchId,
+      )
+
+      if (!movingTouch) return
+
+      current.lastX = movingTouch.clientX
+      current.lastY = movingTouch.clientY
+
+      if (!current.active) {
+        const dx =
+          movingTouch.clientX - current.startX
+        const dy =
+          movingTouch.clientY - current.startY
+
+        if (Math.hypot(dx, dy) > 9) {
+          cleanupPeoplePhotoDrag()
+        }
+        return
+      }
+
+      nativeEvent.preventDefault()
+      nativeEvent.stopPropagation()
+
+      movePhotoDragGhost(
+        current.ghost,
+        movingTouch.clientX,
+        movingTouch.clientY,
+      )
+
+      holdPhotoDragScroll(current)
+
+      const pointTarget = document.elementFromPoint(
+        movingTouch.clientX,
+        movingTouch.clientY,
+      )
+
+      const targetItem =
+        pointTarget?.closest?.('.peoplePhotoItem')
+
+      let to = Number(
+        targetItem?.dataset?.photoGlobalIndex,
+      )
+
+      if (
+        !Number.isInteger(to)
+        && pointTarget?.closest?.('.peoplePhotoGrid')
+      ) {
+        const visible = photosForSelectedAlbum(
+          photoDraft,
+        )
+        const lastVisible =
+          visible[visible.length - 1]
+
+        to = peoplePhotoGlobalIndex(lastVisible)
+      }
+
+      if (
+        !Number.isInteger(to)
+        || to < 0
+        || to === current.index
+      ) {
+        return
+      }
+
+      setPhotoDraft(prev => {
+        const from = prev.findIndex(
+          item =>
+            item === current.photo
+            || (
+              photoIndexIdentity(item)
+              && photoIndexIdentity(item)
+                === photoIndexIdentity(
+                  current.photo,
+                )
+            ),
+        )
+
+        if (
+          from < 0
+          || to >= prev.length
+          || from === to
+        ) {
+          return prev
+        }
+
+        current.index = to
+        return movePhotoItem(prev, from, to)
+      })
+    }
+
+    const finish = (
+      nativeEvent,
+      cancelled = false,
+    ) => {
+      const current = photoDragRef.current
+      if (!current) return
+
+      const changedTouch = Array.from(
+        nativeEvent.changedTouches || [],
+      ).find(
+        item => item.identifier === current.touchId,
+      )
+
+      if (
+        current.active
+        && changedTouch
+        && !cancelled
+      ) {
+        nativeEvent.preventDefault()
+        nativeEvent.stopPropagation()
+
+        const target = document.elementFromPoint(
+          changedTouch.clientX,
+          changedTouch.clientY,
+        )
+
+        const albumCapsule =
+          target?.closest?.(
+            '.peoplePhotoAlbumCapsule',
+          )
+        const targetPhoto =
+          target?.closest?.('.peoplePhotoItem')
+        const albumId =
+          albumCapsule?.dataset?.albumId
+
+        if (albumCapsule && albumId) {
+          setPhotoDraft(prev =>
+            prev.map(item => {
+              const same =
+                item === current.photo
+                || (
+                  photoIndexIdentity(item)
+                  && photoIndexIdentity(item)
+                    === photoIndexIdentity(
+                      current.photo,
+                    )
+                )
+
+              return same
+                ? { ...item, albumId }
+                : item
+            }),
+          )
+
+          setSelectedPhotoAlbumId(albumId)
+        } else if (!targetPhoto) {
+          // 松手在照片网格外、也不在任何胶囊上：
+          // 视为拖出分册，回到未分类。
+          setPhotoDraft(prev =>
+            prev.map(item => {
+              const same =
+                item === current.photo
+                || (
+                  photoIndexIdentity(item)
+                  && photoIndexIdentity(item)
+                    === photoIndexIdentity(
+                      current.photo,
+                    )
+                )
+
+              return same
+                ? { ...item, albumId: '' }
+                : item
+            }),
+          )
+
+          setSelectedPhotoAlbumId('')
+        }
+      }
+
+      cleanupPeoplePhotoDrag()
+    }
+
+    drag.listeners = {
+      move: onMove,
+      end: nativeEvent =>
+        finish(nativeEvent, false),
+      cancel: nativeEvent =>
+        finish(nativeEvent, true),
+    }
+
+    photoDragRef.current = drag
+
+    window.addEventListener(
+      'touchmove',
+      drag.listeners.move,
+      {
+        capture: true,
+        passive: false,
+      },
+    )
+    window.addEventListener(
+      'touchend',
+      drag.listeners.end,
+      {
+        capture: true,
+        passive: false,
+      },
+    )
+    window.addEventListener(
+      'touchcancel',
+      drag.listeners.cancel,
+      {
+        capture: true,
+        passive: false,
+      },
+    )
+
+    photoDragTimerRef.current =
+      window.setTimeout(() => {
+        const current = photoDragRef.current
+        if (
+          !current
+          || current.touchId !== touch.identifier
+        ) {
+          return
+        }
+
+        current.active = true
+        lockPhotoDragScroll(current)
+        current.sourceEl?.classList?.add(
+          'photoDragSource',
+        )
+
+        current.ghost = createPhotoDragGhost(
+          current.photo?.thumbnail,
+          current.sourceEl
+            ?.getBoundingClientRect?.(),
+          current.lastX,
+          current.lastY,
+        )
+
+        setPhotoDragActive(true)
+      }, 320)
   }
 
   function beginPhotoEdit() {
     setPhotoDraft([...photosForTarget()])
+    setPhotoAlbumDraft(albumsForTarget().map(album => ({ ...album })))
+    setNewPhotoAlbumId('')
     setPhotoEditing(true)
   }
 
   function cancelPhotoEdit() {
     setPhotoDraft([...photosForTarget()])
+    setPhotoAlbumDraft(albumsForTarget().map(album => ({ ...album })))
+    if (
+      selectedPhotoAlbumId
+      && !albumsForTarget().some(album => String(album.id) === String(selectedPhotoAlbumId))
+    ) {
+      setSelectedPhotoAlbumId('')
+    }
+    setNewPhotoAlbumId('')
     setPhotoEditing(false)
   }
 
@@ -881,9 +1611,99 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
     })
   }
 
+  function commitPhotoAlbums(nextAlbums) {
+    const key = photoTargetKey()
+    if (!key) return
+
+    const safeAlbums = (Array.isArray(nextAlbums) ? nextAlbums : [])
+      .map(album => ({
+        id: String(album?.id || ''),
+        title: String(album?.title || '').trim(),
+      }))
+      .filter(album => album.id)
+
+    setPhotoAlbums(prev => ({
+      ...(prev || {}),
+      [key]: safeAlbums,
+    }))
+  }
+
   function savePhotoEdit() {
     commitPhotos(photoDraft)
+    commitPhotoAlbums(photoAlbumDraft)
+
+    if (
+      selectedPhotoAlbumId
+      && !photoAlbumDraft.some(album => String(album.id) === String(selectedPhotoAlbumId))
+    ) {
+      setSelectedPhotoAlbumId('')
+    }
+
+    setNewPhotoAlbumId('')
     setPhotoEditing(false)
+  }
+
+  function addPhotoAlbum() {
+    const id = `people-album-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    setPhotoAlbumDraft(prev => [...prev, { id, title: '' }])
+    setSelectedPhotoAlbumId(id)
+    setNewPhotoAlbumId(id)
+
+    setPhotoAlbumWindowStart(prev => {
+      const nextLength = photoAlbumDraft.length + 1
+      return nextLength > 4 ? Math.max(0, nextLength - 4) : prev
+    })
+  }
+
+  function renamePhotoAlbum(albumId, title) {
+    setPhotoAlbumDraft(prev =>
+      prev.map(album =>
+        String(album.id) === String(albumId)
+          ? { ...album, title }
+          : album,
+      ),
+    )
+  }
+
+  function deletePhotoAlbum(albumId) {
+    const key = photoTargetKey()
+    const nextAlbums = photoAlbumDraft.filter(
+      album => String(album.id) !== String(albumId),
+    )
+    const nextPhotos = photoDraft.map(photo =>
+      String(photo?.albumId || '') === String(albumId)
+        ? { ...photo, albumId: '' }
+        : photo,
+    )
+
+    // 分册删除立即生效：只删除雪球里的“目录关系”，不删除任何照片索引。
+    setPhotoAlbumDraft(nextAlbums)
+    setPhotoDraft(nextPhotos)
+
+    if (key) {
+      setPhotoAlbums(prev => ({
+        ...(prev || {}),
+        [key]: nextAlbums.map(album => ({
+          id: String(album?.id || ''),
+          title: String(album?.title || '').trim(),
+        })),
+      }))
+    }
+    commitPhotos(nextPhotos)
+
+    if (String(selectedPhotoAlbumId) === String(albumId)) {
+      setSelectedPhotoAlbumId('')
+    }
+    if (String(newPhotoAlbumId) === String(albumId)) {
+      setNewPhotoAlbumId('')
+    }
+
+    setPhotoAlbumWindowStart(prev =>
+      Math.min(
+        Math.max(0, nextAlbums.length - 4),
+        Math.max(0, prev),
+      ),
+    )
   }
 
   async function pickPeoplePhotos(files = null) {
@@ -905,10 +1725,26 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
 
       if (!picked.length) return
 
+      // 同一人物记录内，主册 + 全部分册共用一个去重池。
+      // 其它人物记录仍允许使用同一张系统照片。
+      const existingForRecord = photoEditing
+        ? photoDraft
+        : photosForTarget()
+      const uniquePicked = filterNewPhotoIndexes(
+        picked,
+        existingForRecord,
+      )
+      if (!uniquePicked.length) return
+
+      const assigned = uniquePicked.map(photo => ({
+        ...photo,
+        albumId: selectedPhotoAlbumId || '',
+      }))
+
       if (photoEditing) {
-        setPhotoDraft(prev => [...prev, ...picked])
+        setPhotoDraft(prev => [...prev, ...assigned])
       } else {
-        const nextPhotos = [...photosForTarget(), ...picked]
+        const nextPhotos = [...photosForTarget(), ...assigned]
         commitPhotos(nextPhotos)
         setPhotoDraft(nextPhotos)
       }
@@ -919,10 +1755,32 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
     }
   }
 
-  function removePhotoDraft(index) {
-    setPhotoDraft(prev =>
-      prev.filter((_, photoIndex) => photoIndex !== index),
-    )
+  function removePhotoDraft(photoToRemove) {
+    const targetKeys =
+      photoIndexIdentityKeys(photoToRemove)
+
+    setPhotoDraft(prev => {
+      let removed = false
+
+      return prev.filter(photo => {
+        if (removed) return true
+
+        const sameObject = photo === photoToRemove
+        const photoKeys = photoIndexIdentityKeys(photo)
+        const sameIdentity =
+          targetKeys.length > 0
+          && photoKeys.some(key =>
+            targetKeys.includes(key),
+          )
+
+        if (sameObject || sameIdentity) {
+          removed = true
+          return false
+        }
+
+        return true
+      })
+    })
   }
 
   async function openPeoplePhoto(photo, photos, index) {
@@ -1362,7 +2220,13 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
 
       {photoTarget && (
         <div className="peopleEditorOverlay peoplePhotoOverlay">
-          <section className="peopleEditor peoplePhotoPanel">
+          <section
+            className={`peopleEditor peoplePhotoPanel ${
+              (photoEditing ? photoAlbumDraft : albumsForTarget()).length
+                ? 'hasAlbums'
+                : ''
+            }`}
+          >
             <button
               type="button"
               className="peoplePhotoClose"
@@ -1412,105 +2276,231 @@ export default function People({ people = [], setData, onClose, birthDate = '', 
                 </label>
               )}
 
-              {!photoEditing ? (
+              <button
+                type="button"
+                className={`peoplePhotoToolButton peoplePhotoEditButton ${photoEditing ? 'active peoplePhotoSaveButton' : ''}`}
+                onClick={event => {
+                  event.preventDefault()
+                  event.stopPropagation()
+
+                  if (photoEditing) {
+                    savePhotoEdit()
+                  } else {
+                    beginPhotoEdit()
+                  }
+                }}
+                title={photoEditing ? '保存' : '编辑照片目录'}
+                aria-label={photoEditing ? '保存' : '编辑照片目录'}
+              >
+                {photoEditing ? (
+                  <svg
+                    className="peoplePhotoSaveIcon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M5 3.75h11.2L20.25 7.8V20.25H3.75V3.75H5Zm1.25 1.5v5.25h10.5V5.25H6.25Zm1.5 9v4.5h8.5v-4.5h-8.5Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                ) : (
+                  '✎'
+                )}
+              </button>
+
+              {photoEditing && (
                 <button
                   type="button"
-                  className="peoplePhotoToolButton peoplePhotoEditButton"
-                  onClick={beginPhotoEdit}
-                  title="编辑照片"
-                  aria-label="编辑照片"
+                  className="peoplePhotoAddAlbum"
+                  onClick={addPhotoAlbum}
                 >
-                  ✎
+                  <span>＋</span>分册(可上传或拖入)
                 </button>
-              ) : (
-                <div className="peoplePhotoEditActions">
-                  <button
-                    type="button"
-                    onPointerDown={event => event.stopPropagation()}
-                    onClick={event => {
-                      event.preventDefault()
-                      event.stopPropagation()
-                      savePhotoEdit()
-                    }}
-                  >
-                    保存
-                  </button>
-                  <button
-                    type="button"
-                    onPointerDown={event => event.stopPropagation()}
-                    onClick={event => {
-                      event.preventDefault()
-                      event.stopPropagation()
-                      cancelPhotoEdit()
-                    }}
-                  >
-                    取消
-                  </button>
-                </div>
               )}
             </div>
 
-            <div className="peoplePhotoScroll">
-              {(photoEditing ? photoDraft : photosForTarget()).length > 0 ? (
-                <div className="peoplePhotoGrid">
-                  {(photoEditing ? photoDraft : photosForTarget()).map(
-                    (photo, index) => (
-                      <div
-                        className="peoplePhotoItem"
-                        key={
-                          photo.id
-                          || photo.assetIdentifier
-                          || photo.uri
-                          || index
-                        }
-                      >
-                        <button
-                          type="button"
-                          className="peoplePhotoOpen"
-                          onClick={() =>
-                            openPeoplePhoto(
-                              photo,
-                              photoEditing
-                                ? photoDraft
-                                : photosForTarget(),
-                              index,
-                            )
-                          }
-                        >
-                          <img
-                            src={photo.thumbnail}
-                            alt={`${photoTarget.name}照片${index + 1}`}
-                          />
-                        </button>
+            {(photoEditing ? photoAlbumDraft : albumsForTarget()).length > 0 && (
+              <div className="peoplePhotoAlbumLine">
+                {(photoEditing ? photoAlbumDraft : albumsForTarget()).length > 4 && (
+                  <button
+                    type="button"
+                    className="peoplePhotoAlbumArrow"
+                    disabled={photoAlbumWindowStart <= 0}
+                    onClick={() =>
+                      setPhotoAlbumWindowStart(prev => Math.max(0, prev - 1))
+                    }
+                    aria-label="上一组分册"
+                  >
+                    ‹
+                  </button>
+                )}
 
-                        {photoEditing && (
+                <div className="peoplePhotoAlbumViewport">
+                  <div className="peoplePhotoAlbumGrid">
+                    {(photoEditing ? photoAlbumDraft : albumsForTarget())
+                      .slice(photoAlbumWindowStart, photoAlbumWindowStart + 4)
+                      .map(album => {
+                        const active = String(selectedPhotoAlbumId) === String(album.id)
+
+                        return (
+                          <div
+                            key={album.id}
+                            className={`peoplePhotoAlbumCapsule ${active ? 'active' : ''} ${photoEditing ? 'editing' : ''} ${photoDragActive ? 'photoDragActive' : ''}`}
+                            data-album-id={album.id}
+                          >
+                            {photoEditing ? (
+                              <>
+                                <input
+                                  type="text"
+                                  value={album.title}
+                                  placeholder="请输入"
+                                  autoFocus={String(newPhotoAlbumId) === String(album.id)}
+                                  onFocus={() => {
+                                    setSelectedPhotoAlbumId(album.id)
+                                    if (String(newPhotoAlbumId) === String(album.id)) {
+                                      setNewPhotoAlbumId('')
+                                    }
+                                  }}
+                                  onChange={event =>
+                                    renamePhotoAlbum(album.id, event.target.value)
+                                  }
+                                  maxLength={8}
+                                />
+                                <button
+                                  type="button"
+                                  className="peoplePhotoAlbumDelete"
+                                  onClick={event => {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                    deletePhotoAlbum(album.id)
+                                  }}
+                                  aria-label="删除分册"
+                                >
+                                  −
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                className="peoplePhotoAlbumSelect"
+                                onTouchStart={event => {
+                                  event.stopPropagation()
+                                }}
+                                onClick={event => {
+                                  event.preventDefault()
+                                  event.stopPropagation()
+                                  selectPhotoAlbum(album.id)
+                                }}
+                              >
+                                {album.title || '未命名'}
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                  </div>
+                </div>
+
+                {(photoEditing ? photoAlbumDraft : albumsForTarget()).length > 4 && (
+                  <button
+                    type="button"
+                    className="peoplePhotoAlbumArrow"
+                    disabled={
+                      photoAlbumWindowStart
+                      >= (photoEditing ? photoAlbumDraft : albumsForTarget()).length - 4
+                    }
+                    onClick={() =>
+                      setPhotoAlbumWindowStart(prev =>
+                        Math.min(
+                          Math.max(
+                            0,
+                            (photoEditing ? photoAlbumDraft : albumsForTarget()).length - 4,
+                          ),
+                          prev + 1,
+                        )
+                      )
+                    }
+                    aria-label="下一组分册"
+                  >
+                    ›
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="peoplePhotoScroll">
+              {photosForSelectedAlbum(photoEditing ? photoDraft : photosForTarget()).length > 0 ? (
+                <div className="peoplePhotoGrid">
+                  {photosForSelectedAlbum(photoEditing ? photoDraft : photosForTarget()).map(
+                    (photo, index) => {
+                      const visiblePhotos = photosForSelectedAlbum(
+                        photoEditing ? photoDraft : photosForTarget(),
+                      )
+                      return (
+                        <div
+                          className={`peoplePhotoItem ${photoDragActive ? 'photoDragging' : ''}`}
+                          data-photo-global-index={peoplePhotoGlobalIndex(photo)}
+                          key={
+                            photo.id
+                            || photo.assetIdentifier
+                            || photo.uri
+                            || index
+                          }
+                          onTouchStart={event => beginPeoplePhotoTouch(event, photo)}
+                          onContextMenu={event => event.preventDefault()}
+                        >
                           <button
                             type="button"
-                            className="peoplePhotoDelete"
-                            onPointerDown={event => {
-                              event.preventDefault()
-                              event.stopPropagation()
-                            }}
-                            onTouchStart={event => {
-                              event.stopPropagation()
-                            }}
-                            onClick={event => {
-                              event.preventDefault()
-                              event.stopPropagation()
-                              removePhotoDraft(index)
-                            }}
-                            aria-label={`删除照片${index + 1}`}
-                            title="删除照片"
+                            className="peoplePhotoOpen"
+                            onClick={() =>
+                              openPeoplePhoto(
+                                photo,
+                                visiblePhotos,
+                                index,
+                              )
+                            }
                           >
-                            ×
+                            <img
+                              src={photo.thumbnail}
+                              alt={`${photoTarget.name}照片${index + 1}`}
+                            />
                           </button>
-                        )}
-                      </div>
-                    ),
+
+                          {photoEditing && (
+                            <>
+                              <span className="peoplePhotoDragHint">按住拖动</span>
+                              {(photoIndexMeta(photo).device || photoIndexMeta(photo).date) && (
+                                <span className="peoplePhotoIndexMeta">
+                                  {photoIndexMeta(photo).device && <span>{photoIndexMeta(photo).device}</span>}
+                                  {photoIndexMeta(photo).date && <span>{photoIndexMeta(photo).date}</span>}
+                                </span>
+                              )}
+                            </>
+                          )}
+
+                          {photoEditing && (
+                            <button
+                              type="button"
+                              className="peoplePhotoDelete"
+                              onClick={event => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                removePhotoDraft(photo)
+                              }}
+                              aria-label="从雪粒移除这张照片"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      )
+                    },
                   )}
                 </div>
               ) : (
-                <p className="peoplePhotoEmpty">还没有照片。</p>
+                <p className="peoplePhotoEmpty">
+                  {selectedPhotoAlbumId ? '这个分册还没有照片。' : '还没有未分类照片。'}
+                </p>
               )}
             </div>
           </section>

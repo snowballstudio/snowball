@@ -1488,6 +1488,9 @@
 
 .thingPhotoDraftItem {
   position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   min-width: 0;
   aspect-ratio: 1 / 1;
   overflow: visible;
@@ -4041,7 +4044,12 @@ position: static;
   .thingsPanel-gems {
     padding-top: env(safe-area-inset-top, 0px) !important;
     padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+
   }
+
+  .thingsPanel-gems .thingsUnifiedHeader {
+  transform: translateY(12px);
+}
 
   .thingsGemGalleryPage {
     grid-template-rows: minmax(0, 1fr) auto 180px;
@@ -4103,3 +4111,73 @@ position: static;
   .thingsProgressCrate .thingsCrateGem { animation: none; }
 }
 
+
+
+/* 编辑模式：照片索引来源设备 + 生成日期 */
+.thingPhotoDraftItem {
+  position: relative;
+}
+
+.thingPhotoIndexMeta {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  z-index: 4;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.15;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.78);
+  pointer-events: none;
+}
+
+/* V1.4 照片编辑：长按拖动 + 两行来源信息 */
+.thingPhotoDragHint {
+  position: absolute; left: 4px; top: 4px; z-index: 4;
+  color: #fff; font-size: 11px; line-height: 1;
+  text-shadow: 0 1px 3px rgba(0,0,0,.78); pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;}
+.thingPhotoIndexMeta {
+  left: 4px !important; bottom: 4px !important; max-width: calc(100% - 8px) !important;
+  display: flex !important; flex-direction: column !important; gap: 1px !important;
+  color: #fff !important; font-size: 10px !important; line-height: 1.05 !important;
+  white-space: normal !important; pointer-events: none !important;
+}
+.thingPhotoIndexMeta > span {
+  display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+
+
+.snowballPhotoDragGhost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 99999;
+  overflow: hidden;
+  border-radius: 6px;
+  pointer-events: none;
+  opacity: 0.92;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.28);
+  will-change: transform;
+}
+
+.snowballPhotoDragGhost img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoDragSource {
+  opacity: 0.42 !important;
+}
+
+
+.thingPhotoDraftGrid {
+  padding-bottom: 28px;
+}

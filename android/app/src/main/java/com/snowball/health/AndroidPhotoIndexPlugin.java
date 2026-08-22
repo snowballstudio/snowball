@@ -2,9 +2,11 @@ package com.snowball.health;
 
 import android.app.Dialog;
 import android.content.ClipData;
+import android.content.ContentUris;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.res.Resources;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -26,7 +28,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.ImageView;
 
 import androidx.annotation.Nullable;
@@ -43,6 +45,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -53,14 +56,200 @@ import android.util.Base64;
 @CapacitorPlugin(name = "AndroidPhotoIndex")
 public class AndroidPhotoIndexPlugin extends Plugin {
 
+    private static final String PHOTO_URI_PREFS =
+        "snowball_photo_uri_map_v1";
+
+    private String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(
+                String.valueOf(value).getBytes(StandardCharsets.UTF_8)
+            );
+
+            StringBuilder builder = new StringBuilder();
+            for (byte item : bytes) {
+                builder.append(
+                    String.format(
+                        java.util.Locale.ROOT,
+                        "%02x",
+                        item & 0xff
+                    )
+                );
+            }
+            return builder.toString();
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private String queryStableAssetKey(Uri uri) {
+        if (uri == null) return "";
+
+        ContentResolver resolver = getContext().getContentResolver();
+
+        try (
+            Cursor cursor = resolver.query(
+                uri,
+                new String[] {
+                    MediaStore.Images.Media._ID,
+                    OpenableColumns.DISPLAY_NAME,
+                    OpenableColumns.SIZE,
+                    MediaStore.Images.Media.DATE_ADDED,
+                    MediaStore.Images.Media.WIDTH,
+                    MediaStore.Images.Media.HEIGHT
+                },
+                null,
+                null,
+                null
+            )
+        ) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int idIndex = cursor.getColumnIndex(
+                    MediaStore.Images.Media._ID
+                );
+
+                if (idIndex >= 0 && !cursor.isNull(idIndex)) {
+                    long mediaId = cursor.getLong(idIndex);
+                    if (mediaId > 0L) {
+                        return "android-media:" + mediaId;
+                    }
+                }
+
+                String name = "";
+                long size = 0L;
+                long added = 0L;
+                int width = 0;
+                int height = 0;
+
+                int nameIndex = cursor.getColumnIndex(
+                    OpenableColumns.DISPLAY_NAME
+                );
+                if (nameIndex >= 0 && !cursor.isNull(nameIndex)) {
+                    name = String.valueOf(
+                        cursor.getString(nameIndex)
+                    ).trim();
+                }
+
+                int sizeIndex = cursor.getColumnIndex(
+                    OpenableColumns.SIZE
+                );
+                if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) {
+                    size = cursor.getLong(sizeIndex);
+                }
+
+                int addedIndex = cursor.getColumnIndex(
+                    MediaStore.Images.Media.DATE_ADDED
+                );
+                if (addedIndex >= 0 && !cursor.isNull(addedIndex)) {
+                    added = cursor.getLong(addedIndex);
+                }
+
+                int widthIndex = cursor.getColumnIndex(
+                    MediaStore.Images.Media.WIDTH
+                );
+                if (widthIndex >= 0 && !cursor.isNull(widthIndex)) {
+                    width = cursor.getInt(widthIndex);
+                }
+
+                int heightIndex = cursor.getColumnIndex(
+                    MediaStore.Images.Media.HEIGHT
+                );
+                if (heightIndex >= 0 && !cursor.isNull(heightIndex)) {
+                    height = cursor.getInt(heightIndex);
+                }
+
+                if (!name.isEmpty() && added > 0L) {
+                    String fingerprint =
+                        name.toLowerCase(java.util.Locale.ROOT)
+                            + "|" + size
+                            + "|" + added
+                            + "|" + width
+                            + "|" + height;
+
+                    String hash = sha256(fingerprint);
+                    if (!hash.isEmpty()) {
+                        return "android-meta:" + hash;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // 部分厂商图库不开放全部 MediaStore 列；
+            // 继续尝试从 URI 本身提取媒体数字 ID。
+        }
+
+        String raw = uri.toString();
+
+        java.util.regex.Matcher matcher =
+            java.util.regex.Pattern
+                .compile(
+                    "(?:images(?:%2F|/|%3A|:)?media(?:%2F|/)?|image(?:%3A|:))(\\d+)",
+                    java.util.regex.Pattern.CASE_INSENSITIVE
+                )
+                .matcher(raw);
+
+        if (matcher.find()) {
+            return "android-media:" + matcher.group(1);
+        }
+
+        return "";
+    }
+
+    private String queryCreationDate(Uri uri) {
+        ContentResolver resolver = getContext().getContentResolver();
+        String[] projection = new String[] {
+            MediaStore.Images.Media.DATE_ADDED
+        };
+
+        try (
+            Cursor cursor = resolver.query(uri, projection, null, null, null)
+        ) {
+            if (cursor == null || !cursor.moveToFirst()) return "";
+
+            int index = cursor.getColumnIndex(
+                MediaStore.Images.Media.DATE_ADDED
+            );
+            if (index < 0 || cursor.isNull(index)) return "";
+
+            long seconds = cursor.getLong(index);
+            if (seconds <= 0L) return "";
+
+            return java.time.Instant
+                .ofEpochSecond(seconds)
+                .toString();
+        } catch (Exception ignored) {
+            // 不用 DATE_MODIFIED 冒充创建日期；读不到就留空。
+            return "";
+        }
+    }
+
+    private String currentSourceDevice() {
+        String manufacturer = String.valueOf(Build.MANUFACTURER).trim();
+        String model = String.valueOf(Build.MODEL).trim();
+
+        if (model.isEmpty()) return manufacturer;
+        if (
+            !manufacturer.isEmpty()
+                && !model.toLowerCase(java.util.Locale.ROOT)
+                    .startsWith(
+                        manufacturer.toLowerCase(
+                            java.util.Locale.ROOT
+                        )
+                    )
+        ) {
+            return manufacturer + " " + model;
+        }
+        return model;
+    }
+
     @PluginMethod
     public void pickPhotos(PluginCall call) {
         /*
-         * 华为旧系统对 ACTION_OPEN_DOCUMENT 的界面通常是“文件/下载”，
-         * 而且可能忽略 EXTRA_ALLOW_MULTIPLE。
+         * 使用系统图库入口，而不是 ACTION_OPEN_DOCUMENT 文件选择器。
+         * 这样旧华为/安卓会回到已经验证过的图库多选界面。
          *
-         * 这里改为直接打开系统相册图库，不再套 Chooser。
-         * 华为图库会收到明确的多选参数并返回 ClipData。
+         * 原图长期读取不再依赖选择器本身的 persistable URI：
+         * 当前版本已有 assetKey / mediaStoreId 映射和
+         * canonical MediaStore URI 回退，继续由那条链负责恢复原图。
          */
         Intent intent = new Intent(
             Intent.ACTION_PICK,
@@ -174,10 +363,16 @@ public class AndroidPhotoIndexPlugin extends Plugin {
                     photo.put("id", "android-photo-" + System.currentTimeMillis() + "-" + index);
                     photo.put("uri", uri.toString());
                     photo.put("assetIdentifier", "");
+                    String assetKey = queryStableAssetKey(uri);
+                    rememberPhotoUri(assetKey, uri);
+                    photo.put("assetKey", assetKey);
+                    photo.put("mediaStoreId", mediaStoreIdFromAssetKey(assetKey));
                     photo.put("thumbnail", thumbnail);
                     photo.put("width", info.width);
                     photo.put("height", info.height);
                     photo.put("filename", queryDisplayName(uri));
+                    photo.put("creationDate", queryCreationDate(uri));
+                    photo.put("sourceDevice", currentSourceDevice());
                     photo.put(
                         "source",
                         "android-photo-index-gallery"
@@ -274,49 +469,191 @@ public class AndroidPhotoIndexPlugin extends Plugin {
         }
     }
 
+
+    private static class PhotoRef {
+        final String rawUri;
+        final String assetKey;
+        final String mediaStoreId;
+
+        PhotoRef(String rawUri, String assetKey, String mediaStoreId) {
+            this.rawUri = rawUri == null ? "" : rawUri.trim();
+            this.assetKey = assetKey == null ? "" : assetKey.trim();
+            this.mediaStoreId = mediaStoreId == null ? "" : mediaStoreId.trim();
+        }
+    }
+
+    private String mediaStoreIdFromAssetKey(String assetKey) {
+        String value = assetKey == null ? "" : assetKey.trim();
+        if (!value.startsWith("android-media:")) return "";
+        String id = value.substring("android-media:".length()).trim();
+        return id.matches("\\d+") ? id : "";
+    }
+
+    private String mediaStoreIdFromUri(String rawUri) {
+        String value = rawUri == null ? "" : rawUri.trim();
+        if (value.isEmpty()) return "";
+        try {
+            String decoded = Uri.decode(value);
+            java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("(?:images/media/|image:)(\\d+)$", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(decoded);
+            if (matcher.find()) return matcher.group(1);
+        } catch (Exception ignored) {}
+        return "";
+    }
+
+    private Uri canonicalMediaStoreUri(String mediaStoreId) {
+        String id = mediaStoreId == null ? "" : mediaStoreId.trim();
+        if (!id.matches("\\d+")) return null;
+        try {
+            return ContentUris.withAppendedId(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                Long.parseLong(id)
+            );
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private boolean canReadPhotoUri(@Nullable Uri uri) {
+        if (uri == null) return false;
+        try (
+            android.os.ParcelFileDescriptor descriptor = getContext()
+                .getContentResolver()
+                .openFileDescriptor(uri, "r")
+        ) {
+            return descriptor != null;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private void rememberPhotoUri(String assetKey, Uri uri) {
+        if (uri == null) return;
+
+        android.content.SharedPreferences.Editor editor = getContext()
+            .getSharedPreferences(PHOTO_URI_PREFS, android.content.Context.MODE_PRIVATE)
+            .edit();
+
+        String raw = uri.toString();
+        String stable = assetKey == null ? "" : assetKey.trim();
+        if (!stable.isEmpty()) editor.putString(stable, raw);
+
+        String mediaId = mediaStoreIdFromAssetKey(stable);
+        if (mediaId.isEmpty()) mediaId = mediaStoreIdFromUri(raw);
+        if (!mediaId.isEmpty()) {
+            editor.putString("android-media:" + mediaId, raw);
+        }
+
+        editor.apply();
+    }
+
+    private Uri mappedPhotoUri(PhotoRef ref) {
+        if (ref == null) return null;
+
+        android.content.SharedPreferences preferences = getContext()
+            .getSharedPreferences(PHOTO_URI_PREFS, android.content.Context.MODE_PRIVATE);
+
+        List<String> keys = new ArrayList<>();
+        if (!ref.assetKey.isEmpty()) keys.add(ref.assetKey);
+
+        String mediaId = ref.mediaStoreId;
+        if (mediaId.isEmpty()) mediaId = mediaStoreIdFromAssetKey(ref.assetKey);
+        if (mediaId.isEmpty()) mediaId = mediaStoreIdFromUri(ref.rawUri);
+        if (!mediaId.isEmpty()) keys.add("android-media:" + mediaId);
+
+        for (String key : keys) {
+            String mapped = preferences.getString(key, "");
+            if (mapped == null || mapped.trim().isEmpty()) continue;
+            try {
+                Uri candidate = Uri.parse(mapped);
+                if (canReadPhotoUri(candidate)) return candidate;
+            } catch (Exception ignored) {}
+        }
+
+        return null;
+    }
+
+    private Uri resolvePhotoUri(PhotoRef ref) {
+        if (ref == null) return null;
+
+        if (!ref.rawUri.isEmpty()) {
+            try {
+                Uri raw = Uri.parse(ref.rawUri);
+                if (canReadPhotoUri(raw)) return raw;
+            } catch (Exception ignored) {}
+        }
+
+        Uri mapped = mappedPhotoUri(ref);
+        if (mapped != null) return mapped;
+
+        String mediaId = ref.mediaStoreId;
+        if (mediaId.isEmpty()) mediaId = mediaStoreIdFromAssetKey(ref.assetKey);
+        if (mediaId.isEmpty()) mediaId = mediaStoreIdFromUri(ref.rawUri);
+
+        Uri canonical = canonicalMediaStoreUri(mediaId);
+        if (canReadPhotoUri(canonical)) return canonical;
+
+        return null;
+    }
+
+    private String arrayString(JSArray array, int index) {
+        if (array == null || index < 0 || index >= array.length()) return "";
+        try {
+            String value = array.getString(index);
+            return value == null ? "" : value.trim();
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
     @PluginMethod
     public void presentPhoto(PluginCall call) {
-        List<Uri> uris = new ArrayList<>();
+        List<PhotoRef> refs = new ArrayList<>();
 
         JSArray rawUris = call.getArray("uris");
-        if (rawUris != null) {
-            try {
-                for (int i = 0; i < rawUris.length(); i++) {
-                    String raw = rawUris.getString(i);
-                    if (raw == null || raw.trim().isEmpty()) continue;
-                    uris.add(Uri.parse(raw));
-                }
-            } catch (Exception ignored) {
-                uris.clear();
+        JSArray rawAssetKeys = call.getArray("assetKeys");
+        JSArray rawMediaStoreIds = call.getArray("mediaStoreIds");
+
+        int count = rawUris == null ? 0 : rawUris.length();
+        if (rawAssetKeys != null) count = Math.max(count, rawAssetKeys.length());
+        if (rawMediaStoreIds != null) count = Math.max(count, rawMediaStoreIds.length());
+
+        for (int i = 0; i < count; i++) {
+            String uri = arrayString(rawUris, i);
+            String assetKey = arrayString(rawAssetKeys, i);
+            String mediaStoreId = arrayString(rawMediaStoreIds, i);
+
+            PhotoRef ref = new PhotoRef(uri, assetKey, mediaStoreId);
+            if (!ref.rawUri.isEmpty() || !ref.assetKey.isEmpty() || !ref.mediaStoreId.isEmpty()) {
+                refs.add(ref);
             }
         }
 
-        // 兼容旧版只传单个 uri 的调用。
-        if (uris.isEmpty()) {
+        // 兼容旧版只传单张照片的调用。
+        if (refs.isEmpty()) {
             String rawUri = call.getString("uri");
-            if (rawUri != null && !rawUri.trim().isEmpty()) {
-                try {
-                    uris.add(Uri.parse(rawUri));
-                } catch (Exception error) {
-                    call.reject("照片索引格式不正确。");
-                    return;
-                }
+            String assetKey = call.getString("assetKey");
+            String mediaStoreId = call.getString("mediaStoreId");
+            PhotoRef single = new PhotoRef(rawUri, assetKey, mediaStoreId);
+            if (!single.rawUri.isEmpty() || !single.assetKey.isEmpty() || !single.mediaStoreId.isEmpty()) {
+                refs.add(single);
             }
         }
 
-        if (uris.isEmpty()) {
+        if (refs.isEmpty()) {
             call.reject("这组照片没有可用的系统索引。");
             return;
         }
 
         Integer requestedIndex = call.getInt("index");
         int initialIndex = requestedIndex == null ? 0 : requestedIndex;
-        initialIndex = Math.max(0, Math.min(initialIndex, uris.size() - 1));
+        initialIndex = Math.max(0, Math.min(initialIndex, refs.size() - 1));
 
         final int safeInitialIndex = initialIndex;
         getActivity().runOnUiThread(() -> {
             try {
-                showPhotoDialog(uris, safeInitialIndex);
+                showPhotoDialog(refs, safeInitialIndex);
                 call.resolve();
             } catch (Exception error) {
                 call.reject(
@@ -327,7 +664,7 @@ public class AndroidPhotoIndexPlugin extends Plugin {
         });
     }
 
-    private void showPhotoDialog(List<Uri> uris, int initialIndex) {
+    private void showPhotoDialog(List<PhotoRef> refs, int initialIndex) {
         Dialog dialog = new Dialog(
             getActivity(),
             android.R.style.Theme_Black_NoTitleBar_Fullscreen
@@ -342,17 +679,26 @@ public class AndroidPhotoIndexPlugin extends Plugin {
         ZoomableImageView image = new ZoomableImageView(getActivity());
         image.setBackgroundColor(Color.BLACK);
 
+        TextView counter = new TextView(getActivity());
+        counter.setTextColor(Color.argb(210, 255, 255, 255));
+        counter.setTextSize(14f);
+        counter.setGravity(Gravity.CENTER);
+        counter.setPadding(dp(12), dp(6), dp(12), dp(6));
+        counter.setBackgroundColor(Color.TRANSPARENT);
+        counter.setIncludeFontPadding(false);
+
         Runnable showCurrentPhoto = () -> {
-            Uri currentUri = uris.get(currentIndex[0]);
+            Uri currentUri = resolvePhotoUri(refs.get(currentIndex[0]));
             image.resetForNewImage();
-            image.setImageURI(currentUri);
-            image.setContentDescription(
-                "足迹原图 " + (currentIndex[0] + 1) + " / " + uris.size()
-            );
+            image.loadIndexedPhoto(currentUri);
+            String positionText =
+                (currentIndex[0] + 1) + " / " + refs.size();
+            image.setContentDescription("原图 " + positionText);
+            counter.setText(positionText);
         };
 
         image.setOnSwipeListener(direction -> {
-            if (direction < 0 && currentIndex[0] < uris.size() - 1) {
+            if (direction < 0 && currentIndex[0] < refs.size() - 1) {
                 currentIndex[0] += 1;
                 showCurrentPhoto.run();
             } else if (direction > 0 && currentIndex[0] > 0) {
@@ -362,7 +708,7 @@ public class AndroidPhotoIndexPlugin extends Plugin {
         });
 
         image.setOnLongPressListener(() ->
-            shareIndexedPhoto(uris.get(currentIndex[0]))
+            shareIndexedPhoto(resolvePhotoUri(refs.get(currentIndex[0])))
         );
 
         FrameLayout.LayoutParams imageParams = new FrameLayout.LayoutParams(
@@ -371,11 +717,22 @@ public class AndroidPhotoIndexPlugin extends Plugin {
         );
         root.addView(image, imageParams);
 
-        ImageButton close = new ImageButton(getActivity());
-        close.setImageResource(
-            android.R.drawable.ic_menu_close_clear_cancel
-        );
-        close.setColorFilter(Color.WHITE);
+        FrameLayout.LayoutParams counterParams =
+            new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+        counterParams.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+        counterParams.bottomMargin = dp(22);
+        root.addView(counter, counterParams);
+
+        TextView close = new TextView(getActivity());
+        close.setText("×");
+        close.setTextColor(Color.argb(190, 255, 255, 255));
+        close.setTextSize(27);
+        close.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.NORMAL);
+        close.setGravity(Gravity.CENTER);
+        close.setIncludeFontPadding(false);
         close.setBackgroundColor(Color.TRANSPARENT);
         close.setContentDescription("关闭原图");
         close.setOnClickListener(v -> dialog.dismiss());
@@ -413,6 +770,7 @@ public class AndroidPhotoIndexPlugin extends Plugin {
     }
 
     private void shareIndexedPhoto(Uri uri) {
+        if (uri == null) return;
         try {
             ContentResolver resolver =
                 getContext().getContentResolver();
@@ -598,10 +956,35 @@ public class AndroidPhotoIndexPlugin extends Plugin {
             setImageMatrix(matrix);
         }
 
+        void loadIndexedPhoto(@Nullable Uri uri) {
+            setImageDrawable(null);
+            if (uri == null) return;
+
+            // 先走 ImageView 自己的 URI 解码。部分旧华为图库 URI 会静默失败，
+            // 因此 drawable 仍为空时再通过 ContentResolver 输入流解码。
+            super.setImageURI(uri);
+
+            if (getDrawable() == null) {
+                try (
+                    InputStream stream = getContext()
+                        .getContentResolver()
+                        .openInputStream(uri)
+                ) {
+                    if (stream != null) {
+                        Bitmap bitmap = BitmapFactory.decodeStream(stream);
+                        if (bitmap != null) setImageBitmap(bitmap);
+                    }
+                } catch (Exception ignored) {
+                    // URI 已失去读取权限或原图已经不存在时保持黑底。
+                }
+            }
+
+            post(this::resetToFit);
+        }
+
         @Override
         public void setImageURI(@Nullable Uri uri) {
-            super.setImageURI(uri);
-            post(this::resetToFit);
+            loadIndexedPhoto(uri);
         }
 
         @Override

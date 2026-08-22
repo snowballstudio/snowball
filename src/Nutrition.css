@@ -244,11 +244,11 @@
     clip-path: inset(0 calc(100% - var(--rainbow-visible, 100%)) 0 0) !important;
   }
 
-  .dailyNutritionPage .rainbowArc1 { width: var(--nutrition-arc1-w) !important; height: var(--nutrition-arc1-h) !important; border-width: var(--nutrition-arc1-b) !important; border-color: rgba(200,80,80,.70) !important; }
+  .dailyNutritionPage .rainbowArc1 { width: var(--nutrition-arc1-w) !important; height: var(--nutrition-arc1-h) !important; border-width: var(--nutrition-arc1-b) !important; border-color: rgba(213, 87, 87, 0.7) !important; }
   .dailyNutritionPage .rainbowArc2 { width: var(--nutrition-arc2-w) !important; height: var(--nutrition-arc2-h) !important; border-width: var(--nutrition-arc2-b) !important; border-color: rgba(236, 194, 86, 0.7) !important; }
-  .dailyNutritionPage .rainbowArc3 { width: var(--nutrition-arc3-w) !important; height: var(--nutrition-arc3-h) !important; border-width: var(--nutrition-arc3-b) !important; border-color: rgba(67, 204, 131, 0.68) !important; }
-  .dailyNutritionPage .rainbowArc4 { width: var(--nutrition-arc4-w) !important; height: var(--nutrition-arc4-h) !important; border-width: var(--nutrition-arc4-b) !important; border-color: rgba(29, 119, 209, 0.66) !important; }
-  .dailyNutritionPage .rainbowArc5 { width: var(--nutrition-arc5-w) !important; height: var(--nutrition-arc5-h) !important; border-width: var(--nutrition-arc5-b) !important; border-color: rgba(178, 105, 202, 0.62) !important; }
+  .dailyNutritionPage .rainbowArc3 { width: var(--nutrition-arc3-w) !important; height: var(--nutrition-arc3-h) !important; border-width: var(--nutrition-arc3-b) !important; border-color: rgba(98, 201, 113, 0.68) !important; }
+  .dailyNutritionPage .rainbowArc4 { width: var(--nutrition-arc4-w) !important; height: var(--nutrition-arc4-h) !important; border-width: var(--nutrition-arc4-b) !important; border-color: rgba(44, 192, 197, 0.66) !important; }
+  .dailyNutritionPage .rainbowArc5 { width: var(--nutrition-arc5-w) !important; height: var(--nutrition-arc5-h) !important; border-width: var(--nutrition-arc5-b) !important; border-color: rgba(184, 116, 207, 0.62) !important; }
 
   /* 拆分后恢复营养不足的颜色逻辑：
      filled = 原彩色；dim(<2种) = 灰色；empty(=0) = 更淡并显示空缺感。 */
@@ -406,7 +406,7 @@
     border: 1px solid transparent !important;
     border-radius: 999px !important;
     background: transparent !important;
-    color: rgba(61, 129, 61, 0.92) !important;
+    color: rgba(217, 223, 217, 0.92) !important;
     box-shadow: none !important;
     font-size: var(--nutrition-tab-size) !important;
     font-weight: 600 !important;
@@ -916,9 +916,9 @@
 
   /* 营养不足时使用更清楚的亮灰色。 */
   .dailyNutritionPage .rainbowArc.dim {
-    border-color: rgba(160, 160, 162, 0.7) !important;
-    opacity: 0.8 !important;
-    filter: grayscale(1) saturate(0) brightness(1.14) !important;
+    border-color: #a6a3a3 !important;
+    opacity: 0.3 !important;
+    filter: none !important;
   }
 
 

@@ -55,8 +55,8 @@ function distanceFieldsForDay(day = {}) {
 function calculatedKmForSteps(steps) {
   const value = finiteStep(steps)
   if (value === null) return null
-  // 固定按 69 厘米/步估算，只基于已经计算完成的 calculatedSteps。
-  return finiteKm(value * 0.69 / 1000)
+  // 固定按 65 厘米/步估算，只基于已经计算完成的 calculatedSteps。
+  return finiteKm(value * 0.65 / 1000)
 }
 
 function withDistanceFields(record = {}) {
